@@ -3,6 +3,10 @@ project(gatb-core)
 # We set the required version
 cmake_minimum_required (VERSION 2.6)
 
+IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    SET (debug 1)
+ENDIF()
+
 ################################################################################
 # The version number.
 ################################################################################
@@ -54,7 +58,11 @@ include (GetDate)
 DefineInteger (k)
 
 # We get the current date
-GetCurrentDate (gatb-core-date) 
+if (debug)
+    set (gatb-core-date "DebugRelease")
+else()
+    GetCurrentDate (gatb-core-date)
+endif ()
 
 ################################################################################
 # COMPILER DEFINITIONS
