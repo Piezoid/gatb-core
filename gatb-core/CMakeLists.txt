@@ -7,6 +7,17 @@ IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
     SET (debug 1)
 ENDIF()
 
+# Compiler cache support with ccache
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set(ENABLE_CCACHE ON CACHE BOOL "Enable ccache")
+    if(ENABLE_CCACHE)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif()
+endif(CCACHE_FOUND)
+
+
 ################################################################################
 # The version number.
 ################################################################################
@@ -135,7 +146,7 @@ set (LIB_COMPILE_WARNINGS "-Wall -Wno-unused-function -Wno-unused-variable -Wno-
 
 if (debug)
     #set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g -p -pg")
-    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g -p ${LIB_COMPILE_WARNINGS}")
+    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -Og -g -p ${LIB_COMPILE_WARNINGS}")
     set (CMAKE_BUILD_TYPE Debug) # else CMake adds DNDEBUG
     message("-- COMPILATION IN DEBUG MODE")
 else()
