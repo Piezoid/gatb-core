@@ -3,6 +3,17 @@ project(gatb-core)
 # We set the required version
 cmake_minimum_required (VERSION 3.1.0)
 
+# Compiler cache support with ccache
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set(ENABLE_CCACHE ON CACHE BOOL "Enable ccache")
+    if(ENABLE_CCACHE)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif()
+endif(CCACHE_FOUND)
+
+
 ################################################################################
 # The version number.
 ################################################################################
@@ -107,7 +118,7 @@ endif()
 
 if (debug)
     #set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g -p -pg")
-    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g -p ${LIB_COMPILE_WARNINGS}")
+    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g ${LIB_COMPILE_WARNINGS}")
     set (CMAKE_BUILD_TYPE Debug) # else CMake adds DNDEBUG
     message("-- COMPILATION IN DEBUG MODE")
 else()
