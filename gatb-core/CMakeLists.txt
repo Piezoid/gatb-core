@@ -1,7 +1,8 @@
 project(gatb-core)
 
 # We set the required version
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.0.2)
+cmake_policy(SET CMP0063 NEW) # Allow configuration of default symbol visibility
 
 IF (CMAKE_BUILD_TYPE STREQUAL "Debug")
     SET (debug 1)
