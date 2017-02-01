@@ -432,61 +432,9 @@ inline std::ostream& operator<< (std::ostream& s, const Path_t<T>& p)
  * it will help readability and convenience: no more need to pass
  * template parameters <Node,Edge,GraphDataVariant>
  */
+
 template<typename Item>
-class GraphIterator : public tools::dp::ISmartIterator<Item>
-{
-    public:
-
-        /** */
-        GraphIterator (tools::dp::ISmartIterator<Item>* ref) : _ref(0) { setRef(ref); }
-
-        /* empty iterator, just for debug purposes, shouldn't be used */
-        GraphIterator () : _ref(0) {  std::cout << "empty GraphIterator used (shouldn't happen)" << std::endl; }
-
-        /** */
-        virtual ~GraphIterator() { setRef(0); }
-
-        /** */
-        GraphIterator (const GraphIterator<Item>& i) : _ref(0) { setRef(i._ref); }
-
-        /** */
-        GraphIterator& operator= (const GraphIterator<Item>& i)  {  if (this != &i)   {  setRef (i._ref);  }   return *this;  }
-
-        /** Method that the number of iterated items so far. */
-        virtual u_int64_t rank() const  { return _ref->rank(); }
-
-        /** Method that initializes the iteration. */
-        void first()  { _ref->first(); }
-
-        /** Method that goes to the next item in the iteration.
-         * \return status of the iteration
-         */
-        void next()  { _ref->next(); }
-
-        /** Method telling whether the iteration is finished or not.
-         * \return true if iteration is finished, false otherwise.
-         */
-        bool isDone()  { return _ref->isDone(); }
-
-        /** Method that returns the current iterated item. Note that the returned type is the template type.
-          \return the current item in the iteration.
-          */
-        Item& item () { return _ref->item(); }
-
-        /** */
-        void setItem (Item& i)  {  _ref->setItem (i); }
-
-        /** */
-        u_int64_t size () const  { return _ref->size(); }
-
-        /** */
-        tools::dp::ISmartIterator<Item>* get()  const { return _ref; }
-
-    private:
-
-        tools::dp::ISmartIterator<Item>* _ref;
-        void setRef (tools::dp::ISmartIterator<Item>* ref)  { SP_SETATTR(ref); }
-};
+using GraphIterator = tools::dp::ISmartIterator<Item>&;
 
 /* exactly same comment as GraphIterator above*/
 template<typename Item, int NB=16 /* TODO bring it down to 8 whenever possible; or try with a much higher value (e.g. 128) and see if there is actually a performance hit*/>
@@ -1152,7 +1100,7 @@ class ProgressGraphIteratorTemplate : public tools::dp::impl::SubjectIterator<Ty
 {
 public:
     ProgressGraphIteratorTemplate (const GraphIterator<Type>& items, const char* msg = "compute", bool verbose=true, size_t divide=100)
-        : tools::dp::impl::SubjectIterator<Type> (items.get(), items.size()/divide), _size(items.size()) 
+        : tools::dp::impl::SubjectIterator<Type> (&items, items.size()/divide), _size(items.size())
         { 
             if (verbose)
                 this->addObserver( new Listener(items.size(), msg) );

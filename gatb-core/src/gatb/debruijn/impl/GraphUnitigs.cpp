@@ -992,7 +992,7 @@ GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getNodes () const
             unsigned int nb_unitigs;
     };
 
-    return new NodeIterator(unitigs, unitigs_deleted, BaseGraph::_kmerSize, nb_unitigs_extremities);
+    return *(new NodeIterator(unitigs, unitigs_deleted, BaseGraph::_kmerSize, nb_unitigs_extremities));
 }
 
 template<size_t span> 
@@ -1610,7 +1610,6 @@ GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getSimpleNodeIterator (const N
 {
     std::cout << "getSimpleNodeIterator called in GraphU, not implemented" << std::endl; 
     exit(1);
-    return GraphIterator<NodeGU> ();
 }
 
 template<size_t span> 
@@ -1618,7 +1617,6 @@ GraphIterator<EdgeGU> GraphUnitigsTemplate<span>::getSimpleEdgeIterator (const N
 {
     std::cout << "getSimpleEdgeIterator called in GraphU, not implemented" << std::endl; 
     exit(1);
-    return GraphIterator<EdgeGU>();
 }
 
 template<size_t span> 

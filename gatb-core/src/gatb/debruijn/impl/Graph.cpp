@@ -2260,12 +2260,12 @@ template<typename Node, typename Edge, typename NodeType, typename GraphDataVari
 };
 
 template<typename Node, typename Edge, typename NodeType, typename GraphDataVariant>
-struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<NodeType>*>
+struct nodes_visitor : public boost::static_visitor<GraphIterator<NodeType>>
 {
     const GraphTemplate<Node, Edge, GraphDataVariant>& graph;
     nodes_visitor (const GraphTemplate<Node, Edge, GraphDataVariant>& graph) : graph(graph) {}
 
-    template<size_t span>  tools::dp::ISmartIterator<NodeType>* operator() (const GraphData<span>& data) const
+    template<size_t span>  GraphIterator<NodeType> operator() (const GraphData<span>& data) const
     {
         /** Shortcuts. */
         typedef typename Kmer<span>::Count Count;
@@ -2354,7 +2354,7 @@ struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<No
         {
             if (data._solid != 0)
             {
-                return new NodeIterator (data._solid->iterator (), data._solid->getNbItems());
+                return *(new NodeIterator (data._solid->iterator (), data._solid->getNbItems()));
             }
             else
             {
@@ -2366,16 +2366,16 @@ struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<No
             if (data._branching != 0)
             {
                 /** We have a branching container*/
-                return new NodeIterator (data._branching->iterator (), data._branching->getNbItems());
+                return *(new NodeIterator (data._branching->iterator (), data._branching->getNbItems()));
             }
             else if (data._solid != 0)
             {
                 /** We don't have pre-computed branching nodes container. We have to compute them on the fly
                  * from the solid kmers. We can do that by filtering out all non branching nodes. */
-                return new FilterIterator<NodeType,BranchingFilter<Node, Edge, NodeType, GraphDataVariant> > (
+                return *(new FilterIterator<NodeType,BranchingFilter<Node, Edge, NodeType, GraphDataVariant> > (
                     new NodeIterator (data._solid->iterator (), data._solid->getNbItems()),
                     BranchingFilter<Node, Edge, NodeType, GraphDataVariant> (graph)
-                );
+                ));
             }
             else
             {
@@ -2397,7 +2397,7 @@ struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<No
 template<typename Node, typename Edge, typename GraphDataVariant>
 GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodes () const
 {
-    return GraphIterator<Node> (boost::apply_visitor (nodes_visitor<Node,Edge, Node, GraphDataVariant>(*this),  *(GraphDataVariant*)_variant));
+    return boost::apply_visitor (nodes_visitor<Node,Edge, Node, GraphDataVariant>(*this),  *(GraphDataVariant*)_variant);
 }
 
 /*********************************************************************
@@ -2409,9 +2409,9 @@ GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodes () con
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphIterator<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>::getBranchingNodes () const
+GraphIterator<BranchingNode_t<Node>> GraphTemplate<Node, Edge, GraphDataVariant>::getBranchingNodes () const
 {
-    return GraphIterator<BranchingNode_t<Node> > (boost::apply_visitor (nodes_visitor<Node, Edge, BranchingNode_t<Node>, GraphDataVariant>(*this),  *(GraphDataVariant*)_variant));
+    return boost::apply_visitor (nodes_visitor<Node, Edge, BranchingNode_t<Node>, GraphDataVariant>(*this),  *(GraphDataVariant*)_variant);
 }
 
 /*********************************************************************
@@ -2902,7 +2902,7 @@ struct Functor_getSimpleNodeIterator {  void operator() (
 template<typename Node, typename Edge, typename GraphDataVariant> 
 GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getSimpleNodeIterator (Node& node, Direction dir) const
 {
-    return GraphIterator<Node> (new NodeSimplePathIterator <Node, Edge, Functor_getSimpleNodeIterator<Node, Edge, GraphDataVariant>, GraphDataVariant> (*this, node, dir, Functor_getSimpleNodeIterator<Node, Edge, GraphDataVariant>()));
+    return *(new NodeSimplePathIterator <Node, Edge, Functor_getSimpleNodeIterator<Node, Edge, GraphDataVariant>, GraphDataVariant> (*this, node, dir, Functor_getSimpleNodeIterator<Node, Edge, GraphDataVariant>()));
 }
 
 /*********************************************************************
@@ -2937,7 +2937,7 @@ struct Functor_getSimpleEdgeIterator {  void operator() (
 template<typename Node, typename Edge, typename GraphDataVariant> 
 GraphIterator<Edge> GraphTemplate<Node, Edge, GraphDataVariant>::getSimpleEdgeIterator (Node& node, Direction dir) const
 {
-    return GraphIterator<Edge> (new EdgeSimplePathIterator<Node, Edge, Functor_getSimpleEdgeIterator<Node, Edge, GraphDataVariant>, GraphDataVariant>(*this, node, dir, Functor_getSimpleEdgeIterator<Node, Edge, GraphDataVariant>()));
+    return *(new EdgeSimplePathIterator<Node, Edge, Functor_getSimpleEdgeIterator<Node, Edge, GraphDataVariant>, GraphDataVariant>(*this, node, dir, Functor_getSimpleEdgeIterator<Node, Edge, GraphDataVariant>()));
 }
 
 /*********************************************************************
@@ -3508,7 +3508,7 @@ struct allocateAdjacency_visitor : public boost::static_visitor<void>    {
  * also, maybe one day, it will replace it
  */
 template<typename Node, typename Edge, typename GraphDataVariant> 
-void GraphTemplate<Node, Edge, GraphDataVariant>::precomputeAdjacency(unsigned int nbCores, bool verbose) 
+void GraphTemplate<Node, Edge, GraphDataVariant>::precomputeAdjacency(unsigned int nbCores, bool verbose)
 {
 #ifndef WITH_MPHF
     std::cout << "Adjacency precomputation isn't supported when GATB-core is compiled with a non-C++11 compiler" << std::endl;
@@ -3862,13 +3862,13 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::cacheNonSimpleNodes(unsigned i
 }
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-struct cached_nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<Node>*>
+struct cached_nodes_visitor : public boost::static_visitor<GraphIterator<Node>>
 {
     const GraphTemplate<Node, Edge, GraphDataVariant>& graph;
     cached_nodes_visitor (const GraphTemplate<Node, Edge, GraphDataVariant>& graph) : graph(graph) {}
 
     // we should really use STL iterators in the next rewrite.
-    template<size_t span>  tools::dp::ISmartIterator<Node>* operator() (const GraphData<span>& data) const
+    template<size_t span>  GraphIterator<Node> operator() (const GraphData<span>& data) const
     {
         class CachedNodeIterator : public tools::dp::ISmartIterator<Node>
         {
@@ -3931,7 +3931,7 @@ struct cached_nodes_visitor : public boost::static_visitor<tools::dp::ISmartIter
             u_int64_t _nbItems;
         };
 
-        return new CachedNodeIterator (data._nodecache);
+        return *(new CachedNodeIterator (data._nodecache));
     }
 };
 

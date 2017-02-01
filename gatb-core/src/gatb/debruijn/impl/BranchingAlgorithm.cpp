@@ -224,7 +224,7 @@ void BranchingAlgorithm<span, Node, Edge, Graph>::execute ()
 
     /** We encapsulate this iterator with a potentially decorated iterated (for progress information). */
     tools::dp::Iterator<Node>* iter = createIterator<Node> (
-        itNodes.get(),
+        &itNodes,
         itNodes.size(),
         progressFormat1,
         listener
