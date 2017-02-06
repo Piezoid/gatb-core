@@ -31,7 +31,7 @@
 #include <iostream>
 #include <gatb/system/api/types.hpp>
 #include <gatb/tools/misc/api/Abundance.hpp>
-#include <hdf5/hdf5.h>
+#include <hdf5.h>
 
 /********************************************************************************/
 namespace gatb  {

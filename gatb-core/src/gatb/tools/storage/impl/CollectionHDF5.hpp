@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 #include <stdarg.h>
-#include <hdf5/hdf5.h>
+#include <hdf5.h>
 
 /********************************************************************************/
 namespace gatb      {

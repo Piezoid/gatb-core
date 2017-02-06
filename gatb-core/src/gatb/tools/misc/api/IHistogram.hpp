@@ -28,7 +28,7 @@
 
 #include <gatb/system/api/ISmartPointer.hpp>
 #include <gatb/tools/storage/impl/Storage.hpp>
-#include <hdf5/hdf5.h>
+#include <hdf5.h>
 
 /********************************************************************************/
 namespace gatb      {

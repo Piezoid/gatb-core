@@ -139,6 +139,25 @@ else()
     message ("-------------------------------------------------------------------------------------")
 endif()
 
+
+################################################################################
+#  PACKAGES DEPENDENCIES
+################################################################################
+set(HDF5_USE_STATIC_LIBRARIES ON)
+FIND_PACKAGE (HDF5)
+IF (HDF5_FOUND)
+    set(ENABLE_SYSTEM_HDF5 ON CACHE BOOL "Use system hdf5 (otherwise use distributed source)")
+ENDIF ()
+
+# In case we use external hdf5
+IF (ENABLE_SYSTEM_HDF5)
+    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} ${HDF5_DEFINITIONS}")
+ELSE ()
+    set(HDF5_LIBRARIES hdf5)
+    set(HDF5_INCLUDE_DIRS ${PROJECT_BINARY_DIR}/include/${CMAKE_BUILD_TYPE}/hdf5)
+ENDIF ()
+
+
 ################################################################################
 # GENERAL DEFINITIONS
 ################################################################################
@@ -261,6 +280,7 @@ message("-- Options: ${LIBRARY_COMPILE_DEFINITIONS}")
 set (LIBRARY_OUTPUT_PATH       ${PROJECT_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE})
 set (EXECUTABLE_OUTPUT_PATH    ${PROJECT_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
 
+
 ################################################################################
 #  EXPORT FOR THIRD PARTIES 
 ################################################################################
@@ -290,10 +310,10 @@ set (gatb-core-flags ${LIBRARY_COMPILE_DEFINITIONS})
 
 # We define the include directories used for linking binary based on gatb core
 # Note that we need to add boost include dependency (not working otherwise with clang)
-set (gatb-core-includes ${PROJECT_BINARY_DIR}/include  ${PROJECT_BINARY_DIR}/include/${CMAKE_BUILD_TYPE} ${PROJECT_SOURCE_DIR}/src  ${PROJECT_SOURCE_DIR}/thirdparty ${gatb-core-extra-libraries-inc})
+set (gatb-core-includes ${PROJECT_BINARY_DIR}/include  ${PROJECT_BINARY_DIR}/include/${CMAKE_BUILD_TYPE} ${PROJECT_SOURCE_DIR}/src  ${PROJECT_SOURCE_DIR}/thirdparty ${HDF5_INCLUDE_DIRS} ${gatb-core-extra-libraries-inc} /myass )
 
 # We define the libraries used for linking binary based on gatb core
-set (gatb-core-libraries   gatbcore-static  dl  pthread  z hdf5 ${gatb-core-extra-libraries})
+set (gatb-core-libraries   gatbcore-static  dl  pthread  z ${HDF5_LIBRARIES} ${gatb-core-extra-libraries})
 
 # We define the directory where to find cmake helpers
 set (gatb-core-cmake  ${CMAKE_MODULE_PATH})
@@ -339,7 +359,9 @@ ADD_SUBDIRECTORY(thirdparty)
 #  DEPENDENCIES 
 ################################################################################
 # we must be sure that hdf5 is built and installed before building gatb-core
-ADD_DEPENDENCIES (gatbcore-static hdf5 hdf5_postbuild)
+IF (NOT ENABLE_SYSTEM_HDF5)
+    ADD_DEPENDENCIES (gatbcore-static hdf5 hdf5_postbuild)
+ENDIF ()
 
 IF (DEFINED WITH_MPHF)
     ADD_DEPENDENCIES(gatbcore-static emphf_copyasis)

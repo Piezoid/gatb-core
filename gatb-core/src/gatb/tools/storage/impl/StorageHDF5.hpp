@@ -33,7 +33,7 @@
 #include <gatb/tools/storage/impl/CollectionHDF5.hpp>
 #include <gatb/tools/storage/impl/CollectionHDF5Patch.hpp>
 #include <gatb/system/impl/System.hpp>
-#include <hdf5/hdf5.h>
+#include <hdf5.h>
 #include <sstream>
 
 /********************************************************************************/
