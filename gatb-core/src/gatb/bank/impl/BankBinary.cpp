@@ -51,8 +51,8 @@ static bool checkMagic (FILE* file)
     if (MAGIC_NUMBER == 0)  { return true; }
 
     u_int64_t value = 0;
-    fread (&value, sizeof(value), 1, file);
-    return  value==MAGIC_NUMBER;
+    bool read = fread (&value, sizeof(value), 1, file) == 1;
+    return read && value==MAGIC_NUMBER;
 }
 
 /********************************************************************************/
@@ -450,7 +450,11 @@ void BankBinary::Iterator::next ()
         /** We are about to read another chunk of data from the disk. We need */
         setBufferData (new Data (block_size));
 
-        fread (_bufferData->getBuffer(), sizeof( char),block_size, binary_read_file); // read a block of reads into the buffer
+        size_t read_len = fread (_bufferData->getBuffer(), sizeof( char), block_size, binary_read_file) == block_size; // read a block of reads into the buffer
+        if (read_len != block_size)
+        {
+            throw gatb::core::system::ExceptionErrno ("BankBinary: Truncated block: expected %d bytes, got EOF or an error after %d bytes.", block_size, read_len);
+        }
 
         cpt_buffer       = 0;
         blocksize_toread = block_size;
