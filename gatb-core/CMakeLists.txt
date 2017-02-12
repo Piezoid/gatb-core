@@ -190,17 +190,20 @@ set (EXECUTABLE_OUTPUT_PATH    ${PROJECT_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
 # For instance, you can do the following:
 #       cmake -DEXTRALIBS="somelib"  -DEXTRALIBS_PATH="/somewhere/libs"  -DEXTRALIBS_INC="/somewhere/inc" ..
 
-IF (DEFINED EXTRALIBS)
-    set (gatb-core-extra-libraries ${EXTRALIBS})
-    set (gatb-core-extra-libraries ${gatb-core-extra-libraries} PARENT_SCOPE)
-ENDIF()
-IF (DEFINED EXTRALIBS_PATH)
-    set (gatb-core-extra-libraries-path ${EXTRALIBS_PATH})
-    set (gatb-core-extra-libraries-path ${gatb-core-extra-libraries-path} PARENT_SCOPE)
-ENDIF()
-IF (DEFINED EXTRALIBS_INC)
-    set (gatb-core-extra-libraries-inc ${EXTRALIBS_INC})
-    set (gatb-core-extra-libraries-inc ${gatb-core-extra-libraries-inc} PARENT_SCOPE)
+get_directory_property(hasParent PARENT_DIRECTORY)
+IF (hasParent)
+    IF (DEFINED EXTRALIBS)
+        set (gatb-core-extra-libraries ${EXTRALIBS})
+        set (gatb-core-extra-libraries ${gatb-core-extra-libraries} PARENT_SCOPE)
+    ENDIF()
+    IF (DEFINED EXTRALIBS_PATH)
+        set (gatb-core-extra-libraries-path ${EXTRALIBS_PATH})
+        set (gatb-core-extra-libraries-path ${gatb-core-extra-libraries-path} PARENT_SCOPE)
+    ENDIF()
+    IF (DEFINED EXTRALIBS_INC)
+        set (gatb-core-extra-libraries-inc ${EXTRALIBS_INC})
+        set (gatb-core-extra-libraries-inc ${gatb-core-extra-libraries-inc} PARENT_SCOPE)
+    ENDIF()
 ENDIF()
 
 # We define the compilation flags used for compiling binary based on gatb core
@@ -216,19 +219,19 @@ set (gatb-core-libraries   gatbcore-static  dl  pthread  z hdf5 ${gatb-core-extr
 # We define the directory where to find cmake helpers
 set (gatb-core-cmake  ${CMAKE_MODULE_PATH})
 
-# NOTE... we have to duplicate the variables for the other scopes (in particular for sub directories)
-set (gatb-core-flags          ${gatb-core-flags}          PARENT_SCOPE)
-set (gatb-core-includes       ${gatb-core-includes}       PARENT_SCOPE)
-set (gatb-core-libraries      ${gatb-core-libraries}      PARENT_SCOPE)
-set (gatb-core-cmake          ${gatb-core-cmake}          PARENT_SCOPE)
-
 ################################################################################
 #  LIBRARY GENERATION 
 ################################################################################
 ADD_SUBDIRECTORY(src)
 
 # NOTE... we have to duplicate the variables for the other scopes (in particular for sub directories)
-set (gatb-core-klist   ${gatb-core-klist}  PARENT_SCOPE)
+IF (hasParent)
+    set (gatb-core-flags          ${gatb-core-flags}          PARENT_SCOPE)
+    set (gatb-core-includes       ${gatb-core-includes}       PARENT_SCOPE)
+    set (gatb-core-libraries      ${gatb-core-libraries}      PARENT_SCOPE)
+    set (gatb-core-cmake          ${gatb-core-cmake}          PARENT_SCOPE)
+    set (gatb-core-klist          ${gatb-core-klist}  PARENT_SCOPE)
+ENDIF ()
 
 ################################################################################
 #  UNIT TESTS GENERATION 
