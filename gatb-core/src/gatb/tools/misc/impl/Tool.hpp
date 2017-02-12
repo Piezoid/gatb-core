@@ -221,17 +221,6 @@ protected:
     void setDispatcher (dp::IDispatcher*        dispatcher)  { SP_SETATTR (dispatcher); }
 
 protected:
-
-	
-	//pointer to function to display help
-	void (*userDisplayHelp)(void * target);
-	void * _helpTarget;
-	
-	//pointer to function to display help
-	void (*userDisplayVersion)(void * target);
-	void * _versionTarget;
-
-	
     /** Name of the tool (set at construction). */
     std::string _name;
 
@@ -244,6 +233,14 @@ protected:
     IOptionsParser* _parser;
 
     dp::IDispatcher* _dispatcher;
+
+    //pointer to function to display help
+    void (*userDisplayHelp)(void * target);
+    void * _helpTarget;
+
+    //pointer to function to display help
+    void (*userDisplayVersion)(void * target);
+    void * _versionTarget;
 
     /** */
     TimeInfo _timeInfo;
