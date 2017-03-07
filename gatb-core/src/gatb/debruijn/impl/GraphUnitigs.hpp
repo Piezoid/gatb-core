@@ -87,23 +87,32 @@ struct NodeGU
 
 };
 
-struct EdgeGU 
+struct EdgeGU
 {
+    template<class Node_Ref1, class Node_Ref2>
+    EdgeGU(Node_Ref1&& node_from, Node_Ref2&& node_to, Direction dir)
+    : from(std::forward<Node_Ref1>(node_from)),
+      to(std::forward<Node_Ref2>(node_to)),
+      direction(dir)
+    {}
+
+    EdgeGU() = default;
+
     /** The source node of the edge. */
     NodeGU from;
     /** The target node of the edge. */
     NodeGU to;
     /** The direction of the transition. */
     Direction        direction;
-    
+
     // this need to be implemented, for something in in Simplifications
-    bool operator< (const EdgeGU& other) const  { return ((from < other.from) || (from == other.from && to < other.to)); } 
+    bool operator< (const EdgeGU& other) const  { return ((from < other.from) || (from == other.from && to < other.to)); }
 
     /** Setter for some attributes of the Edge object.
      * \param[in] unitig_from
      * \param[in] pos_from
      * \param[in] strand_from : strand of the 'from' Node
-     * \param[in] unitig_to 
+     * \param[in] unitig_to
      * \param[in] pos_to
      * \param[in] strand_to : strand of the 'from' Node
      * \param[in] dir : direction of the transition.

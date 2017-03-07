@@ -44,6 +44,7 @@
 
 #include <gatb/tools/designpattern/api/Iterator.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
+#include <gatb/tools/collections/impl/SmallVector.hpp>
 #include <gatb/tools/misc/impl/Algorithm.hpp>
 #include <gatb/tools/misc/impl/Property.hpp>
 #include <gatb/tools/misc/api/Enums.hpp>
@@ -114,7 +115,7 @@ inline Direction reverse (Direction dir)  { return dir==DIR_OUTCOMING ? DIR_INCO
  *  for the BranchingNode structure).
  *
  *  The Node structure has also a 'abundance' attribute; it gives the occurrences number of the kmer in
- *  the initial set of reads. Note that this attribute has a correct value only when nodes are iterated 
+ *  the initial set of reads. Note that this attribute has a correct value only when nodes are iterated
  *  (from the solid kmers on disk). When Node objects are created via the Graph API (e.g. using
  *  as a result of buildNode, successors(), predecessors(), etc..), developers should not assume
  *  that the 'abundance' attribute is correctly set. Use the queryAbundance() function instead to get
@@ -159,24 +160,11 @@ struct Node_t
     /** Overload of operator <  NOTE: by now, it doesn't take care of the strand... */
     bool operator< (const Node_t& other) const  { return (kmer   < other.kmer); }
 
-    /** Setter for some attributes of the Node object. Usually used by the Graph class for setting
-     * a Node object's guts.
-     * \param[in] kmer : the kmer value to be set
-     * \param[in] strand : strand to be set
-     */
-    void set (const Node_t::Value& kmer, const kmer::Strand& strand)
-    {
-        this->kmer      = kmer;
-        this->strand    = strand;
-        this->mphfIndex = 0;
-        this->iterationRank = 0;
-    }
-
     template<typename T>
     const T& getKmer() const;
 };
 
-template <> 
+template <>
 template<typename T>
 const T& Node_t<tools::math::Integer>::getKmer() const
 {
@@ -200,24 +188,9 @@ const T& Node_t<tools::math::Integer>::getKmer() const
 template<typename Node>
 struct BranchingNode_t : Node
 {
+    using Node::Node; // inherit constructor
 };
 
-/********************************************************************************/
-
-/** \brief Specific Node structure representing a simple node in the De Bruijn graph
- *
- * The SimpleNode inherits from the Node structure.
- *
- * Its semantics is to define nodes this way:
- *      indegree==1 && outdegree==1
- *
- * Its main usage is to be the template specialization type for some Graph class methods.
- */
-template <typename Node>
-struct SimpleNode : Node
-
-{
-};
 
 /********************************************************************************
                         #######  ######    #####   #######
@@ -256,29 +229,19 @@ struct Edge_t
 
     /** The direction of the transition. */
     Direction        direction;
-    
+
+    template<class Node_Ref1, class Node_Ref2>
+    Edge_t(Node_Ref1&& node_from, Node_Ref2&& node_to, kmer::Nucleotide _nt, Direction dir)
+    : from(std::forward<Node_Ref1>(node_from)),
+      to(std::forward<Node_Ref2>(node_to)),
+      nt(_nt),
+      direction(dir)
+    {}
+
+    Edge_t() = default;
+
     /** Overload of operator <.  May not really mean much to compare edges, but is used in Minia's graph simplifications */
     bool operator< (const Edge_t<Node_t>& other) const  { return ((from < other.from) || (from == other.from && to < other.to)); }
-
-    /** Setter for some attributes of the Edge object.
-     * \param[in] kmer_from : kmer value of the 'from' Node
-     * \param[in] strand_from : strand of the 'from' Node
-     * \param[in] kmer_to : kmer value of the 'to' Node
-     * \param[in] strand_to : strand of the 'to' Node
-     * \param[in] n : the transition nucleotide
-     * \param[in] dir : direction of the transition.
-     */
-    void set (
-        const typename Node_t::Value& kmer_from, kmer::Strand strand_from,
-        const typename Node_t::Value& kmer_to,   kmer::Strand strand_to,
-        kmer::Nucleotide n, Direction dir
-    )
-    {
-        from.set (kmer_from, strand_from);
-        to.set   (kmer_to,   strand_to);
-        nt = n;
-        direction = dir;
-    }
 };
 
 
@@ -295,17 +258,13 @@ struct Edge_t
  * branching nodes.
  */
 template<typename Node, typename Edge>
-struct BranchingEdge_t : Edge 
+struct BranchingEdge_t : Edge
 {
-    void set (
-        const typename Node::Value& kmer_from, kmer::Strand strand_from,
-        const typename Node::Value& kmer_to,   kmer::Strand strand_to,
-        kmer::Nucleotide nt, Direction dir, size_t distance
-    )
-    {
-        Edge::set (kmer_from, strand_from, kmer_to, strand_to, nt, dir);
-        this->distance = distance;
-    }
+    template<class Node_Ref>
+    BranchingEdge_t(Node_Ref&& node_from, Node_Ref&& node_to, kmer::Nucleotide _nt, Direction dir, size_t dist)
+    : Edge(std::forward<Node_Ref>(node_from), std::forward<Node_Ref>(node_to), _nt, dir),
+      distance(dist)
+    {}
 
     // number of simple nodes between the two branching nodes
     size_t distance;
@@ -474,24 +433,7 @@ class GraphIterator : public tools::dp::ISmartIterator<Item>
 
 /* exactly same comment as GraphIterator above*/
 template<typename Item, int NB=16 /* TODO bring it down to 8 whenever possible; or try with a much higher value (e.g. 128) and see if there is actually a performance hit*/>
-class GraphVector
-{
-    public:
-        GraphVector () : _size(0)  {} 
-        Item& operator[] (size_t idx)  { return (_items[idx]); }
-        size_t size()  { return _size; }
-        void resize (size_t n)  { _size = n; }
-
-        template<typename Functor>  void iterate (const Functor& f)  { for (size_t i=0; i<_size; i++)  { f(_items[i]); } }
-
-    protected:
-        Item   _items[NB];
-        size_t _size;
-};
-
-
-
-
+using GraphVector = tools::collections::impl::SmallVector<Item, NB>;
 
 /********************************************************************************
                  #####   ######      #     ######   #     #
@@ -606,7 +548,7 @@ public:
      *      so call iteratorBranching if you want an iterator over BranchingNode's
      * \return the nodes iterator. */
 
-    inline GraphIterator<Node> iterator () const  {  return getNodes ();           }
+    inline GraphIterator<Node> iterator () const  {  return neighbors ();           }
     inline GraphIterator<BranchingNode_t<Node> > iteratorBranching () const  {  return getBranchingNodes ();           }
     GraphIterator<Node> iteratorCachedNodes () const;
 
@@ -618,11 +560,16 @@ public:
     /** Returns a vector of neighbors of the provided node.
      * \param[in] node : the node whose neighbors are wanted
      * \param[in] direction : the direction of the neighbors. If not set, out and in neighbors are computed.
-     * \return a vector of the node neighbors (may be empty). 
+     * \return a vector of the node neighbors (may be empty).
      * Warning: be sure to check if edge.from (or node.from) is actually your input node, or its reverse complement.
      */
-    inline GraphVector<Node> neighbors    ( Node& node, Direction dir=DIR_END) const  {  return getNodes(node, dir);           }
-    
+    void neighbors (Node& source, Direction direction, GraphVector<Node>& nodes) const;
+    inline GraphVector<Node> neighbors (Node& node, Direction dir=DIR_END) const {
+        GraphVector<Node> nodes;
+        neighbors(node, dir, nodes);
+        return nodes;
+    }
+
     /** Returns a vector of neighbors of the provided kmer. It has to be understood as the following:
      *  - a node N is built with the kmer, with the strand FORWARD
      *  - a call to 'neighbors<T> (N,          DIR_OUTGOING)' is done; we get v1
@@ -631,29 +578,57 @@ public:
      *  \param[in] kmer : the kmer whose neighbors are wanted.
      *  \return a vector of the neighbors (may be empty).
      */
-    inline GraphVector<Node> neighbors    ( const typename Node::Value& kmer) const          {  return getNodeValues (kmer);           }
-    
-    inline Node* neighborsDummy      ( Node& node, Direction dir=DIR_END) const  {   return NULL;           }
+    void neighbors (const typename Node::Value& kmer, GraphVector<Node>&) const;
+    inline GraphVector<Node> neighbors    ( typename Node::Value& kmer) const {
+        GraphVector<Node> nodes;
+        neighbors(kmer, nodes);
+        return nodes;
+    }
+    inline Node* neighborsDummy      (const Node& node, Direction dir=DIR_END) const  {   return NULL;           }
 
-
-    /* neighbors used to be templated.. not anymore, trying to avoid nested template specialization; 
+    /* neighbors used to be templated.. not anymore, trying to avoid nested template specialization;
      * so call neighbors for getting nodes, or neighborsEdge for getting edges */
-    inline GraphVector<Edge> neighborsEdge    ( Node& node, Direction dir=DIR_END) const  {   return getEdges(node, dir);           }
-    inline Edge* neighborsDummyEdge      ( Node& node, Direction dir=DIR_END) const  {   return NULL;           }
-    inline GraphVector<Edge> neighborsEdge    ( const typename Node::Value& kmer) const          {  return getEdgeValues (kmer);           }
+    void neighborsEdge (Node& source, Direction direction, GraphVector<Edge>&) const;
+    inline GraphVector<Edge> neighborsEdge (Node& node, Direction dir=DIR_END) const {
+        GraphVector<Edge> edges;
+        neighborsEdge(node, dir, edges);
+        return edges;
+    }
+    inline Edge* neighborsDummyEdge (const Node& node, Direction dir=DIR_END) const  {   return NULL;           }
+    void neighborsEdge (const typename Node::Value& kmer, GraphVector<Edge>& edges) const;
+    inline GraphVector<Edge> neighborsEdge ( const typename Node::Value& kmer) const {
+        GraphVector<Edge> edges;
+        neighborsEdge(kmer, edges);
+        return edges;
+    }
 
+    void neighborsBranching (Node& source, Direction direction, GraphVector<BranchingNode_t<Node> >& nodes) const;
+    inline GraphVector<BranchingNode_t<Node> > neighborsBranching(Node& node, Direction direction) const {
+        GraphVector<BranchingNode_t<Node> > branching_nodes;
+        neighborsBranching(node, direction, branching_nodes);
+        return branching_nodes;
+    }
 
-    inline GraphVector<BranchingNode_t<Node> > neighborsBranching(Node& node, Direction direction) const
-    { return getBranchingNodeNeighbors (node, direction);  }
+    void neighborsBranching (const typename Node::Value& kmer, GraphVector<BranchingNode_t<Node> >& nodes) const;
+    inline GraphVector<BranchingNode_t<Node> > neighborsBranching(const typename Node::Value& kmer) const {
+        GraphVector<BranchingNode_t<Node> > branching_nodes;
+        neighborsBranching(kmer, branching_nodes);
+        return branching_nodes;
+    }
 
-    inline GraphVector<BranchingNode_t<Node> > neighborsBranching(const typename Node::Value& kmer) const
-    { return getBranchingNodeValues (kmer);  }
+    void neighborsBranchingEdge (Node& source, Direction direction, GraphVector<BranchingEdge_t<Node,Edge> >& edges) const;
+    inline GraphVector<BranchingEdge_t<Node,Edge> > neighborsBranchingEdge (Node& node, Direction direction) const {
+        GraphVector<BranchingEdge_t<Node,Edge> > branching_edges;
+        neighborsBranchingEdge (node, direction, branching_edges);
+        return branching_edges;
+    }
 
-     inline GraphVector<BranchingEdge_t<Node,Edge> > neighborsBranchingEdge (Node& node, Direction direction) const
-    { return getBranchingEdgeNeighbors (node, direction);  }
-
-    inline GraphVector<BranchingEdge_t<Node,Edge> > neighborsBranchingEdge (const typename Node::Value& kmer) const
-    { return getBranchingEdgeValues (kmer);  }
+    void neighborsBranchingEdge (const typename Node::Value& kmer, GraphVector<BranchingEdge_t<Node,Edge> >& edges) const;
+    inline GraphVector<BranchingEdge_t<Node,Edge> > neighborsBranchingEdge (const typename Node::Value& kmer) const {
+        GraphVector<BranchingEdge_t<Node,Edge> > branching_edges;
+        neighborsBranchingEdge (kmer, branching_edges);
+        return branching_edges;
+    }
 
 
 
@@ -661,28 +636,32 @@ public:
      * \param[in] node : the node whose neighbors are wanted
      * \return a vector of the node neighbors (may be empty).
      */
-    inline GraphVector<Node> successors   ( Node& node) const                 {  return getNodes(node, DIR_OUTCOMING); }
+    inline GraphVector<Node> successors (Node& node) const { return neighbors(node, DIR_OUTCOMING); }
+    inline void successors (Node& node, GraphVector<Node>& nodes) const { neighbors(node, DIR_OUTCOMING, nodes); }
 
     /** Shortcut for 'neighbors' method with direction==DIR_INCOMING.
      * \param[in] node : the node whose neighbors are wanted
      * \return a vector of the node neighbors (may be empty).
      */
-    inline GraphVector<Node> predecessors ( Node& node) const                 {  return getNodes(node, DIR_INCOMING);  }
-    
-    inline GraphVector<Edge> successorsEdge   ( Node& node) const                 {  return getEdges(node, DIR_OUTCOMING); }
-    inline GraphVector<Edge> predecessorsEdge ( Node& node) const                 {  return getEdges(node, DIR_INCOMING);  }
+    inline GraphVector<Node> predecessors (Node& node) const {  return neighbors(node, DIR_INCOMING); }
+    inline void predecessors (Node& node, GraphVector<Node>& nodes) const { neighbors(node, DIR_INCOMING, nodes); }
+
+    inline GraphVector<Edge> successorsEdge   (Node& node) const {  return neighborsEdge(node, DIR_OUTCOMING); }
+    inline GraphVector<Edge> predecessorsEdge (Node& node) const {  return neighborsEdge(node, DIR_INCOMING);  }
+    inline void successorsEdge   (Node& node, GraphVector<Edge>& edges) const { neighborsEdge(node, DIR_OUTCOMING, edges); }
+    inline void predecessorsEdge (Node& node, GraphVector<Edge>& edges) const { neighborsEdge(node, DIR_INCOMING,  edges); }
 
     inline GraphVector<BranchingNode_t<Node> > successorsBranching (Node& node) const
-        { return getBranchingNodeNeighbors (node, DIR_OUTCOMING);  }
+        { return neighborsBranching (node, DIR_OUTCOMING);  }
 
     inline GraphVector<BranchingNode_t<Node> > predecessorsBranching (Node& node) const
-        { return getBranchingNodeNeighbors (node, DIR_INCOMING);  }
+        { return neighborsBranching (node, DIR_INCOMING);  }
 
     inline GraphVector<BranchingEdge_t<Node,Edge> > successorsBranchingEdge (Node& node) const
-        { return getBranchingEdgeNeighbors (node, DIR_OUTCOMING);  }
+        { return neighborsBranchingEdge (node, DIR_OUTCOMING);  }
 
     inline GraphVector<BranchingEdge_t<Node,Edge> > predecessorsBranchingEdge (Node& node) const
-        { return getBranchingEdgeNeighbors (node, DIR_INCOMING);  }
+        { return neighborsBranchingEdge (node, DIR_INCOMING);  }
 
 
     /** Returns a set of neighbors for each node iterated with the provided two iterators
@@ -694,16 +673,42 @@ public:
     //std::set<T> neighbors (IteratorInput first, IteratorInput last) const;
     std::set<BranchingNode_t<Node> > neighbors (typename std::set<BranchingNode_t<Node> >::iterator first, typename std::set<BranchingNode_t<Node> >::iterator last) const;
 
+    /** Returns the neighbors of two nodes, ie with the same transition nucleotide from both nodes.
+     * \param[in] node1 : first node
+     * \param[in] node2 : sedond node
+     * \return the vector of pairs of items as successors
+     */
+    void neighborsEdge (const Node& node1, const Node& node2, Direction direction, GraphVector<std::pair<Edge,Edge> >& edges) const;
+    inline GraphVector<std::pair<Edge,Edge> >  neighborsEdge (const Node& node1, const Node& node2, Direction direction=DIR_END) const
+    {
+        GraphVector<std::pair<Edge,Edge> > edges;
+        neighborsEdge (node1, node2, direction, edges);
+        return edges;
+    }
+
+    void neighbors (const Node& node1, const Node& node2, Direction direction, GraphVector<std::pair<Node,Node> >& nodes) const;
+    inline GraphVector<std::pair<Node,Node> > neighbors (const Node& node1, const Node& node2, Direction direction=DIR_END) const
+    {
+        GraphVector<std::pair<Node,Node> > nodes;
+        neighbors(node1, node2, direction, nodes);
+        return nodes;
+    }
+
     /** Returns the successors of two nodes, ie with the same transition nucleotide from both nodes.
      * \param[in] node1 : first node
      * \param[in] node2 : sedond node
      * \return the vector of pairs of items as successors
      */
+
     inline GraphVector<std::pair<Edge,Edge> > successorsEdge (const Node& node1, const Node& node2) const
-    { return getEdgesCouple (node1, node2, DIR_OUTCOMING); }
+    { return neighborsEdge (node1, node2, DIR_OUTCOMING); }
+    inline void successorsEdge (const Node& node1, const Node& node2, GraphVector<std::pair<Edge,Edge> >& edges) const
+    { neighborsEdge (node1, node2, DIR_OUTCOMING, edges); }
 
     inline GraphVector<std::pair<Node,Node> > successors (const Node& node1, const Node& node2) const
-    { return getNodesCouple (node1, node2, DIR_OUTCOMING); }
+    { return neighbors (node1, node2, DIR_OUTCOMING); }
+    inline void successors (const Node& node1, const Node& node2, GraphVector<std::pair<Node,Node> > nodes) const
+    { neighbors (node1, node2, DIR_OUTCOMING, nodes); }
 
     /** Returns the predecessors of two nodes, ie with the same transition nucleotide from both nodes.
      * \param[in] node1 : first node
@@ -711,10 +716,14 @@ public:
      * \return the vector of pairs of items as predecessors
      */
     inline GraphVector<std::pair<Edge,Edge> > predecessorsEdge (const Node& node1, const Node& node2) const
-    { return getEdgesCouple (node1, node2, DIR_INCOMING); }
+    { return neighborsEdge (node1, node2, DIR_INCOMING); }
+    inline void predecessorsEdge (const Node& node1, const Node& node2, GraphVector<std::pair<Edge,Edge> >& edges) const
+    { neighborsEdge (node1, node2, DIR_INCOMING, edges); }
 
     inline GraphVector<std::pair<Node,Node> > predecessors (const Node& node1, const Node& node2) const
-    { return getNodesCouple (node1, node2, DIR_INCOMING); }
+    { return neighbors (node1, node2, DIR_INCOMING); }
+    inline void predecessors (const Node& node1, const Node& node2, GraphVector<std::pair<Node,Node> >& nodes) const
+    { neighbors (node1, node2, DIR_INCOMING, nodes); }
 
 
     /**********************************************************************/
@@ -731,7 +740,7 @@ public:
      * \param[in] nt : the nucleotide of the transition
      * \return the neighbor object.
      */
-    inline Node neighbor ( Node& source, Direction dir, kmer::Nucleotide nt) const
+    inline Node neighbor (Node& source, Direction dir, kmer::Nucleotide nt) const
     {  bool exists=true; return getNode (source, dir, nt, exists);  }
 
     /** Return a specific neighbor from a given node. The neighbor is defined by a direction and the transition
@@ -744,22 +753,21 @@ public:
      * \param[out] exists : yes means that the neighbor is in the graph, false otherwise
      * \return the neighbor object.
      */
-    inline Node neighbor ( Node& source, Direction dir, kmer::Nucleotide nt, bool& exists) const
-    {  return getNode (source, dir, nt, exists);  }
+    inline Node neighbor (Node& source, Direction dir, kmer::Nucleotide nt, bool& exists)     {  return getNode (source, dir, nt, exists);  }
 
     /** Shortcut for neighbor with dir==DIR_OUTCOMING. */
-    inline Node successor ( Node& source, kmer::Nucleotide nt) const
+    inline Node successor (Node& source, kmer::Nucleotide nt) const
     {  bool exists=true; return getNode (source, DIR_OUTCOMING, nt, exists);  }
 
-    inline Node successor ( Node& source, kmer::Nucleotide nt, bool& exists) const
+    inline Node successor (Node& source, kmer::Nucleotide nt, bool& exists) const
     {  return getNode (source, DIR_OUTCOMING, nt, exists);  }
 
-   
+
     /** Shortcut for neighbor with dir==DIR_INCOMING. */
-    inline Node predecessor ( Node& source, kmer::Nucleotide nt) const
+    inline Node predecessor (Node& source, kmer::Nucleotide nt) const
     {  bool exists=true; return getNode (source, DIR_INCOMING, nt, exists);  }
 
-    inline Node predecessor ( Node& source, kmer::Nucleotide nt, bool& exists) const
+    inline Node predecessor (Node& source, kmer::Nucleotide nt, bool& exists) const
     {  return getNode (source, DIR_INCOMING, nt, exists);  }
 
 
@@ -770,24 +778,25 @@ public:
     /** Get the incoming degree of the node.
      * \param[in] node : the node
      * \return the indegree of the node. */
-    size_t indegree  (Node& node) const;
+    uint8_t indegree  (Node& node) const { return degree(node, DIR_INCOMING); }
 
     /** Get the outcoming degree of the node.
      * \param[in] node : the node
      * \return the outdegree of the node. */
-    size_t outdegree (Node& node) const;
+    uint8_t outdegree (Node& node) const { return degree(node, DIR_OUTCOMING); }
 
     /** Get the degree of the node (either incoming or outcoming).
      * \param[in] node : the node
      * \param[in] dir : direction of the degree
      * \return the degree of the node. */
-    size_t degree    (Node& node, Direction dir) const;
-    
-    /* get both the in and out degree of a node, in a single call
-     * takes advantage of adjacency
+    uint8_t degree (Node&, Direction) const;
+    /** Get the incoming and outcoming of a node at the same time
+     * \param[in] node : the node
+     * \param[out] in_degree : the indegree of the node
+     * \param[out] out_degree : the outdegree of the node
      */
-    void degree    (Node& node, size_t& in, size_t &out) const;
-    
+    void degree (Node&, uint8_t& in_degree, uint8_t& out_degree) const;
+
     /**********************************************************************/
     /*                      SIMPLIFICATION METHODS                        */
     /**********************************************************************/
@@ -816,30 +825,30 @@ public:
     int simplePathAvance (Node& node, Direction dir, kmer::Nucleotide& nt) const;
 
     /** */
-    GraphIterator<Node> simplePath     (Node& node, Direction dir) const  { return getSimpleNodeIterator(node, dir); }
-    GraphIterator<Edge> simplePathEdge (Node& node, Direction dir) const  { return getSimpleEdgeIterator(node, dir); }
-    
+    GraphIterator<Node> simplePath     (const Node& node, Direction dir) const  { return getSimpleNodeIterator(node, dir); }
+    GraphIterator<Edge> simplePathEdge (const Node& node, Direction dir) const  { return getSimpleEdgeIterator(node, dir); }
+
     // high-level functions that used to be in Simplifications.cpp
     // convention: unitigXXX works on the unitigs as computed as bcalm. never leaves that unitig
     //             simplepathXXX may traverse multiple unitigs
-    Node             unitigLastNode          (Node& node, Direction dir) const;
-    Node         simplePathLastNode          (Node& node, Direction dir) const;
-    unsigned int     unitigLength            (Node& node, Direction dir) const;
-    unsigned int simplePathLength            (Node& node, Direction dir) const;
-    double           unitigMeanAbundance     (Node& node) const;
-    double       simplePathMeanAbundance     (Node& node, Direction dir) const;
-    void             unitigDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant> >& nodesDeleter) ;
-    void             unitigDelete          (Node& node) ;
+    Node             unitigLastNode          (const Node& node, Direction dir) const;
+    Node         simplePathLastNode          (const Node& node, Direction dir) const;
+    unsigned int     unitigLength            (const Node& node, Direction dir) const;
+    unsigned int simplePathLength            (const Node& node, Direction dir) const;
+    double           unitigMeanAbundance     (const Node& node) const;
+    double       simplePathMeanAbundance     (const Node& node, Direction dir) const;
+    void             unitigDelete          (const Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant> >& nodesDeleter) ;
+    void             unitigDelete          (const Node& node) ;
     void         simplePathDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant> >& nodesDeleter) ;
-    std::string  unitigSequence (Node& node, bool& isolatedLeft, bool& isolatedRight) const;
-    std::string  unitigPathSequence (Node& node, bool& isolatedLeft, bool& isolatedRight) const;
-    void         unitigMark            (Node& node) ; // used to flag simple path as traversed, in minia
-    bool         unitigIsMarked        (Node& node) ;
-    
+    std::string  unitigSequence (const Node& node, bool& isolatedLeft, bool& isolatedRight) const;
+    std::string  unitigPathSequence (const Node& node, bool& isolatedLeft, bool& isolatedRight) const;
+    void         unitigMark            (const Node& node) ; // used to flag simple path as traversed, in minia
+    bool         unitigIsMarked        (const Node& node) ;
+
     std::string simplePathBothDirections(const Node& node, bool& isolatedLeft, bool& isolatedRight, bool dummy, float& coverage);
     // aux function, not meant to be called from outside, but maybe it could.
-    void simplePathLongest_avance(const Node& node, Direction dir, int& seqLength, int& endDegree, bool markDuringTraversal, float& coverage, std::string* seq = nullptr, std::vector<Node> *unitigNodes = nullptr); 
-    
+    void simplePathLongest_avance(const Node& node, Direction dir, int& seqLength, int& endDegree, bool markDuringTraversal, float& coverage, std::string* seq = nullptr, std::vector<Node> *unitigNodes = nullptr);
+
     void debugPrintAllUnitigs() const;
 
     /**********************************************************************/
@@ -850,8 +859,8 @@ public:
      * \param[in] item : the node
      * \return true if the node belongs to the graph, false otherwise. */
     bool contains (const Node& item) const;
-                                  
-    template<size_t span> 
+
+    template<size_t span>
     bool contains (const typename gatb::core::kmer::impl::Kmer<span>::Type& item) const;
 
     /** Get the ascii string for the node, according to its strand.
@@ -888,13 +897,13 @@ public:
     /** Mutation of a node. */
     GraphVector<Node> mutate (const Node& node, size_t idx, int mode=0) const;
 
-    /** Return a nucleotide at position 'idx' of a given node 
+    /** Return a nucleotide at position 'idx' of a given node
      * \param[in] node : the node we want to extract a nucleotide from
      * \param[in] idx : the position of the nucleotide to be extracted
      * \return the wanted nucleotide. */
     kmer::Nucleotide getNT (const Node& node, size_t idx) const;
 
-    /** Return the abundance of a node by querying the perfect hash function 
+    /** Return the abundance of a node by querying the perfect hash function
      * \param[in] node : the node
      * \return the abundance */
     int queryAbundance (Node& node) const;
@@ -916,15 +925,15 @@ public:
     /* returns an index between 0 and (number of nodes - 1)
      * the function is a bijection between the nodes and the indices
      *
-     * NOTE: if you query this function for a node that doesn't beling to the graph, 
+     * NOTE: if you query this function for a node that doesn't beling to the graph,
      * it may still return an index (that will be in collision with
-     * the index of another node in the graph), or it may return ULLONG_MAX, 
+     * the index of another node in the graph), or it may return ULLONG_MAX,
      * the latter indicates that for sure, the node isn't in the graph
      */
     unsigned long nodeMPHFIndex(Node& node) const;
 
 
-    unsigned long nodeMPHFIndexDummy(Node& node) const; // debug function, for profiling only
+    unsigned long nodeMPHFIndexDummy(const Node& node) const; // debug function, for profiling only
 
 
     /**********************************************************************/
@@ -973,8 +982,8 @@ public:
 
     /** cache adjacency information from the Bloom filter to an array, 8 bits per node, for faster traversal queries*/
     void precomputeAdjacency(unsigned int nbCores = 1, bool verbose = true);
-    unsigned int nt2bit[256]; 
-    bool debugCompareNeighborhoods(Node& node, Direction dir, std::string prefix) const; // debug
+    unsigned int nt2bit[256];
+    bool debugCompareNeighborhoods(Node& node, Direction dir, std::string prefix); // debug
 
 
     /* functions to precompute non-simple nodes */
@@ -1026,7 +1035,7 @@ public:
     GraphTemplate (const std::string& uri);
 
 public: // was private: before, but had many compilation errors during the change from Graph to GraphTemplate. took the easy route, set it to "public:", it solved everything.
-    
+
     /** Kind of storage for the graph. */
     tools::storage::impl::StorageMode_e _storageMode;
 
@@ -1058,51 +1067,18 @@ public: // was private: before, but had many compilation errors during the chang
     tools::misc::DebloomKind     _debloomKind;
     tools::misc::DebloomImpl     _debloomImpl;
     tools::misc::BranchingKind   _branchingKind;
-   
+
     /** */
-    GraphIterator<Node> getNodes () const;
-    
-    unsigned char countNeighbors (Node&, Direction) const; // simple and much faster version of getNodes, for degree(), outdegree(), indegree() queries
-    void countNeighbors (Node&, size_t&, size_t&) const;  // compute in and out degree at the same time
+    GraphIterator<Node> neighbors () const;
 
     /** */
     GraphIterator<BranchingNode_t<Node> > getBranchingNodes () const;
 
     /** */
-    GraphIterator<Node> getSimpleNodeIterator (Node& node, Direction dir) const;
+    GraphIterator<Node> getSimpleNodeIterator (const Node& node, Direction dir) const;
 
     /** */
-    GraphIterator<Edge> getSimpleEdgeIterator (Node& node, Direction dir) const;
-
-    /** */
-    GraphVector<Edge> getEdges (Node source, Direction direction) const;
-
-    /** */
-    GraphVector<std::pair<Node,Node> > getNodesCouple (const Node& node1, const Node& node2, Direction direction) const;
-
-    /** */
-    GraphVector<std::pair<Edge,Edge> > getEdgesCouple (const Node& node1, const Node& node2, Direction direction) const;
-
-    /** */
-    GraphVector<Node> getNodes (Node &source, Direction direction)  const;
-
-    /** */
-    GraphVector<BranchingNode_t<Node> > getBranchingNodeNeighbors (Node& source, Direction direction) const;
-
-    /** */
-    GraphVector<BranchingEdge_t<Node,Edge> > getBranchingEdgeNeighbors (Node& source, Direction direction) const;
-
-    /** */
-    GraphVector<Edge> getEdgeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    GraphVector<Node> getNodeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    GraphVector<BranchingEdge_t<Node,Edge> > getBranchingEdgeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    GraphVector<BranchingNode_t<Node> > getBranchingNodeValues (const typename Node::Value& kmer) const;
+    GraphIterator<Edge> getSimpleEdgeIterator (const Node& node, Direction dir) const;
 
     /** */
     Node getNode (Node& source, Direction dir, kmer::Nucleotide nt, bool& exists) const;
@@ -1136,11 +1112,11 @@ class ProgressGraphIteratorTemplate : public tools::dp::impl::SubjectIterator<Ty
 public:
     ProgressGraphIteratorTemplate (const GraphIterator<Type>& items, const char* msg = "compute", bool verbose=true, size_t divide=100)
         : tools::dp::impl::SubjectIterator<Type> (items.get(), items.size()/divide), _size(items.size()) 
-        { 
+        {
             if (verbose)
                 this->addObserver( new Listener(items.size(), msg) );
         }
-    
+
 
     u_int64_t size () const  { return _size; }
 
@@ -1153,7 +1129,7 @@ template<typename T>
 class NodeHasher
 {
     public:
-        size_t operator()(const T & k) const 
+        size_t operator()(const T & k) const
         {
             return hash1(k, 0);
         }
@@ -1246,7 +1222,7 @@ struct GraphData
     void setNodeCache   (NodeCacheMap*          nodecache)  { _nodecache = nodecache; /* would like to do "SP_SETATTR (nodecache)" but nodecache is an unordered_map, not some type that derives from a smartpointer. so one day, address this. I'm not sure if it's important though. Anyway I'm phasing out NodeCache in favor of GraphUnitigs. */; }
 
     /** Shortcut. */
-    bool contains (const Type& item)  const  {  
+    bool contains (const Type& item)  const  {
 
         bool res = _container->contains (item);
 
@@ -1264,7 +1240,7 @@ struct GraphData
             if ((hashIndex % 2) == 1)
                 value >>= 4;
             value &= 0xF;
-            if (((value >> 1) & 1) == 1) 
+            if (((value >> 1) & 1) == 1)
                 return false;
         }
 
@@ -1286,9 +1262,9 @@ template<typename T>  struct ToGraphDataVariant  {  typedef GraphData<T::value> 
 
 typedef Node_t<> Node; // default Node type: tools::math::Integer (which is a boost::variant)
 typedef Edge_t<Node> Edge;
-typedef Path_t<Node> Path; 
-typedef BranchingNode_t<Node> BranchingNode; 
-typedef BranchingEdge_t<Node,Edge> BranchingEdge; 
+typedef Path_t<Node> Path;
+typedef BranchingNode_t<Node> BranchingNode;
+typedef BranchingEdge_t<Node,Edge> BranchingEdge;
 typedef boost::make_variant_over<boost::mpl::transform<gatb::core::tools::math::IntegerList, ToGraphDataVariant<boost::mpl::_> >::type >::type GraphDataVariant;
 typedef GraphTemplate<Node, Edge, GraphDataVariant> Graph; // define classical GATB Graph
 
@@ -1300,7 +1276,7 @@ using NodeFast = Node_t<typename gatb::core::kmer::impl::Kmer<span>::Type >;
 template <size_t span>
 using EdgeFast = Edge_t<NodeFast<span> >;
 template <size_t span>
-using GraphDataVariantFast = boost::variant<GraphData<span> >; 
+using GraphDataVariantFast = boost::variant<GraphData<span> >;
 
 
 template <typename Type, class Listener>
@@ -1310,7 +1286,7 @@ class ProgressGraphIterator : public ProgressGraphIteratorTemplate<Type, Listene
         ProgressGraphIteratorTemplate<Type, Listener> (items,msg,divide)
     {}
 };
-    
+
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 struct configure_visitor : public boost::static_visitor<>    {
@@ -1326,8 +1302,8 @@ struct configure_visitor : public boost::static_visitor<>    {
 template<typename Node, typename Edge, typename GraphDataVariant>
 struct build_visitor_solid : public boost::static_visitor<>    {
 
-    GraphTemplate<Node, Edge, GraphDataVariant>& graph; 
-    bank::IBank* bank; 
+    GraphTemplate<Node, Edge, GraphDataVariant>& graph;
+    bank::IBank* bank;
     tools::misc::IProperties* props;
 
     build_visitor_solid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, bank::IBank* aBank, tools::misc::IProperties* aProps)  : graph(aGraph), bank(aBank), props(aProps) {}
@@ -1339,7 +1315,7 @@ struct build_visitor_solid : public boost::static_visitor<>    {
 template<typename Node, typename Edge, typename GraphDataVariant>
 struct build_visitor_postsolid : public boost::static_visitor<>    {
 
-    GraphTemplate<Node, Edge, GraphDataVariant>& graph; tools::misc::IProperties* props; 
+    GraphTemplate<Node, Edge, GraphDataVariant>& graph; tools::misc::IProperties* props;
 
     build_visitor_postsolid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, tools::misc::IProperties* aProps)  : graph(aGraph), props(aProps) {}
 

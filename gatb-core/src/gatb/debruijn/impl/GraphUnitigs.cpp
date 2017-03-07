@@ -1111,8 +1111,6 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
     }
  
     GraphVector<EdgeGU> res;
-
-    res.resize(0);
     
     unsigned int kmerSize = BaseGraph::_kmerSize;
     unsigned int seqSize = internal_get_unitig_length(source.unitig);
@@ -1135,8 +1133,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
         {
             Unitig_pos pos = UNITIG_INSIDE;
             if (seqSize == kmerSize + 1) pos = UNITIG_END;
-            res.resize(res.size()+1);
-            res[res.size()-1].set ( source.unitig, source.pos, source.strand, source.unitig, pos, source.strand, DIR_OUTCOMING);
+            res.emplace_back (source, NodeGU(source.unitig, pos, source.strand), DIR_OUTCOMING);
             if (debug) std::cout << "found success of [kmer]---" << std::endl;
         }
 
@@ -1145,8 +1142,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
         {
             Unitig_pos pos = UNITIG_INSIDE;
             if (seqSize == kmerSize + 1) pos = UNITIG_END;
-            res.resize(res.size()+1);
-            res[res.size()-1].set ( source.unitig, source.pos, source.strand, source.unitig, pos, source.strand, DIR_INCOMING); // not sure about the dest.strand in those cases, so i'm setting to source.strand, we'll see. (applies to all 3 other cases) It doesn't matter in Minia anyway, we don't use nodes inside unitigs
+            res.emplace_back (source, NodeGU(source.unitig, pos, source.strand), DIR_INCOMING); // not sure about the dest.strand in those cases, so i'm setting to source.strand, we'll see. (applies to all 3 other cases) It doesn't matter in Minia anyway, we don't use nodes inside unitigs
             if (debug) std::cout << "found success of [kmer rc]---" << std::endl;
         }
 
@@ -1155,8 +1151,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
         {
             Unitig_pos pos = UNITIG_INSIDE;
             if (seqSize == kmerSize + 1) pos = UNITIG_BEGIN;
-            res.resize(res.size()+1);
-            res[res.size()-1].set ( source.unitig, source.pos, source.strand, source.unitig, pos, source.strand, DIR_INCOMING);
+            res.emplace_back (source, NodeGU(source.unitig, pos, source.strand), DIR_INCOMING);
             if (debug) std::cout << "found predec of --------[kmer]" << std::endl;
         }
 
@@ -1165,8 +1160,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
         {
             Unitig_pos pos = UNITIG_INSIDE;
             if (seqSize == kmerSize + 1) pos = UNITIG_BEGIN;
-            res.resize(res.size()+1);
-            res[res.size()-1].set ( source.unitig, source.pos, source.strand, source.unitig, pos, source.strand, DIR_OUTCOMING);
+            res.emplace_back (source, NodeGU(source.unitig, pos, source.strand), DIR_OUTCOMING);
             if (debug) std::cout << "found predec of --------[kmer rc]" << std::endl;
         }
     }
@@ -1213,8 +1207,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
                 std::cout << "[out-of-unitig getEdges], found neighbor " << this->/*not putting this this crashes gcc 4.7 */toString(node) << " dir " << dir << std::endl;
             }
     
-            res.resize(res.size()+1);
-            res[res.size()-1].set ( source.unitig, source.pos, source.strand, unitig, pos, strand, dir);
+            res.emplace_back (source, NodeGU(unitig, pos, strand), dir);
         }
     }; 
 
@@ -1256,10 +1249,9 @@ GraphVector<NodeGU> GraphUnitigsTemplate<span>::getNodes (const NodeGU &source, 
 {
     GraphVector<NodeGU> nodes;
     GraphVector<EdgeGU> edges = getEdges (source, direction);
-    nodes.resize(edges.size());
     for (unsigned int i = 0; i < edges.size(); i++)
     {
-        nodes[i] = edges[i].to;
+        nodes.emplace_back(edges[i].to);
     }
     return nodes;
 }
@@ -1948,7 +1940,7 @@ void GraphUnitigsTemplate<span>::degree (const NodeGU& node, size_t &in, size_t 
 template<size_t span>
 int GraphUnitigsTemplate<span>::simplePathAvance (const NodeGU& node, Direction dir) const
 {
-    EdgeGU output;  return simplePathAvance (node, dir, output);
+    return simplePathAvance (node, dir, *((EdgeGU*) nullptr));
 }
 
 template<size_t span>

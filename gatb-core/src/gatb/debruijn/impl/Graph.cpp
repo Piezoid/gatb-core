@@ -1018,7 +1018,7 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::remove ()
 template<typename Node, typename Edge, typename GraphDataVariant>
 bool GraphTemplate<Node, Edge, GraphDataVariant>::isBranching (Node& node) const
 {
-    size_t in, out;
+    uint8_t in, out;
     degree(node, in, out); 
     return (! (in==1 && out==1));
 }
@@ -1046,22 +1046,6 @@ bool GraphTemplate<Node, Edge, GraphDataVariant>::isSimple (Edge& edge) const
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-Node GraphTemplate<Node, Edge, GraphDataVariant>::reverse (const Node& node) const
-{
-    Node result = node;
-    result.strand = kmer::StrandReverse(node.strand);
-    return result;
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
 BranchingNode_t<Node> GraphTemplate<Node, Edge, GraphDataVariant>::reverse (const BranchingNode_t<Node>& node) const
 {
     BranchingNode_t<Node> result = node;
@@ -1078,10 +1062,24 @@ BranchingNode_t<Node> GraphTemplate<Node, Edge, GraphDataVariant>::reverse (cons
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
+Node GraphTemplate<Node, Edge, GraphDataVariant>::reverse (const Node& node) const
+{
+    Node result = node;
+    result.strand = kmer::StrandReverse(node.strand);
+    return result;
+}
+
+/*********************************************************************
+** METHOD  :
+** PURPOSE :
+** INPUT   :
+** OUTPUT  :
+** RETURN  :
+** REMARKS :
+*********************************************************************/
+template<typename Node, typename Edge, typename GraphDataVariant>
 Edge GraphTemplate<Node, Edge, GraphDataVariant>::reverse (const Edge& edge) const
 {
-    Edge result;
-
     Nucleotide NT = edge.nt;
 
     if (edge.direction == DIR_INCOMING)
@@ -1095,53 +1093,9 @@ Edge GraphTemplate<Node, Edge, GraphDataVariant>::reverse (const Edge& edge) con
         else                                     {  NT = (Nucleotide) edge.from.kmer[0];                                }
     }
 
-    result.set (
-        edge.to.kmer,   edge.to.strand,
-        edge.from.kmer, edge.from.strand,
-        NT,
-        edge.direction==DIR_OUTCOMING ? DIR_INCOMING : DIR_OUTCOMING
-    );
-
-    return result;
+    return Edge(edge.to, edge.from, NT,
+                edge.direction==DIR_OUTCOMING ? DIR_INCOMING : DIR_OUTCOMING);
 }
-
-
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-size_t GraphTemplate<Node, Edge, GraphDataVariant>::indegree  (Node& node) const  {  return degree(node, DIR_INCOMING);   }
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-size_t GraphTemplate<Node, Edge, GraphDataVariant>::outdegree (Node& node) const  {  return degree(node, DIR_OUTCOMING);  }
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-size_t GraphTemplate<Node, Edge, GraphDataVariant>::degree (Node& node, Direction dir) const  {  return countNeighbors(node, dir);  } // used to be getNodes(node,dir).size() but made it faster
-
-template<typename Node, typename Edge, typename GraphDataVariant>
-void GraphTemplate<Node, Edge, GraphDataVariant>::degree (Node& node, size_t &in, size_t &out) const  {  countNeighbors(node, in, out);  } 
 
 /*********************************************************************
 ** METHOD  :
@@ -1152,27 +1106,20 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::degree (Node& node, size_t &in
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename Item, typename Functor, typename GraphDataVariant>
-struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
+struct getItems_visitor : public boost::static_visitor<void>    {
 
-    Node& source;  Direction direction;  Functor fct; 
+    Node& source;  Direction direction;  Functor fct;
     bool hasAdjacency;
 
     getItems_visitor (Node& aSource, Direction aDirection, bool hasAdjacency, Functor aFct) : source(aSource), direction(aDirection), fct(aFct), hasAdjacency(hasAdjacency) {}
 
-    template<size_t span>  GraphVector<Item> operator() (const GraphData<span>& data) const
+    template<size_t span> void operator() (const GraphData<span>& data) const
     {
 
         /** Shortcut. */
         typedef typename Kmer<span>::Type Type;
-
-        GraphVector<Item> items;
-        GraphVector<Item> itemsAdj;
-
-        size_t idx = 0;
-        size_t idxAdj = 0;
-
         /** We get the specific typed value from the generic typed value. */
-        Type sourceVal = source.template getKmer<Type>();
+        const Type& sourceVal = source.template getKmer<Type>();
 
         /** Shortcuts. */
         size_t      kmerSize = data._model->getKmerSize();
@@ -1187,7 +1134,7 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
         if (hasAdjacency)
         {
             unsigned long hashIndex = getNodeIndex<span>(data, source);
-			if(hashIndex == ULLONG_MAX) return itemsAdj;
+			if(hashIndex == ULLONG_MAX) return;
 
             unsigned char &value = (*(data._adjacency)).at(hashIndex);
 
@@ -1232,7 +1179,7 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
                         }
 
                         if (debug) std::cout << "adj, found OUT " << (dest_strand==STRAND_REVCOMP ? "REV" : "FWD") << " nt=" << nt << std::endl;
-                        fct (itemsAdj, idxAdj++, source.kmer, source.strand, dest_value, dest_strand, dest_nt, DIR_OUTCOMING);
+                        fct (source.kmer, source.strand, dest_value, dest_strand, dest_nt, DIR_OUTCOMING);
                     }
                 }
             }
@@ -1275,16 +1222,11 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
                         }
 
                         if (debug) std::cout << "adj, found INC " << (dest_strand==STRAND_REVCOMP ? "REV" : "FWD") << " nt=" << nt << std::endl;
-                        fct (itemsAdj, idxAdj++, source.kmer, source.strand, dest_value, dest_strand, dest_nt, DIR_INCOMING);
+                        fct (source.kmer, source.strand, dest_value, dest_strand, dest_nt, DIR_INCOMING);
                     }
                 }
             }
-
-            /** We update the size of the container according to the number of found items. */
-            itemsAdj.resize (idxAdj);
-
-            /** We return the result. */
-            return itemsAdj;
+            return;
         }
 
         /* else, run classical neighbor queries using the data.contains() operation (bloom filters behind the scenes) */
@@ -1303,7 +1245,7 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
                     {
                         dest_value = forward;
                         if (debug) std::cout << "kmer  "<< sourceVal << " found OUT FWD nt=" << nt << std::endl;
-                        fct (items, idx++, source.kmer, source.strand, dest_value, STRAND_FORWARD, (Nucleotide)nt, DIR_OUTCOMING);
+                        fct (source.kmer, source.strand, dest_value, STRAND_FORWARD, (Nucleotide)nt, DIR_OUTCOMING);
                     }
                 }
                 else
@@ -1312,7 +1254,7 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
                     {
                         dest_value = reverse;
                         if (debug) std::cout << "found OUT REV nt=" << nt << std::endl;
-                        fct (items, idx++, source.kmer, source.strand, dest_value, STRAND_REVCOMP, (Nucleotide)nt, DIR_OUTCOMING);
+                        fct (source.kmer, source.strand, dest_value, STRAND_REVCOMP, (Nucleotide)nt, DIR_OUTCOMING);
                     }
                 }
             }
@@ -1337,7 +1279,7 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
                         dest_value = forward;
                         if (debug) std::cout << "found INC FWD nt=" << nt << std::endl;
                         // It used to be that "nt" was source[0] (in forward strand) and reverse(source[k-1]) in reverse, but i think it was wrong, so i changed it. TODO: delete this line if neighbors(..,DIR_INCOMING) causes no trouble for anyone, as it is now.
-                        fct (items, idx++, source.kmer, source.strand, dest_value, STRAND_FORWARD, (Nucleotide)nt, DIR_INCOMING);
+                        fct (source.kmer, source.strand, dest_value, STRAND_FORWARD, (Nucleotide)nt, DIR_INCOMING);
                     }
                 }
                 else
@@ -1346,67 +1288,52 @@ struct getItems_visitor : public boost::static_visitor<GraphVector<Item> >    {
                     {
                         dest_value = reverse;
                         if (debug) std::cout << "found INC REV nt=" << nt << std::endl;
-                        fct (items, idx++, source.kmer, source.strand, dest_value, STRAND_REVCOMP, (Nucleotide)nt, DIR_INCOMING);
+                        fct (source.kmer, source.strand, dest_value, STRAND_REVCOMP, (Nucleotide)nt, DIR_INCOMING);
                     }
                 }
             }
         }
-
-        /** We update the size of the container according to the number of found items. */
-        items.resize (idx);
-
-        /** We return the result. */
-        return items;
     }
 };
 
-/********************************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-struct Functor_getEdges {   void operator() (
-    GraphVector<Edge>& items,
-    size_t               idx,
-    const typename Node::Value&   kmer_from,
-    kmer::Strand         strand_from,
-    const typename Node::Value&   kmer_to,
-    kmer::Strand         strand_to,
-    kmer::Nucleotide     nt,
-    Direction            dir
-) const
-{
-    items[idx++].set (kmer_from, strand_from, kmer_to, strand_to, nt, dir);
-}};
+
 
 /* TODO: so in principle, when Node is a NodeFast, we should be able to call the getItems_visitor 
  * operator directly, without apply_visitor (which seems to be expensive in the minia profiling using valgrind) 
  * but this seems tricky to code, so I gave up quickly */
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<Edge> GraphTemplate<Node, Edge, GraphDataVariant>::getEdges (Node source, Direction direction)  const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsEdge (Node& source, Direction direction, GraphVector<Edge>& edges) const
 {
+    auto appendEdge = [&] (const typename Node::Value&   kmer_from,
+                           kmer::Strand         strand_from,
+                           const typename Node::Value&   kmer_to,
+                           kmer::Strand         strand_to,
+                           kmer::Nucleotide     nt,
+                           Direction            dir) {
+        edges.emplace_back(Node(kmer_from, strand_from), Node(kmer_to, strand_to), nt, dir);
+    };
     bool hasAdjacency = getState() & GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE;
-    return boost::apply_visitor (getItems_visitor<Node, Edge, Edge, Functor_getEdges<Node, Edge, GraphDataVariant>, GraphDataVariant>(source, direction, hasAdjacency, Functor_getEdges<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant);
+    auto visitor = getItems_visitor<Node, Edge, Edge, decltype(appendEdge), GraphDataVariant> (source, direction, hasAdjacency, appendEdge);
+    boost::apply_visitor (visitor, *(GraphDataVariant*)_variant);
 }
 
 /********************************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-struct Functor_getNodes {  void operator() (
-    GraphVector<Node>&   items,
-    size_t               idx,
-    const typename Node::Value&   kmer_from,
-    kmer::Strand         strand_from,
-    const typename Node::Value&   kmer_to,
-    kmer::Strand         strand_to,
-    kmer::Nucleotide     nt,
-    Direction            dir
-) const
-{
-    items[idx++].set (kmer_to, strand_to);
-}};
+
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodes (Node &source, Direction direction)  const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighbors (Node& source, Direction direction, GraphVector<Node>& nodes)  const
 {
+    auto appendNode = [&] (const typename Node::Value&   kmer_from,
+                           kmer::Strand         strand_from,
+                           const typename Node::Value&   kmer_to,
+                           kmer::Strand         strand_to,
+                           kmer::Nucleotide     nt,
+                           Direction            dir) {
+            nodes.emplace_back(kmer_to, strand_to);
+    };
     bool hasAdjacency = getState() & GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE;
-    return boost::apply_visitor (getItems_visitor<Node, Edge, Node, Functor_getNodes<Node, Edge, GraphDataVariant>, GraphDataVariant >(source, direction, hasAdjacency, Functor_getNodes<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant);
+    auto visitor = getItems_visitor<Node, Edge, Node, decltype(appendNode), GraphDataVariant>(source, direction, hasAdjacency, appendNode);
+    boost::apply_visitor (visitor, *(GraphDataVariant*)_variant);
 }
 
 /*********************************************************************
@@ -1418,14 +1345,14 @@ GraphVector<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodes (Node &s
 ** REMARKS : simple version of getITems above, just for counting number of neighbors. sorry for code duplication, I didn't want to use more functors (yet)
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-struct countNeighbors_visitor : public boost::static_visitor<void>    {
+struct degree_visitor : public boost::static_visitor<void>    {
 
     Node& source;  Direction direction;
     bool hasAdjacency;
-    size_t &indegree;
-    size_t &outdegree;
+    uint8_t &indegree;
+    uint8_t &outdegree;
 
-    countNeighbors_visitor (Node& aSource, Direction aDirection, bool hasAdjacency, size_t& indegree, size_t& outdegree) : source(aSource), direction(aDirection), hasAdjacency(hasAdjacency),
+    degree_visitor (Node& aSource, Direction aDirection, bool hasAdjacency, uint8_t& indegree, uint8_t& outdegree) : source(aSource), direction(aDirection), hasAdjacency(hasAdjacency),
     indegree(indegree), outdegree(outdegree) {}
 
     template<size_t span>  void operator() (const GraphData<span>& data) const
@@ -1465,7 +1392,7 @@ struct countNeighbors_visitor : public boost::static_visitor<void>    {
         typedef typename Kmer<span>::Type Type;
 
         /** We get the specific typed value from the generic typed value. */
-        Type sourceVal = source.template getKmer<Type>();
+        const Type& sourceVal = source.template getKmer<Type>();
 
         /** Shortcuts. */
         size_t      kmerSize = data._model->getKmerSize();
@@ -1532,22 +1459,19 @@ struct countNeighbors_visitor : public boost::static_visitor<void>    {
 };
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-unsigned char GraphTemplate<Node, Edge, GraphDataVariant>::countNeighbors (Node &source, Direction direction)  const
+uint8_t GraphTemplate<Node, Edge, GraphDataVariant>::degree (Node& source, Direction direction)  const
 {
     bool hasAdjacency = getState() & GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE;
-    size_t in, out;
-    boost::apply_visitor (countNeighbors_visitor<Node, Edge, GraphDataVariant >(source, direction, hasAdjacency, in, out),  *(GraphDataVariant*)_variant);
-    size_t res = 0;
-    if (direction & DIR_INCOMING) res += in;
-    if (direction & DIR_OUTCOMING) res += out;
-    return res;
+    uint8_t degree;
+    boost::apply_visitor (degree_visitor<Node, Edge, GraphDataVariant >(source, direction, hasAdjacency, degree, degree),  *(GraphDataVariant*)_variant);
+    return degree;
 }
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-void GraphTemplate<Node, Edge, GraphDataVariant>::countNeighbors (Node &source, size_t &in, size_t &out)  const
+void GraphTemplate<Node, Edge, GraphDataVariant>::degree (Node& source, uint8_t &in, uint8_t &out)  const
 {
     bool hasAdjacency = getState() & GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE;
-    boost::apply_visitor (countNeighbors_visitor<Node, Edge, GraphDataVariant >(source, DIR_END, hasAdjacency, in, out),  *(GraphDataVariant*)_variant);
+    boost::apply_visitor (degree_visitor<Node, Edge, GraphDataVariant >(source, DIR_END, hasAdjacency, in, out),  *(GraphDataVariant*)_variant);
 }
 
 
@@ -1560,19 +1484,16 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::countNeighbors (Node &source, 
 ** REMARKS : Why is'nt this code using getItems? ah, I guess, because there's a common functor called for both nodes neighbors at the same time. strange.
 *********************************************************************/
 template<typename Node, typename Edge, typename Item, typename Functor, typename GraphDataVariant>
-struct getItemsCouple_visitor : public boost::static_visitor<GraphVector<pair<Item,Item> > >    {
+struct getItemsCouple_visitor : public boost::static_visitor<void> {
 
     const Node& node1; const Node& node2;  Direction direction; Functor functor;
 
     getItemsCouple_visitor (const Node& node1, const Node& node2, Direction aDirection, Functor aFct)
         : node1(node1), node2(node2),  direction(aDirection), functor(aFct) {}
 
-    template<size_t span>  GraphVector<pair<Item,Item> > operator() (const GraphData<span>& data) const
+    template<size_t span> void operator() (const GraphData<span>& data) const
     {
         typedef typename Kmer<span>::Type  Type;
-
-        size_t idx = 0;
-        GraphVector < pair<Item,Item> > items;
 
         /** Shortcuts. */
         size_t      kmerSize = data._model->getKmerSize();
@@ -1603,10 +1524,9 @@ struct getItemsCouple_visitor : public boost::static_visitor<GraphVector<pair<It
                 {
                     if (data.contains (forward1) && data.contains (forward2))
                     {
-                        pair<Item,Item>& p = items[idx++];
                         typename Node::Value dest_value1, dest_value2;
                         dest_value1 = forward1; dest_value2 = forward2;
-                        functor (p,
+                        functor (
                             node1.kmer, node1.strand, dest_value1, STRAND_FORWARD, (Nucleotide)nt, DIR_OUTCOMING,
                             node2.kmer, node2.strand, dest_value2, STRAND_FORWARD, (Nucleotide)nt, DIR_OUTCOMING
                         );
@@ -1616,10 +1536,9 @@ struct getItemsCouple_visitor : public boost::static_visitor<GraphVector<pair<It
                 {
                     if (data.contains (forward1) && data.contains (reverse2))
                     {
-                        pair<Item,Item>& p = items[idx++];
                         typename Node::Value dest_value1, dest_value2;
                         dest_value1 = forward1; dest_value2 = reverse2;
-                        functor (p,
+                        functor (
                             node1.kmer, node1.strand, dest_value1, STRAND_FORWARD, (Nucleotide)nt, DIR_OUTCOMING,
                             node2.kmer, node2.strand, dest_value2, STRAND_REVCOMP, (Nucleotide)nt, DIR_OUTCOMING
                         );
@@ -1629,10 +1548,9 @@ struct getItemsCouple_visitor : public boost::static_visitor<GraphVector<pair<It
                 {
                     if (data.contains (reverse1) && data.contains (forward2))
                     {
-                        pair<Item,Item>& p = items[idx++];
                         typename Node::Value dest_value1, dest_value2;
                         dest_value1 = reverse1; dest_value2 = forward2;
-                        functor (p,
+                        functor (
                             node1.kmer, node1.strand, dest_value1, STRAND_REVCOMP, (Nucleotide)nt, DIR_OUTCOMING,
                             node2.kmer, node2.strand, dest_value2, STRAND_FORWARD, (Nucleotide)nt, DIR_OUTCOMING
                         );
@@ -1642,10 +1560,9 @@ struct getItemsCouple_visitor : public boost::static_visitor<GraphVector<pair<It
                 {
                     if (data.contains (reverse1) && data.contains (reverse2))
                     {
-                        pair<Item,Item>& p = items[idx++];
                         typename Node::Value dest_value1, dest_value2;
                         dest_value1 = reverse1; dest_value2 = reverse2;
-                        functor (p,
+                        functor (
                             node1.kmer, node1.strand, dest_value1, STRAND_REVCOMP, (Nucleotide)nt, DIR_OUTCOMING,
                             node2.kmer, node2.strand, dest_value2, STRAND_REVCOMP, (Nucleotide)nt, DIR_OUTCOMING
                         );
@@ -1658,69 +1575,55 @@ struct getItemsCouple_visitor : public boost::static_visitor<GraphVector<pair<It
         {
             throw system::ExceptionNotImplemented();
         }
-
-        /** We update the size of the container according to the number of found items. */
-        items.resize (idx);
-
-        /** We return the result. */
-        return items;
     }
 };
 
 /********************************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-struct Functor_getNodesCouple {  void operator() (
-    pair<Node,Node>&   items,
-    const typename Node::Value&   kmer_from1,
-    kmer::Strand         strand_from1,
-    const typename Node::Value&   kmer_to1,
-    kmer::Strand         strand_to1,
-    kmer::Nucleotide     nt1,
-    Direction            dir1,
-    const typename Node::Value&   kmer_from2,
-    kmer::Strand         strand_from2,
-    const typename Node::Value&   kmer_to2,
-    kmer::Strand         strand_to2,
-    kmer::Nucleotide     nt2,
-    Direction            dir2
-) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighbors (const Node& node1, const Node& node2, Direction direction, GraphVector<std::pair<Node,Node> >& nodes) const
 {
-    items.first.set  (kmer_to1, strand_to1);
-    items.second.set (kmer_to2, strand_to2);
-}};
-
-template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<std::pair<Node,Node> > GraphTemplate<Node, Edge, GraphDataVariant>::getNodesCouple (const Node& node1, const Node& node2, Direction direction) const
-{
-    return boost::apply_visitor (getItemsCouple_visitor<Node, Edge, Node, Functor_getNodesCouple<Node, Edge, GraphDataVariant>, GraphDataVariant>(node1, node2, direction, Functor_getNodesCouple<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant);
+    auto appendNode = [&] (const typename Node::Value&   kmer_from1,
+                           kmer::Strand         strand_from1,
+                           const typename Node::Value&   kmer_to1,
+                           kmer::Strand         strand_to1,
+                           kmer::Nucleotide     nt1,
+                           Direction            dir1,
+                           const typename Node::Value&   kmer_from2,
+                           kmer::Strand         strand_from2,
+                           const typename Node::Value&   kmer_to2,
+                           kmer::Strand         strand_to2,
+                           kmer::Nucleotide     nt2,
+                           Direction            dir2) {
+        nodes.emplace_back(Node(kmer_to1, strand_to1), Node(kmer_to2, strand_to2));
+    };
+    auto visitor = getItemsCouple_visitor<Node, Edge, Node, decltype(appendNode), GraphDataVariant>(node1, node2, direction, appendNode);
+    boost::apply_visitor (visitor,  *(GraphDataVariant*)_variant);
 }
 
 /********************************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-struct Functor_getEdgesCouple {  void operator() (
-        pair<Edge,Edge>&     items,
-        const typename Node::Value&   kmer_from1,
-        kmer::Strand         strand_from1,
-        const typename Node::Value&   kmer_to1,
-        kmer::Strand         strand_to1,
-        kmer::Nucleotide     nt1,
-        Direction            dir1,
-        const typename Node::Value&   kmer_from2,
-        kmer::Strand         strand_from2,
-        const typename Node::Value&   kmer_to2,
-        kmer::Strand         strand_to2,
-        kmer::Nucleotide     nt2,
-        Direction            dir2
-) const
-{
-    items.first.set  (kmer_from1, strand_from1, kmer_to1, strand_to1, nt1, dir1);
-    items.second.set (kmer_from2, strand_from2, kmer_to2, strand_to2, nt2, dir2);
-}};
+
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<std::pair<Edge,Edge> > GraphTemplate<Node, Edge, GraphDataVariant>::getEdgesCouple (const Node& node1, const Node& node2, Direction direction) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsEdge (const Node& node1, const Node& node2, Direction direction, GraphVector<std::pair<Edge,Edge> >& edges) const
 {
-    return boost::apply_visitor (getItemsCouple_visitor<Node, Edge, Edge, Functor_getEdgesCouple<Node, Edge, GraphDataVariant>, GraphDataVariant >(node1, node2, direction, Functor_getEdgesCouple<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant);
+    auto appendEdge = [&] (const typename Node::Value&   kmer_from1,
+                           kmer::Strand         strand_from1,
+                           const typename Node::Value&   kmer_to1,
+                           kmer::Strand         strand_to1,
+                           kmer::Nucleotide     nt1,
+                           Direction            dir1,
+                           const typename Node::Value&   kmer_from2,
+                           kmer::Strand         strand_from2,
+                           const typename Node::Value&   kmer_to2,
+                           kmer::Strand         strand_to2,
+                           kmer::Nucleotide     nt2,
+                           Direction            dir2) {
+        edges.emplace_back(
+            Edge(Node(kmer_from1, strand_from1), Node(kmer_to1, strand_to1), nt1, dir1),
+            Edge(Node(kmer_from2, strand_from2), Node(kmer_to2, strand_to2), nt2, dir2));
+    };
+    auto visitor = getItemsCouple_visitor<Node, Edge, Node, decltype(appendEdge), GraphDataVariant>(node1, node2, direction, appendEdge);
+    boost::apply_visitor (visitor,  *(GraphDataVariant*)_variant);
 }
 
 /*********************************************************************
@@ -1790,15 +1693,10 @@ Node GraphTemplate<Node, Edge, GraphDataVariant>::buildNode (const char* sequenc
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>::getBranchingNodeNeighbors (Node& source, Direction direction) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsBranching (Node& source, Direction direction, GraphVector<BranchingNode_t<Node> >& nodes) const
 {
-    GraphVector<BranchingNode_t<Node> >  result;
-
     /** We get the neighbors of the source node. */
     GraphVector<Edge> neighbors = this->neighborsEdge (source, direction);
-
-    /** We resize the result vector. */
-    result.resize (neighbors.size());
 
     /** We loop over all the neighbors. */
     for (size_t i=0; i<neighbors.size(); i++)
@@ -1813,10 +1711,9 @@ GraphVector<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>:
         Node& last = path.item().to;
 
         /** We set the ith branching neighbor node. */
-        result[i].set (last.kmer, last.strand);
+        nodes.emplace_back (last.kmer, last.strand);
     }
 
-    return result;
 }
 
 /*********************************************************************
@@ -1828,15 +1725,10 @@ GraphVector<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>:
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<BranchingEdge_t<Node,Edge> > GraphTemplate<Node, Edge, GraphDataVariant>::getBranchingEdgeNeighbors (Node& source, Direction direction) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsBranchingEdge (Node& source, Direction direction, GraphVector<BranchingEdge_t<Node,Edge> >& edges) const
 {
-    GraphVector<BranchingEdge_t<Node,Edge> >  result;
-
     /** We get the neighbors of the source node. */
     GraphVector<Edge> neighbors = this->neighborsEdge (source, direction);
-
-    /** We resize the result vector. */
-    result.resize (neighbors.size());
 
     /** We loop over all the neighbors. */
     for (size_t i=0; i<neighbors.size(); i++)
@@ -1856,10 +1748,9 @@ GraphVector<BranchingEdge_t<Node,Edge> > GraphTemplate<Node, Edge, GraphDataVari
         Node& last = path.item().to;
 
         /** We set the ith branching neighbor node. By convention, we memorize the nucleotide of the initial transition. */
-        result[i].set (source.kmer, source.strand, last.kmer, last.strand, neighbors[i].nt, direction, path.rank()+1);
+        edges.emplace_back (Node(source.kmer, source.strand), Node(last.kmer, last.strand),
+                             neighbors[i].nt, direction, path.rank()+1);
     }
-
-    return result;
 }
 
 /*********************************************************************
@@ -1884,7 +1775,6 @@ struct getItem_visitor : public boost::static_visitor<Item>    {
         typedef typename Kmer<span>::Type Type;
 
         Item item;
-        Item itemAdj;
 
         /** We get the specific typed value from the generic typed value. */
         const Type& sourceVal = source.template getKmer<Type>();
@@ -1902,7 +1792,7 @@ struct getItem_visitor : public boost::static_visitor<Item>    {
         if (hasAdjacency)
         {
             unsigned long hashIndex = getNodeIndex<span>(data, source);
-			if(hashIndex == ULLONG_MAX) {exists = false; return itemAdj;} // node was not found in the mphf 
+			if(hashIndex == ULLONG_MAX) {exists = false; return item;} // node was not found in the mphf
 
             unsigned char &value = (*(data._adjacency)).at(hashIndex);
 
@@ -2073,25 +1963,19 @@ struct getItem_visitor : public boost::static_visitor<Item>    {
 };
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-struct Functor_getNode {  void operator() (
-    Node&                item,
-    const typename Node::Value&   kmer_from,
-    kmer::Strand         strand_from,
-    const typename Node::Value&   kmer_to,
-    kmer::Strand         strand_to,
-    kmer::Nucleotide     nt,
-    Direction            dir
-) const
-{
-    item.set (kmer_to, strand_to);
-}};
-
-
-template<typename Node, typename Edge, typename GraphDataVariant>
 Node GraphTemplate<Node, Edge, GraphDataVariant>::getNode (Node& source, Direction dir, kmer::Nucleotide nt, bool& exists) const
 {
     bool hasAdjacency = getState() & GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE;
-    return boost::apply_visitor (getItem_visitor<Node, Edge, Node, Functor_getNode<Node, Edge, GraphDataVariant> >(source, dir, nt, hasAdjacency, exists, Functor_getNode<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant);
+    auto getNode = [&] (Node&                item,
+                        const typename Node::Value&   kmer_from,
+                        kmer::Strand         strand_from,
+                        const typename Node::Value&   kmer_to,
+                        kmer::Strand         strand_to,
+                        kmer::Nucleotide     nt,
+                        Direction            dir) {
+        item = Node(kmer_to, strand_to);
+    };
+    return boost::apply_visitor (getItem_visitor<Node, Edge, Node, decltype(getNode) >(source, dir, nt, hasAdjacency, exists, getNode),  *(GraphDataVariant*)_variant);
 }
 
 /*********************************************************************
@@ -2103,42 +1987,24 @@ Node GraphTemplate<Node, Edge, GraphDataVariant>::getNode (Node& source, Directi
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<Edge> GraphTemplate<Node, Edge, GraphDataVariant>::getEdgeValues (const typename Node::Value& kmer) const
-{
-    Node source (kmer);
-
-    GraphVector<Edge> v1 = getEdges(source,          DIR_OUTCOMING);
-    GraphVector<Edge> v2 = getEdges(reverse(source), DIR_OUTCOMING);
-#if 0
-    v1.insert (v1.end(), v2.begin(), v2.end());
-#else
-    size_t n1=v1.size(), n2=v2.size();
-    v1.resize (n1+n2);
-    for (size_t i=0; i<n2; i++)  { v1[i+n1] = v2[i];  }
-#endif
-
-    return v1;
-}
-
-/********************************************************************************/
-template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodeValues (const typename Node::Value& kmer) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsEdge (const typename Node::Value& kmer, GraphVector<Edge>& edges) const
 {
     Node source (kmer);
     Node rev_source (reverse(source));
 
-    GraphVector<Node> v1 = getNodes(source,          DIR_OUTCOMING);
-    GraphVector<Node> v2 = getNodes(rev_source, DIR_OUTCOMING);
+    neighborsEdge(source,          DIR_OUTCOMING, edges);
+    neighborsEdge(rev_source,      DIR_OUTCOMING, edges);
+}
 
-#if 0
-    v1.insert (v1.end(), v2.begin(), v2.end());
-#else
-    size_t n1=v1.size(), n2=v2.size();
-    v1.resize (n1+n2);
-    for (size_t i=0; i<n2; i++)  { v1[i+n1] = v2[i];  }
-#endif
+/********************************************************************************/
+template<typename Node, typename Edge, typename GraphDataVariant>
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighbors (const typename Node::Value& kmer, GraphVector<Node>& nodes) const
+{
+    Node source (kmer);
+    Node rev_source (reverse(source));
 
-    return v1;
+    neighbors(source,     DIR_OUTCOMING, nodes);
+    neighbors(rev_source, DIR_OUTCOMING, nodes);
 }
 
 /*********************************************************************
@@ -2150,44 +2016,24 @@ GraphVector<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodeValues (co
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<BranchingEdge_t<Node,Edge> > GraphTemplate<Node, Edge, GraphDataVariant>::getBranchingEdgeValues (const typename Node::Value& kmer) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsBranchingEdge (const typename Node::Value& kmer, GraphVector<BranchingEdge_t<Node,Edge> >& edges) const
 {
     Node source (kmer);
     Node rev_source (reverse(source));
 
-    GraphVector<BranchingEdge_t<Node,Edge> > v1 = getBranchingEdgeNeighbors (source,          DIR_OUTCOMING);
-    GraphVector<BranchingEdge_t<Node,Edge> > v2 = getBranchingEdgeNeighbors (rev_source, DIR_OUTCOMING);
-#if 0
-    v1.insert (v1.end(), v2.begin(), v2.end());
-#else
-    size_t n1=v1.size(), n2=v2.size();
-    v1.resize (n1+n2);
-    for (size_t i=0; i<n2; i++)  { v1[i+n1] = v2[i];  }
-#endif
-
-    return v1;
+    neighborsBranchingEdge (source,     DIR_OUTCOMING, edges);
+    neighborsBranchingEdge (rev_source, DIR_OUTCOMING, edges);
 }
 
 /********************************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphVector<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>::getBranchingNodeValues (const typename Node::Value& kmer) const
+void GraphTemplate<Node, Edge, GraphDataVariant>::neighborsBranching (const typename Node::Value& kmer, GraphVector<BranchingNode_t<Node> >& nodes) const
 {
     Node source (kmer);
     Node rev_source (reverse(source));
 
-    GraphVector<BranchingNode_t<Node> > v1 = getBranchingNodeNeighbors (source,          DIR_OUTCOMING);
-    GraphVector<BranchingNode_t<Node> > v2 = getBranchingNodeNeighbors (rev_source, DIR_OUTCOMING);
-
-
-#if 0
-    v1.insert (v1.end(), v2.begin(), v2.end());
-#else
-    size_t n1=v1.size(), n2=v2.size();
-    v1.resize (n1+n2);
-    for (size_t i=0; i<n2; i++)  { v1[i+n1] = v2[i];  }
-#endif
-
-    return v1;
+    neighborsBranching (source,     DIR_OUTCOMING, nodes);
+    neighborsBranching (rev_source, DIR_OUTCOMING, nodes);
 }
 
 /*********************************************************************
@@ -2226,21 +2072,6 @@ bool GraphTemplate<Node, Edge, GraphDataVariant>::contains (const typename Kmer<
 {
     return boost::apply_visitor (contains_visitor<Node, Edge, GraphDataVariant>(item),  *(GraphDataVariant*)_variant);
 }
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<typename Node, typename Edge, typename NodeType, typename GraphDataVariant>  struct BranchingFilter
-{
-    const GraphTemplate<Node, Edge, GraphDataVariant>& graph;
-    BranchingFilter(const GraphTemplate<Node, Edge, GraphDataVariant>& graph) : graph(graph) {}
-    bool operator () (NodeType& item) { return graph.isBranching(item); }
-};
 
 template<typename Node, typename Edge, typename NodeType, typename GraphDataVariant>
 struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<NodeType>*>
@@ -2355,9 +2186,11 @@ struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<No
             {
                 /** We don't have pre-computed branching nodes container. We have to compute them on the fly
                  * from the solid kmers. We can do that by filtering out all non branching nodes. */
-                return new FilterIterator<NodeType,BranchingFilter<Node, Edge, NodeType, GraphDataVariant> > (
+                auto& graph_ref = this->graph;
+                auto branchingFilter = [&graph_ref] (Node& node) { return graph_ref.isBranching(node); };
+                return new FilterIterator<NodeType, decltype(branchingFilter) > (
                     new NodeIterator (data._solid->iterator (), data._solid->getNbItems()),
-                    BranchingFilter<Node, Edge, NodeType, GraphDataVariant> (graph)
+                    branchingFilter
                 );
             }
             else
@@ -2378,7 +2211,7 @@ struct nodes_visitor : public boost::static_visitor<tools::dp::ISmartIterator<No
 ** REMARKS :
 *********************************************************************/
 template<typename Node, typename Edge, typename GraphDataVariant>
-GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getNodes () const
+GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::neighbors () const
 {
     return GraphIterator<Node> (boost::apply_visitor (nodes_visitor<Node,Edge, Node, GraphDataVariant>(*this),  *(GraphDataVariant*)_variant));
 }
@@ -2646,7 +2479,7 @@ int GraphTemplate<Node, Edge, GraphDataVariant>::simplePathAvance (Node& node, D
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 double GraphTemplate<Node, Edge, GraphDataVariant>::
-simplePathMeanAbundance     (Node& node, Direction dir) const
+simplePathMeanAbundance     (const Node& node, Direction dir) const
 {
     GraphIterator <Node> itNodes = simplePath (node, dir);
 
@@ -2680,11 +2513,11 @@ simplePathMeanAbundance     (Node& node, Direction dir) const
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 Node  GraphTemplate<Node, Edge, GraphDataVariant>::
-simplePathLastNode  (Node& node, Direction dir) const
+simplePathLastNode  (const Node& node, Direction dir) const
 {
     GraphIterator <Node> itNodes = simplePath (node, dir);
     itNodes.first();
-    Node cur = *itNodes;
+    Node& cur = *itNodes;
     for (; !itNodes.isDone(); itNodes.next())
         cur = *itNodes; // is there an easier way?
     return cur;
@@ -2692,7 +2525,7 @@ simplePathLastNode  (Node& node, Direction dir) const
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 unsigned int GraphTemplate<Node, Edge, GraphDataVariant>::
-simplePathLength (Node& node, Direction dir) const
+simplePathLength (const Node& node, Direction dir) const
 {
     GraphIterator <Node> itNodes = simplePath (node, dir);
     unsigned int length = 0;
@@ -2703,14 +2536,14 @@ simplePathLength (Node& node, Direction dir) const
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 void GraphTemplate<Node, Edge, GraphDataVariant>::
-unitigDelete (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant>> &nodesDeleter) 
+unitigDelete (const Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant>> &nodesDeleter)
 {
     std::cout << "Graph::unitigDelete not implemented" << std::endl; exit(1);
 }
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 void GraphTemplate<Node, Edge, GraphDataVariant>::
-unitigDelete (Node& node) 
+unitigDelete (const Node& node)
 {
     std::cout << "Graph::simplePathDelete not implemented" << std::endl; exit(1);
 }
@@ -2718,7 +2551,7 @@ unitigDelete (Node& node)
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 void GraphTemplate<Node, Edge, GraphDataVariant>::
-simplePathDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant>>& nodesDeleter) 
+simplePathDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant>>& nodesDeleter)
 {
     GraphIterator <Node> itNodes = simplePath (node, dir);
     for (itNodes.first(); !itNodes.isDone(); itNodes.next())
@@ -2728,14 +2561,14 @@ simplePathDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, Gr
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 void GraphTemplate<Node, Edge, GraphDataVariant>::
-unitigMark            (Node& node)  // used to flag simple path as traversed, in minia
+unitigMark            (const Node& node)  // used to flag simple path as traversed, in minia
 {
     std::cout << "Graph::simplePathMark not implemented. Only in GraphUnitigs it is." << std::endl; exit(1);
 }
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 bool GraphTemplate<Node, Edge, GraphDataVariant>::
-unitigIsMarked        (Node& node)
+unitigIsMarked        (const Node& node)
 {
     std::cout << "Graph::simplePathIsMarked not implemented" << std::endl; exit(1);
 }
@@ -2746,7 +2579,7 @@ unitigIsMarked        (Node& node)
 
 template<typename Node, typename Edge, typename GraphDataVariant>
 std::string GraphTemplate<Node, Edge, GraphDataVariant>::
-unitigSequence (Node& node, bool& isolatedLeft, bool& isolatedRight) const
+unitigSequence (const Node& node, bool& isolatedLeft, bool& isolatedRight) const
 {
     std::cout << "Graph::simplePathSequence not implemented (only in GraphUnitigs yet)" << std::endl;// would be easy to implement, just see Minia's legacy code for example
     return "";
@@ -2848,7 +2681,7 @@ class EdgeSimplePathIterator : public AbstractSimplePathIterator<Node,Edge, Edge
 public:
     EdgeSimplePathIterator (const GraphTemplate<Node, Edge, GraphDataVariant>& graph, const Node& node, Direction dir, const Functor& udpate)
         : AbstractSimplePathIterator<Node,Edge, Edge, Functor, GraphDataVariant> (graph, node, dir, udpate)
-    { this->_item->set (node.kmer, node.strand, node.kmer, node.strand, NUCL_UNKNOWN, dir); }
+    { *(this->_item) = Edge(node, node, NUCL_UNKNOWN, dir); }
 };
 
 /*********************************************************************
@@ -2873,7 +2706,7 @@ struct Functor_getSimpleNodeIterator {  void operator() (
     if (graph.simplePathAvance (item, dir, output) > 0)
     {
         /** We update the currently iterated node. */
-        item = output.to;
+        item = std::move(output.to);
     }
     else
     {
@@ -2883,7 +2716,7 @@ struct Functor_getSimpleNodeIterator {  void operator() (
 }};
 
 template<typename Node, typename Edge, typename GraphDataVariant> 
-GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getSimpleNodeIterator (Node& node, Direction dir) const
+GraphIterator<Node> GraphTemplate<Node, Edge, GraphDataVariant>::getSimpleNodeIterator (const Node& node, Direction dir) const
 {
     return GraphIterator<Node> (new NodeSimplePathIterator <Node, Edge, Functor_getSimpleNodeIterator<Node, Edge, GraphDataVariant>, GraphDataVariant> (*this, node, dir, Functor_getSimpleNodeIterator<Node, Edge, GraphDataVariant>()));
 }
@@ -2910,7 +2743,7 @@ struct Functor_getSimpleEdgeIterator {  void operator() (
     int res = graph.simplePathAvance (item.to, dir, output);
 
     /** NOTE: we update the item in case we have outdegree==1 (case>0 and case==-2) */
-    if (res > 0  ||  res == -2)  {  item = output;  }
+    if (res > 0  ||  res == -2)  {  item = std::move(output);  }
 
     /** We can't have a non branching node in the wanted direction => iteration is finished. */
     if (res <= 0)  {  isDone = true;  }
@@ -2918,7 +2751,7 @@ struct Functor_getSimpleEdgeIterator {  void operator() (
 }};
 
 template<typename Node, typename Edge, typename GraphDataVariant> 
-GraphIterator<Edge> GraphTemplate<Node, Edge, GraphDataVariant>::getSimpleEdgeIterator (Node& node, Direction dir) const
+GraphIterator<Edge> GraphTemplate<Node, Edge, GraphDataVariant>::getSimpleEdgeIterator (const Node& node, Direction dir) const
 {
     return GraphIterator<Edge> (new EdgeSimplePathIterator<Node, Edge, Functor_getSimpleEdgeIterator<Node, Edge, GraphDataVariant>, GraphDataVariant>(*this, node, dir, Functor_getSimpleEdgeIterator<Node, Edge, GraphDataVariant>()));
 }
@@ -2974,10 +2807,12 @@ std::set<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>::ne
 
             void execute ()
             {
+                GraphVector<BranchingNode_t<Node> > neighbors;
                 for (typename std::set<BranchingNode_t<Node> >::iterator it=range.first; it!=range.second; ++it)
                 {
-                    GraphVector<BranchingNode_t<Node> > neighbors = graph.neighborsBranching(it->kmer);
-                    for (size_t i=0; i<neighbors.size(); i++)  { result.push_back (neighbors[i]); }
+                    neighbors.clear();
+                    graph.neighborsBranching(it->kmer,neighbors);
+                    for (size_t i=0; i<neighbors.size(); i++) { result.push_back (std::move(neighbors[i])); }
                 }
             }
 
@@ -3015,10 +2850,12 @@ std::set<BranchingNode_t<Node> > GraphTemplate<Node, Edge, GraphDataVariant>::ne
     }
     else
     {
+        GraphVector<BranchingNode_t<Node> > neighbors;
         for (typename std::set<BranchingNode_t<Node> >::iterator it=first; it!=last; ++it)
         {
-            GraphVector<BranchingNode_t<Node> > neighbors = this->neighborsBranching(it->kmer);
-            for (size_t i=0; i<neighbors.size(); i++)  { result.insert (neighbors[i]); }
+            neighbors.clear();
+            this->neighborsBranching(it->kmer, neighbors);
+            for (size_t i=0; i<neighbors.size(); i++)  { result.insert (std::move(neighbors[i])); }
         }
     }
 
@@ -3213,7 +3050,7 @@ unsigned long getNodeIndex (const GraphData<span>& data, Node_in& node)
     /* I'm hesitant to put a check (possible branch) in such a critical code. let's check at a higher level */
 
     /** We get the specific typed value from the generic typed value. */
-    Type value = node.template getKmer<Type>();
+    const Type& value = node.template getKmer<Type>();
 
     // this code was used to make sure that getNodeIndex was always called on a canonical kmer. it is.
 #if 0
@@ -3299,7 +3136,7 @@ struct queryNodeState_visitor : public boost::static_visitor<int>    {
 
 /** */
 template<typename Node, typename Edge, typename GraphDataVariant>
-int GraphTemplate<Node, Edge, GraphDataVariant>::queryNodeState (Node& node) const 
+int GraphTemplate<Node, Edge, GraphDataVariant>::queryNodeState (Node& node) const
 {
     return boost::apply_visitor (queryNodeState_visitor<Node, Edge, GraphDataVariant>(node),  *(GraphDataVariant*)_variant);
 }
@@ -3341,7 +3178,7 @@ struct setNodeState_visitor : public boost::static_visitor<int>    {
 
 /** */
 template<typename Node, typename Edge, typename GraphDataVariant>
-void GraphTemplate<Node, Edge, GraphDataVariant>::setNodeState (Node& node, int state) const 
+void GraphTemplate<Node, Edge, GraphDataVariant>::setNodeState (Node& node, int state) const
 {
     boost::apply_visitor (setNodeState_visitor<Node, Edge, GraphDataVariant>(node, state),  *(GraphDataVariant*)_variant);
 }
@@ -3412,7 +3249,7 @@ struct nodeMPHFIndex_visitor : public boost::static_visitor<unsigned long>    {
 };
 
 template<typename Node, typename Edge, typename GraphDataVariant> 
-unsigned long GraphTemplate<Node, Edge, GraphDataVariant>::nodeMPHFIndex(Node& node) const 
+unsigned long GraphTemplate<Node, Edge, GraphDataVariant>::nodeMPHFIndex(Node& node) const
 {
     if (!checkState(GraphTemplate<Node, Edge, GraphDataVariant>::STATE_MPHF_DONE))
        return 0;
@@ -3436,7 +3273,7 @@ struct nodeMPHFIndex_visitorDummy : public boost::static_visitor<unsigned long> 
 };
 
 template<typename Node, typename Edge, typename GraphDataVariant> 
-unsigned long GraphTemplate<Node, Edge, GraphDataVariant>::nodeMPHFIndexDummy(Node& node) const /* debug function, only for profiling*/
+unsigned long GraphTemplate<Node, Edge, GraphDataVariant>::nodeMPHFIndexDummy(const Node& node) const /* debug function, only for profiling*/
 {
     if (!checkState(GraphTemplate<Node, Edge, GraphDataVariant>::STATE_MPHF_DONE))
        return 0;
@@ -3513,8 +3350,7 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::precomputeAdjacency(unsigned i
     nt2bit[NUCL_T] = 4;
     nt2bit[NUCL_G] = 8;
 
-    dispatcher.iterate (itNode, [&] (Node& node)        {
-
+    dispatcher.iterate (itNode, [&] (Node& node) {
             unsigned char &value = boost::apply_visitor (getAdjacency_visitor<Node, Edge, GraphDataVariant>(node),  *(GraphDataVariant*)_variant);
             value = 0;
 
@@ -3576,7 +3412,7 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::deleteNode (Node& node) const
 
         for (size_t i = 0; i < neighbs.size(); i++)
         {
-            Node neighbor = neighbs[i].to;
+            Node& neighbor = neighbs[i].to;
 
             bool deleted = false;
 
@@ -3661,7 +3497,7 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::deleteNode (Node& node) const
         GraphVector<Edge> neighbs = this->neighborsEdge(node);
         for (size_t i = 0; i < neighbs.size(); i++)
         {
-            Node neighbor = neighbs[i].to;
+            Node& neighbor = neighbs[i].to;
             if (isBranching(neighbor))
                 cacheNonSimpleNode(neighbor);
         }
@@ -3669,13 +3505,19 @@ void GraphTemplate<Node, Edge, GraphDataVariant>::deleteNode (Node& node) const
 }
 
 template<typename Node, typename Edge, typename GraphDataVariant>
-bool GraphTemplate<Node, Edge, GraphDataVariant>::debugCompareNeighborhoods(Node& node, Direction dir, std::string prefix) const
+bool GraphTemplate<Node, Edge, GraphDataVariant>::debugCompareNeighborhoods(Node& node, Direction dir, std::string prefix)
 {
     bool hasAdjacency = getState() & GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE;
     if (!hasAdjacency) return false;
 
-    GraphVector<Edge> neighborsAdj = boost::apply_visitor (getItems_visitor<Node, Edge, Edge, Functor_getEdges<Node, Edge, GraphDataVariant>, GraphDataVariant>(node, dir, true , Functor_getEdges<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant);
-    GraphVector<Edge> neighborsBloom = boost::apply_visitor (getItems_visitor<Node, Edge, Edge, Functor_getEdges<Node, Edge, GraphDataVariant>, GraphDataVariant>(node, dir, false, Functor_getEdges<Node, Edge, GraphDataVariant>()),  *(GraphDataVariant*)_variant); // without adjacency (copied neighborsEdge code because hasAdjacency parameter isn't exposed)
+    GraphVector<Edge> neighborsAdj;
+    neighborsEdge(node, dir, neighborsAdj);
+
+    // without adjacency
+    unsetState(GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE);
+    GraphVector<Edge> neighborsBloom;
+    neighborsEdge(node, dir, neighborsBloom);
+    setState(GraphTemplate<Node, Edge, GraphDataVariant>::STATE_ADJACENCY_DONE);
 
     if (neighborsAdj.size() != neighborsBloom.size())
     {

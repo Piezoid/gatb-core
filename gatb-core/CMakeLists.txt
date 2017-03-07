@@ -130,7 +130,7 @@ endif()
 # from https://github.com/rurban/smhasher/blob/master/CMakeLists.txt
 # i do not see much performance gain for now, but let's keep that code here, might be useful later.
 # list of performance gain observed:
-# popcount in Graph::countNeighbors
+# popcount in Graph::degree
 IF(CMAKE_SYSTEM_NAME MATCHES "Linux")
     EXEC_PROGRAM(cat ARGS "/proc/cpuinfo" OUTPUT_VARIABLE CPUINFO)
     STRING(REGEX REPLACE "^.*(sse2).*$" "\\1" SSE_THERE ${CPUINFO})
