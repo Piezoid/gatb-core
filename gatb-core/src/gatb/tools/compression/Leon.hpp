@@ -106,7 +106,7 @@ class Leon : public misc::impl::Tool
 		size_t          _kmerSize;
 		string     _dskOutputFilename;
 		//static const int READ_PER_BLOCK = 50000;
-		int _nb_cores;
+		size_t _nb_cores;
 		
 		bool _compress, _decompress;
 		bool _iterator_mode;

@@ -112,7 +112,7 @@ void AbstractHeaderCoder::makeField(){
 	if(_fieldStartPos == _currentPos) return;
 	
 	//Adjust the maximum number fo field column
-	int currentFieldColumn = _currentFieldPos.size();
+	size_t currentFieldColumn = _currentFieldPos.size();
 	while(currentFieldColumn <= _fieldIndex+1){
 		addFieldColumn();
 		currentFieldColumn = _currentFieldPos.size();
@@ -170,7 +170,7 @@ void AbstractHeaderCoder::endHeader(){
 		cout << "\tField count: " << _prevFieldCount << endl;
 	#endif
 	
-	for(int i=0; i<_prevFieldCount+1; i++){
+	for(size_t i=0; i<_prevFieldCount+1; i++){
 		_prevFieldPos[i] = _currentFieldPos[i];
 		_prevFieldValues[i] = _currentFieldValues[i];
 		_prevFieldTypes[i] = _currentFieldTypes[i];
@@ -189,7 +189,7 @@ void AbstractHeaderCoder::startBlock(){
 
 	_currentHeader = _leon->_firstHeader;
 	
-	for(int i=0; (unsigned)i<_typeModel.size(); i++){
+	for(size_t i=0; i<_typeModel.size(); i++){
 		_typeModel[i].clear();
 		_fieldIndexModel[i].clear();
 		_fieldColumnModel[i].clear();
@@ -489,7 +489,7 @@ void HeaderEncoder::encodeNumeric(){
 }
 
 void HeaderEncoder::encodeAscii(){
-	int missSize = _currentFieldSize - _misCurrentStartPos;//_currentPos - _misCurrentStartPos;
+	size_t missSize = _currentFieldSize - _misCurrentStartPos;//_currentPos - _misCurrentStartPos;
 	//cout << _currentFieldSize <<  " " << _fieldPos << endl;
 	_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ASCII);
 	_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
@@ -499,7 +499,7 @@ void HeaderEncoder::encodeAscii(){
 		cout << "\t\t\t<Mismatch> " << "    Type: " << "ASCII" << "    Field: " << _fieldIndex << "    Column: " << _misCurrentStartPos << "    Size: " << missSize << endl;
 	#endif
 	//for(int j=_misCurrentStartPos; j<_currentPos; j++){
-	for(int i=_misCurrentStartPos; i < _misCurrentStartPos+missSize; i++){
+	for(size_t i=_misCurrentStartPos; i < _misCurrentStartPos+missSize; i++){
 		#ifdef PRINT_DEBUG_ENCODER
 			cout << "\t\t\tEncoding: " << _currentHeader[_currentFieldPos[_fieldIndex]+i] << endl;
 		#endif
@@ -676,12 +676,12 @@ void HeaderDecoder::decodeAscii(){
 	#endif
 	
 	if(_fieldIndex < _prevFieldCount){
-		for(int fieldPos=0; fieldPos<misColumn; fieldPos++){
+		for(size_t fieldPos=0; fieldPos<misColumn; fieldPos++){
 			_currentHeader += _prevHeader[_prevFieldPos[_fieldIndex]+fieldPos];
 		}
 	}
 	
-	for(int i=0; i<misSize; i++){
+	for(size_t i=0; i<misSize; i++){
 		u_int8_t c = _rangeDecoder.nextByte(_asciiModel[_misIndex]);
 		
 		#ifdef PRINT_DEBUG_DECODER
@@ -758,7 +758,7 @@ void HeaderDecoder::decodeZero(){
 		cout << "\t\tDecoding   Type: ZERO     Size: " << (int)zeroCount << endl;
 	#endif
 	
-	for(int i=0; i<zeroCount; i++){
+	for(size_t i=0; i<zeroCount; i++){
 		
 		#ifdef PRINT_DEBUG_DECODER
 			cout << "\t\t\tAdding: 0"<< endl;
@@ -773,7 +773,7 @@ void HeaderDecoder::endHeader(){
 
 	#ifdef PRINT_DEBUG_DECODER
 		cout << _currentHeader << endl;
-		//for(int i=0; i<_currentPos; i++){
+		//for(size_t i=0; i<_currentPos; i++){
 		//	cout << _currentHeader2[i];
 		//}
 		//cout << endl;

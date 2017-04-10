@@ -188,7 +188,7 @@ void Leon::execute()
     setReadPerBlock(getInput()->getInt("-reads"));
     
 	//setup global
-	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
+	for(size_t i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
 	}
 	
@@ -828,7 +828,7 @@ void Leon::startHeaderCompression(){
 	//encode the size of the first header on 2 byte and the header itself
 	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
 	
-	//for(int i=0; i < _firstHeader.size(); i++){
+	//for(size_t i=0; i < _firstHeader.size(); i++){
 	//	_rangeEncoder.encode(_generalModel, _firstHeader[i]);
 	//}
 	
@@ -872,7 +872,7 @@ void Leon::endHeaderCompression(){
 	//cout << "Description start pos: " << descriptionStartPos << endl;
 	
 	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
-	//for(int i=0; i<_blockSizes.size(); i++){
+	//for(size_t i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
 	//	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
 	//}
@@ -1118,7 +1118,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	
 	/*
 	////////////
-	for(int i=0; i<kmers.size(); i++){
+	for(size_t i=0; i<kmers.size(); i++){
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 		if(_bloom->contains(kmerMin)){
@@ -1134,15 +1134,15 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	/////////////////////*/
 
 
-	//int iMin = 40;
-	//int iMax = 60;
-	int iMin = kmers.size()/2;
-	int iMax = kmers.size()/2 + 10;
+	//size_t iMin = 40;
+	//size_t iMax = 60;
+	size_t iMin = kmers.size()/2;
+	size_t iMax = kmers.size()/2 + 10;
 	//cout << iMin << "  " << iMax << endl;
-	iMin = std::max(iMin, 0);
-	iMax = std::min(iMax, (int) kmers.size());
+	iMin = std::max(iMin, (size_t) 0);
+	iMax = std::min(iMax, kmers.size());
 
-	for(int i=iMin; i<iMax; i++){
+	for(size_t i=iMin; i<iMax; i++){
 
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
@@ -1157,7 +1157,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 	if(maxAbundance == -1){
 
-		for(int i=0; i<iMin; i++){
+		for(size_t i=0; i<iMin; i++){
 			kmer = kmers[i];
 			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
@@ -1188,7 +1188,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 
 	/*
-	for(int i=0; i<kmers.size(); i++){
+	for(size_t i=0; i<kmers.size(); i++){
 
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
@@ -1231,7 +1231,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	
 	/*
 	int val;
-	for(int i=0; i<kmers.size(); i++){
+	for(size_t i=0; i<kmers.size(); i++){
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 		_kmerAbundance->remove(kmerMin, &val);
@@ -1582,7 +1582,7 @@ void Leon::decoders_setup(){
 
 
 	
-	for(int i=0; i<_nb_cores; i++){
+	for(size_t i=0; i<_nb_cores; i++){
 		
 		if(! _isFasta)
 		{
@@ -1631,16 +1631,16 @@ void Leon::decoders_cleanup(){
 void Leon::decompressionDecodeBlocks(unsigned int & idx, int & livingThreadCount){
 
 
-	for(int j=0; j<_nb_cores; j++){
+	for(size_t j=0; j<_nb_cores; j++){
 		
 
 		if(idx >= _dnaBlockSizes.size()) break;
 		
-		int blockId = idx/2 ;
+		u_int64_t blockId = idx/2 ;
 
 		
 		u_int64_t blockSize;
-		int sequenceCount;
+		u_int64_t sequenceCount;
 		
 		livingThreadCount = j+1;
 		
@@ -1890,7 +1890,7 @@ void Leon::setupNextComponent( 		vector<u_int64_t>   & blockSizes    ){
 	
 	//cout << "\tBlock count: " << _blockCount/2 << endl;
 	/*
-	for(int i=0; i<_blockSizes.size(); i++){
+	for(size_t i=0; i<_blockSizes.size(); i++){
 		cout << _blockSizes[i] << " ";
 	}
 	cout << endl;*/
@@ -1908,14 +1908,14 @@ void Leon::decodeBloom(){
 	/*
 	u_int64_t total_header_block_size = 0 ;
 	
-	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
+	for(size_t ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		total_header_block_size  += _headerBlockSizes[ii];
 	}
 	
 	u_int64_t bloomPos =  total_header_block_size ;  
 
-	for(int i=0; i<_dnaBlockSizes.size(); i++){
+	for(size_t i=0; i<_dnaBlockSizes.size(); i++){
 		bloomPos += _dnaBlockSizes[i];
 		i += 1;
 	}
@@ -2067,7 +2067,7 @@ void Leon::endDecompression(){
 		newBankIt = newBank->iterator();
 		newBankIt->first();
 		
-		//int i=0;
+		//size_t i=0;
 		
 		while(true){
 			if(newBankIt->isDone()){

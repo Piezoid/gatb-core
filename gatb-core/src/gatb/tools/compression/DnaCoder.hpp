@@ -187,7 +187,7 @@ class DnaEncoder : AbstractDnaCoder
 		
 		void encodeNoAnchorRead();
 
-		int getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend);
+		int getBestPath(unsigned int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend);
 		
 		Sequence* _sequence;
 		char* _readseq;
@@ -211,8 +211,8 @@ class DnaEncoder : AbstractDnaCoder
 		u_int64_t _MCnoAternative;
 		u_int64_t _MCmultipleSolid;
 	
-		int _minSequenceSize;
-		int _maxSequenceSize;
+		size_t _minSequenceSize;
+		size_t _maxSequenceSize;
 		//u_int64_t _MCmultipleNoSolid;
 	
 		int _thread_id;

@@ -69,13 +69,13 @@ class AbstractHeaderCoder
 		
 		string _prevHeader;
 		string _currentHeader;
-		vector<unsigned int> _prevFieldPos;
-		vector<unsigned int> _currentFieldPos;
-		int _currentPos;
-		int _fieldStartPos;
-		int _prevFieldCount;
-		int _fieldIndex;
-		int _misIndex;
+		vector<size_t> _prevFieldPos;
+		vector<size_t> _currentFieldPos;
+		size_t _currentPos;
+		size_t _fieldStartPos;
+		size_t _prevFieldCount;
+		size_t _fieldIndex;
+		size_t _misIndex;
 	
 		vector<u_int64_t> _prevFieldValues;
 		vector<u_int64_t> _currentFieldValues;
@@ -86,13 +86,13 @@ class AbstractHeaderCoder
 		
 		
 		bool _isCurrentFieldNumeric;
-		int _currentFieldCount;
+		size_t _currentFieldCount;
 		
 		Leon* _leon;
 		
 		void startBlock();
 		
-		int _processedSequenceCount;
+		size_t _processedSequenceCount;
 };
 
 //====================================================================================
@@ -117,12 +117,12 @@ class HeaderEncoder : AbstractHeaderCoder
 		
 		u_int64_t _totalHeaderSize;
 	
-		int _fieldPos;
+		size_t _fieldPos;
 		//int _misPrevStartPos, _misCurrentStartPos;
 		int _misCurrentStartPos;
 		//int _encoderFieldIndex;
-		int _prevFieldSize, _currentFieldSize;
-		int _lastMatchFieldIndex;
+		size_t _prevFieldSize, _currentFieldSize;
+		size_t _lastMatchFieldIndex;
 		u_int64_t _seqId;
 		int _thread_id;
 
@@ -178,7 +178,7 @@ class HeaderDecoder : AbstractHeaderCoder
 		void decodeZero();
 		
 
-		int _sequenceCount;
+		size_t _sequenceCount;
 		
 };
 

@@ -58,7 +58,7 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 	_kmerSize = _leon->_kmerSize;
 	
 	
-	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
+	for(size_t i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel.push_back(Order0Model(256));
 		//_isPrevReadAnchorablePosModel.push_back(Order0Model(256));
 		_anchorPosModel.push_back(Order0Model(256));
@@ -78,7 +78,7 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 void AbstractDnaCoder::startBlock(){
 	//_prevSequences = NULL;
 
-	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
+	for(size_t i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel[i].clear();
 		//_isPrevReadAnchorablePosModel[i].clear();
 		_anchorPosModel[i].clear();
@@ -338,7 +338,7 @@ void DnaEncoder::writeBlock(){
 	
 #ifdef PRINT_DISTRIB
 	cout << "----------------------------------------------------" << endl;
-	for(int i=0; i<_distrib.size(); i++){
+	for(size_t i=0; i<_distrib.size(); i++){
 		cout << i << "    " << _distrib[i] << endl;
 	}
 	cout << "Adressed:    " << _outDistrib << endl;
@@ -542,7 +542,7 @@ void DnaEncoder::buildKmers(){
 		H.insert(kmerMin.getVal());
 	}
 
-	for(int i=0; i<_sequences.size(); i++){
+	for(size_t i=0; i<_sequences.size(); i++){
 		Sequence* sequence = _sequences[i];
 
 		_itKmer.setData(sequence->getData());
@@ -682,7 +682,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 
 	
 	kmer_type kmer = anchor;
-	for(int i=anchorPos-1; i>=0; i--){
+	for(size_t i=anchorPos-1; i-- > 0; ){
 		kmer = buildBifurcationList(i, kmer, false);
 		//i = buildBifurcationList(i, false);
 		//cout << kmer.toString(_kmerSize) << endl;
@@ -693,7 +693,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		//cout << "Pos: " << i << endl;
 		kmer = buildBifurcationList(i, kmer, true);
 		//i = buildBifurcationList(i, true);
-	//for(int i=anchorPos; i<_kmers.size()-1; i++)
+	//for(size_t i=anchorPos; i<_kmers.size()-1; i++)
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
 		
@@ -969,7 +969,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 }
 
 
-int DnaEncoder::getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend){
+int DnaEncoder::getBestPath(unsigned int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend){
 
 
 	char ntInRead = 0;
@@ -979,7 +979,7 @@ int DnaEncoder::getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool 
 		}
 	}
 	else{
-		if(pos-1 >= 0){
+		if(pos > 0){
 			ntInRead = _readseq[pos-1];
 		}
 	}
@@ -989,7 +989,7 @@ int DnaEncoder::getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool 
 	//int depth = 2;
 	int bestNt = -1;
 	bool isValid[4];
-	for(int i=0; i<4; i++){
+	for(size_t i=0; i<4; i++){
 		isValid[i] = true;
 	}
 
@@ -1175,7 +1175,7 @@ void DnaEncoder::encodeNoAnchorRead(){
 	_readWithoutAnchorCount +=1;
 	
 	/*
-	for(int i=0; i<_readSize; i++){
+	for(size_t i=0; i<_readSize; i++){
 		if(_readseq[i] == 'N'){
 			_leon->_noAnchor_with_N_kmer_count += 1;
 			break;
@@ -1183,7 +1183,7 @@ void DnaEncoder::encodeNoAnchorRead(){
 	}
 	
 	bool full_N = true;
-	for(int i=0; i<_readSize; i++){
+	for(size_t i=0; i<_readSize; i++){
 		if(_readseq[i] != 'N'){
 			full_N = false;
 			break;
@@ -1404,7 +1404,7 @@ void DnaDecoder::execute(){
 	while(_processedSequenceCount < _sequenceCount){
 		
 		//cout << "lala" << endl;
-	//int i=0;
+	//size_t i=0;
 	//while(i < Leon::READ_PER_BLOCK){
 	//while(_inputFile->tellg() <= _blockStartPos+_blockSize){
 		//if(_leon->_readCount > 1) return;
@@ -1534,7 +1534,7 @@ void DnaDecoder::decodeAnchorRead(){
 	/*
 	u_int64_t nbRightError = CompressionUtils::decodeNumeric(_rangeDecoder, _rightErrorModel);
 	_prevErrorPos = anchorPos-1;
-	for(int i=0; i<nbLeftError; i++){
+	for(size_t i=0; i<nbLeftError; i++){
 		int deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorPosModel);
 		int errorPos = _prevErrorPos-deltaValue;
 		//deltaType = _rangeDecoder.nextByte(_errorPosDeltaTypeModel);
@@ -1546,7 +1546,7 @@ void DnaDecoder::decodeAnchorRead(){
 		//_errorPos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
 	}
 	_prevErrorPos = anchorPos+_kmerSize;
-	for(int i=0; i<nbRightError; i++){
+	for(size_t i=0; i<nbRightError; i++){
 		int deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _rightErrorPosModel);
 		int errorPos = _prevErrorPos+deltaValue;
 		//deltaType = _rangeDecoder.nextByte(_errorPosDeltaTypeModel);
@@ -1561,7 +1561,7 @@ void DnaDecoder::decodeAnchorRead(){
 	
 	//Extend anchor to the left
 	kmer_type kmer = anchor;
-	for(int i=anchorPos-1; i>=0; i--){
+	for(size_t i=anchorPos-1; i-- > 0; ){
 		kmer = extendAnchor(kmer, i, false);
 	}
 	
