@@ -293,8 +293,8 @@ void DnaEncoder::operator()(Sequence& sequence){
 	_totalDnaSize += _readSize ;
 	
 	
-	_minSequenceSize = std::min(_minSequenceSize, (int) _readSize);
-	_maxSequenceSize = std::max(_maxSequenceSize, (int)_readSize);
+	_minSequenceSize = std::min(_minSequenceSize, _readSize);
+	_maxSequenceSize = std::max(_maxSequenceSize, _readSize);
 	
 	
 	//_lastSequenceIndex = sequence->getIndex();
@@ -1364,7 +1364,7 @@ DnaDecoder::~DnaDecoder(){
 
 }
 
-void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount,int blockID){
+void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, size_t sequenceCount,int blockID){
 	startBlock();
 	_rangeDecoder.clear();
 	

@@ -183,9 +183,9 @@ void Leon::execute()
 	
    // u_int64_t total_nb_solid_kmers_in_reads = 0;
    // int nb_threads_living;
-    _nb_cores = getInput()->getInt(STR_NB_CORES);
+    _nb_cores = getInput()->getUInt(STR_NB_CORES);
     
-    setReadPerBlock(getInput()->getInt("-reads"));
+    setReadPerBlock(getInput()->getUInt("-reads"));
     
 	//setup global
 	for(size_t i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){

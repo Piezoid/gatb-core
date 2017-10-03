@@ -89,7 +89,7 @@ class AbstractDnaCoder
 		vector<Order0Model> _noAnchorReadSizeValueModel;
 		
 		size_t _kmerSize;
-		unsigned int _readSize;
+		size_t _readSize;
 	
 		vector<int> _leftErrorPos;
 		vector<int> _rightErrorPos;
@@ -113,7 +113,7 @@ class AbstractDnaCoder
 		u_int64_t _prevErrorPos;
 		u_int64_t _prevNbLeftError;
 	
-		int _processedSequenceCount;
+		size_t _processedSequenceCount;
 };
 
 //====================================================================================
@@ -233,7 +233,7 @@ class DnaDecoder : AbstractDnaCoder
 		DnaDecoder(Leon* leon, const string& inputFilename,tools::storage::impl::Group *  group);
 		~DnaDecoder();
 		
-		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount, int blockID);
+		void setup(u_int64_t blockStartPos, u_int64_t blockSize, size_t sequenceCount, int blockID);
 		void execute();
 	
 		string _buffer;
@@ -259,7 +259,7 @@ class DnaDecoder : AbstractDnaCoder
 		void decodeNoAnchorRead();
 		void endRead();
 		
-		int _sequenceCount;
+		size_t _sequenceCount;
 	
 	tools::storage::impl::Group *  _group;
 	tools::storage::impl::Storage::istream *_inputStream;

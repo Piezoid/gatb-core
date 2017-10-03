@@ -27,11 +27,11 @@
 #define _GATB_CORE_TOOLS_MISC_IPROPERTY_HPP_
 
 #include <gatb/system/api/ISmartPointer.hpp>
-#include <stdlib.h>
 #include <stdarg.h>
 #include <list>
 #include <set>
 #include <iostream>
+#include <string>
 
 /********************************************************************************/
 namespace gatb      {
@@ -86,12 +86,17 @@ public:
     /** Returns the value of the property as an integer (it supposes that the string represents an integer).
      * \return the value
      */
-    long                getInt    ()  { return atol (value.c_str()); }
+    long                getInt    ()  { return std::stol (value); }
+
+    /** Returns the value of the property as an integer (it supposes that the string represents an integer).
+     * \return the value
+     */
+    unsigned long       getUInt    ()  { return std::stoul (value); }
 
     /** Returns the value of the property as a float (it supposes that the string represents an float).
      * \return the value
      */
-    double              getDouble    ()  { return atof (value.c_str()); }
+    double              getDouble    ()  { return std::stod (value); }
 
     /** Returns the value of the property as a C string.
      * \return the value
@@ -219,9 +224,15 @@ public:
 
     /** Get the value of a property given its key.
      * \param[in] key : the key of the property
-     * \return the value of the key as an integer
+     * \return the value of the key as a signed integer
      */
     virtual int64_t     getInt    (const std::string& key) const = 0;
+
+    /** Get the value of a property given its key.
+     * \param[in] key : the key of the property
+     * \return the value of the key as a unsigned integer
+     */
+    virtual uint64_t     getUInt    (const std::string& key) const = 0;
 
     /** Get the value of a property given its key.
      * \param[in] key : the key of the property

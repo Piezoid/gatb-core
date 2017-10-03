@@ -386,6 +386,15 @@ int64_t Properties::getInt (const std::string& key) const
     return prop->getInt();
 }
 
+uint64_t Properties::getUInt(const string &key) const
+{
+    IProperty* prop = get (key);
+
+    if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
+
+    return prop->getUInt();
+}
+
 /*********************************************************************
 ** METHOD  :
 ** PURPOSE :

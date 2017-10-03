@@ -205,17 +205,17 @@ class Leon : public misc::impl::Tool
 			return bin2ntTab[nt];
 		}
 		
-		void setReadPerBlock(int value){
+        void setReadPerBlock(size_t value){
 			_read_per_block = value;
 		}
 	
-		int getReadPerBlock(){
+        size_t getReadPerBlock(){
 			return _read_per_block;
 		}
 
 	private:
 
-    int _read_per_block;
+    size_t _read_per_block;
 
 	//hdf5 stuff
 	Storage* _storageH5file;

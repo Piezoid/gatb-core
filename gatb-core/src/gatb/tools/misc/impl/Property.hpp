@@ -121,6 +121,9 @@ public:
     /** \copydoc IProperties::getInt */
     int64_t     getInt    (const std::string& key) const ;
 
+    /** \copydoc IProperties::getUInt */
+    uint64_t     getUInt    (const std::string& key) const ;
+
     /** \copydoc IProperties::getDouble */
     double      getDouble (const std::string& key) const ;
 
