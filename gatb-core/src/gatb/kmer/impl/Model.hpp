@@ -1434,7 +1434,7 @@ struct Kmer
 
 			//reste du newbyte avec le superk
 
-			int skid =1;
+			unsigned skid =1;
 			
 			while(true)
 			{
@@ -1484,7 +1484,7 @@ struct Kmer
             Type compactedK;
             compactedK.setVal(zero);
 
-            for (size_t ii=1 ; ii < superKmerLen; ii++)
+            for (unsigned ii=1 ; ii < superKmerLen; ii++)
             {
                 compactedK = compactedK << 2  ;
                 compactedK = compactedK | ( ((*this)[ii].forward()) & masknt) ;

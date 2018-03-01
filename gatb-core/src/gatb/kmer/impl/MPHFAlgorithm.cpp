@@ -305,10 +305,10 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::check ()
 
     for (itKmers->first(); !itKmers->isDone(); itKmers->next())
     {
-        Count& count = itKmers->item();
+        // Count& count = itKmers->item();
 
         /** We get the current abundance. */
-        Abundance_t abundance = (*_abundanceMap)[count.value];
+        // Abundance_t abundance = (*_abundanceMap)[count.value];
 
         // sanity check (thank god i wrote this, was useful for spruce) //todo change this now that abundance is discretized
        /* if (abundance!=count.abundance && abundance<MAX_ABUNDANCE)

@@ -442,8 +442,8 @@ private:
     std::string     _filename;
     system::IFile*  _file;
     u_int8_t*       _buffer;
-    int             _cpt_buffer; // how many unread bytes are remaining in the buffer
-    int             _idx; // where we should read the next elem in the buffer
+    size_t             _cpt_buffer; // how many unread bytes are remaining in the buffer
+    size_t             _idx; // where we should read the next elem in the buffer
     size_t          _cacheItemsNb; //in bytes for this  compressed type file
     bool            _isDone;
     u_int8_t        _abundance ;
@@ -451,7 +451,7 @@ private:
 
     bool readChunkIfNeeded (size_t needNBytes)
     {
-        if (_cpt_buffer < (int)needNBytes)
+        if (_cpt_buffer < needNBytes)
         {
             // printf("Read new chunk  _cacheItemsNb %zu B nedd %zu have %i  \n",_cacheItemsNb,needNBytes,_cpt_buffer);
             // _idx = 0;

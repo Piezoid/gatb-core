@@ -263,8 +263,8 @@ public:
 
 	//read/write block of superkmers to filefile_id
 	//readBlock will re-allocate the block buffer if needed (current size passed by max_block_size)
-	int readBlock(unsigned char ** block, unsigned int* max_block_size, unsigned int* nb_bytes_read, int file_id);
-	void writeBlock(unsigned char * block, unsigned int block_size, int file_id, int nbkmers);
+	int readBlock(unsigned char ** block, size_t* max_block_size, size_t* nb_bytes_read, int file_id);
+	void writeBlock(unsigned char * block, size_t block_size, int file_id, int nbkmers);
 
 	int nbFiles();
 	int getNbItems(int fileId);

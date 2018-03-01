@@ -406,7 +406,7 @@ void graph3<span>::addtuple(tuple<string,uint,uint,uint>& tuple){
         //  if (kmer2 < kmer1) instead of the "else"
         //  but i didnt test it yet, was chasing another bug, so let's implement that later
 	}
-    else
+    else {
     {
         indexed_left.push_back(false);
     }
@@ -426,7 +426,7 @@ void graph3<span>::addtuple(tuple<string,uint,uint,uint>& tuple){
 
 		}
 	}
-    else
+    else {
     {
         indexed_right.push_back(false);
     }

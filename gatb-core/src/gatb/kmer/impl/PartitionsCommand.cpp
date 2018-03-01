@@ -22,8 +22,7 @@
 #include <gatb/tools/collections/impl/Hash16.hpp>
 #include <gatb/tools/misc/impl/Stringify.hpp>
 
-
-using namespace std;
+using string_vector = std::vector<std::string>;
 
 using namespace gatb::core::system;
 using namespace gatb::core::system::impl;
@@ -219,15 +218,13 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 	{
 		typedef typename Kmer<span>::Type  Type;
 		typedef tools::misc::Abundance<Type> abundance_t;
-		typedef std::pair< int , Type> ptcf; //  id pointer , kmer value
-		struct ptcfcomp { bool operator() (ptcf l,ptcf r) { return ((r.second) < (l.second)); } } ;
-		
+		typedef std::pair<Type, int> ptcf; //  id pointer , kmer value
 	public:
 		TempCountFileMerger(int reduceTarget, int chunksize) :_reduceTarget(reduceTarget), _chunksize(chunksize),_idx(0)
 		{
 		}
 		
-		std::vector<string>  mergeFiles(std::vector<string> filenames)
+		string_vector  mergeFiles(string_vector filenames)
 		{
 			ptcf best_elem;
 			int best_p;
@@ -239,8 +236,8 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 			while(filenames.size() > _reduceTarget)
 			{
 				
-				std::vector<string> currentFiles;
-				for(int ii=0; ii<_chunksize; ii++)
+				string_vector currentFiles;
+				for(size_t ii=0; ii<_chunksize; ii++)
 				{
 					currentFiles.push_back(filenames.back()); filenames.pop_back();
 				}
@@ -254,24 +251,18 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				
 				std::vector<Iterator<abundance_t>*> _tmpCountIterators;
 				
-				for(int ii=0; ii< currentFiles.size(); ii++)
+				for(std::string& file: currentFiles)
 				{
-					_tmpCountIterators.push_back( new IteratorFile<abundance_t> (currentFiles[ii])  );
+					_tmpCountIterators.push_back( new IteratorFile<abundance_t> (file)  );
 				}
-				std::priority_queue< ptcf, std::vector<ptcf>,ptcfcomp > pq;
-				
-				
-				//// init all iterators  ////
-				for(int ii=0; ii< _tmpCountIterators.size(); ii++)
-				{
-					_tmpCountIterators[ii]->first();
-				}
+				std::priority_queue< ptcf > pq;
 				
 				//////   init pq ////
-				for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+				for(auto itptr : _tmpCountIterators)
 				{
-					if( ! _tmpCountIterators[ii]->isDone())  {
-						pq.push(ptcf(ii,_tmpCountIterators[ii]->item().value) );
+                    itptr->first(); // Init iterator
+					if( ! itptr->isDone())  {
+                        pq.emplace(itptr->item().value, pq.size());
 					}
 				}
 				
@@ -280,15 +271,15 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				{
 					//get first pointer
 					best_elem = pq.top() ; pq.pop();
-					best_p = best_elem.first;
+					best_p = best_elem.second;
 					previous_ab = _tmpCountIterators[best_p]->item().abundance;
-					previous_kmer = best_elem.second;
+					previous_kmer = best_elem.first;
 					
 					//go forward in this list
 					_tmpCountIterators[best_p]->next();
 					if (! _tmpCountIterators[best_p]->isDone())
 					{
-						pq.push(ptcf( best_p,_tmpCountIterators[best_p]->item().value) );
+						pq.emplace(_tmpCountIterators[best_p]->item().value, best_p);
 					}
 					
 					while (pq.size() != 0)
@@ -296,15 +287,15 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 						
 						//get  first pointer
 						best_elem = pq.top() ; pq.pop();
-						best_p = best_elem.first;
+						best_p = best_elem.second;
 						current_ab = _tmpCountIterators[best_p]->item().abundance;
-						current_kmer = best_elem.second;
+						current_kmer = best_elem.first;
 						
 						//go forward in this list
 						_tmpCountIterators[best_p]->next();
 						if (! _tmpCountIterators[best_p]->isDone())
 						{
-							pq.push(ptcf( best_p,_tmpCountIterators[best_p]->item().value) );
+							pq.emplace(_tmpCountIterators[best_p]->item().value, best_p);
 						}
 						
 						
@@ -332,16 +323,15 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				
 				//cleanup
 				
-				for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+				for(auto itptr: _tmpCountIterators)
 				{
-					delete _tmpCountIterators[ii];
+					delete itptr;
 				}
 				
 				
 				//erase used files
-				for(int ii=0; ii< currentFiles.size(); ii++)
+				for(std::string& fname : currentFiles)
 				{
-					std::string fname = currentFiles[ii];
 					system::impl::System::file().remove(fname);
 				}
 				
@@ -353,9 +343,9 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 		
 		private :
 		
-		int _reduceTarget;
-		int _chunksize;
-		int _idx;
+		size_t _reduceTarget;
+		size_t _chunksize;
+		size_t _idx;
 		
 	};
 	
@@ -396,7 +386,7 @@ void PartitionsByHashCommand<span>:: execute ()
 	
 	
 	typedef tools::misc::Abundance<Type> abundance_t;
-	std::vector<string> _tmpCountFileNames;
+	string_vector _tmpCountFileNames;
 	
 
 		//with decompactage
@@ -411,12 +401,9 @@ void PartitionsByHashCommand<span>:: execute ()
 		
 		int _fileId = this->_parti_num;
 		unsigned char * _buffer = 0 ;
-		unsigned int _buffer_size = 0;
+		size_t _buffer_size = 0;
 		
-		
-
-		
-		unsigned int nb_bytes_read;
+		size_t nb_bytes_read;
 		while(this->_superKstorage->readBlock(&_buffer, &_buffer_size, &nb_bytes_read, _fileId))
 		{
 			unsigned char * ptr = _buffer;
@@ -560,9 +547,8 @@ void PartitionsByHashCommand<span>:: execute ()
 
 		//how to make sure there are not too many subpart files ?  and that we'll not reach the max open files limit ?
 		//we *could* merge  only some of them at a time ..  todo ?  --> done with TempCountFileMerger above
-		for(int ii=0; ii< _tmpCountFileNames.size(); ii++)
+		for(std::string& fname : _tmpCountFileNames)
 		{
-			std::string fname = _tmpCountFileNames[ii];
 			_tmpCountIterators.push_back( new IteratorFile<abundance_t> (fname)  );
 		}
 	
@@ -582,26 +568,19 @@ void PartitionsByHashCommand<span>:: execute ()
 		struct ptcfcomp { bool operator() (ptcf l,ptcf r) { return ((r.second) < (l.second)); } } ;
 		std::priority_queue< ptcf, std::vector<ptcf>,ptcfcomp > pq;
 
-		//// init all iterators  ////
-		itKmerAbundance->first();
-		for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+		for(auto itptr : _tmpCountIterators)
 		{
-			_tmpCountIterators[ii]->first();
-		}
-		
-		//////   init pq ////
-
-		if(!itKmerAbundance->isDone())
-		{
-			pq.push(ptcf(-1,itKmerAbundance->item().graine) ); // -1  will mean in the  itKmerAbundance
-		}
-		
-		for(int ii=0; ii< _tmpCountIterators.size(); ii++)
-		{
-			if( ! _tmpCountIterators[ii]->isDone())  {
-				abundance_t &ab = _tmpCountIterators[ii]->item();
-				pq.push(ptcf(ii,ab.value) );
+            itptr->first();
+			if( ! itptr->isDone())  {
+				abundance_t &ab = itptr->item();
+                pq.emplace(pq.size(), ab.value);
 			}
+		}
+
+        itKmerAbundance->first();
+        if(!itKmerAbundance->isDone())
+		{
+			pq.emplace(-1,itKmerAbundance->item().graine); // -1  will mean in the  itKmerAbundance
 		}
 		
 		ptcf best_elem;
@@ -635,7 +614,7 @@ void PartitionsByHashCommand<span>:: execute ()
 				itKmerAbundance->next();
 				if (! itKmerAbundance->isDone())
 				{
-					pq.push(ptcf(-1,itKmerAbundance->item().graine) );
+					pq.emplace(-1,itKmerAbundance->item().graine);
 				}
 			}
 			else
@@ -643,7 +622,7 @@ void PartitionsByHashCommand<span>:: execute ()
 				_tmpCountIterators[best_p]->next();
 				if (! _tmpCountIterators[best_p]->isDone())
 				{
-					pq.push(ptcf( best_p,_tmpCountIterators[best_p]->item().value) );
+					pq.emplace(best_p,_tmpCountIterators[best_p]->item().value);
 				}
 			}
 			
@@ -670,7 +649,7 @@ void PartitionsByHashCommand<span>:: execute ()
 					itKmerAbundance->next();
 					if (! itKmerAbundance->isDone())
 					{
-						pq.push(ptcf(-1,itKmerAbundance->item().graine) );
+						pq.emplace(-1,itKmerAbundance->item().graine);
 					}
 				}
 				else
@@ -678,7 +657,7 @@ void PartitionsByHashCommand<span>:: execute ()
 					_tmpCountIterators[best_p]->next();
 					if (! _tmpCountIterators[best_p]->isDone())
 					{
-						pq.push(ptcf( best_p,_tmpCountIterators[best_p]->item().value) );
+						pq.emplace(best_p,_tmpCountIterators[best_p]->item().value);
 					}
 				}
 
@@ -705,16 +684,15 @@ void PartitionsByHashCommand<span>:: execute ()
 		
 
 		//cleanup
-		for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+		for(auto itptr : _tmpCountIterators)
 		{
-			delete _tmpCountIterators[ii];
+			delete itptr;
 		}
 		
 		
 		//erase sub files
-		for(int ii=0; ii< _tmpCountFileNames.size(); ii++)
+		for(std::string& fname : _tmpCountFileNames)
 		{
-			std::string fname = _tmpCountFileNames[ii];
 			system::impl::System::file().remove(fname);
 		}
 		
@@ -943,7 +921,7 @@ public:
 	
 	void execute ()
 	{
-		unsigned int nb_bytes_read;
+		size_t nb_bytes_read;
 		while(_superKstorage->readBlock(&_buffer, &_buffer_size, &nb_bytes_read, _fileId))
 		{
 			//decode block and iterate through its superkmers
@@ -1130,7 +1108,7 @@ private:
 	tools::storage::impl::SuperKmerBinFiles* _superKstorage;
 	int _fileId;
 	unsigned char * _buffer;
-	unsigned int _buffer_size;
+	size_t _buffer_size;
 	int _kmerSize;
 	int    _kx;
 	
@@ -1171,7 +1149,7 @@ PartitionsByVectorCommand<span>:: PartitionsByVectorCommand (
     size_t              nbCores,
     size_t              kmerSize,
     MemAllocator&       pool,
-    vector<size_t>&     offsets,
+    std::vector<size_t>&     offsets,
 	tools::storage::impl::SuperKmerBinFiles* 		superKstorage
 )
     : PartitionsCommand<span> (/*partition,*/ processor, cacheSize,  progress, timeInfo, pInfo, passi, parti,nbCores,kmerSize,pool,superKstorage),
@@ -1352,7 +1330,7 @@ void PartitionsByVectorCommand<span>::executeRead ()
     {
         /** We iterate the superkmers. */
 
-			vector<ICommand*> cmds;
+			std::vector<ICommand*> cmds;
 			for (size_t tid=0; tid < this->_nbCores; tid++)
 			{
 				cmds.push_back(new ReadSuperKCommand<span> (
@@ -1399,8 +1377,8 @@ public:
     /** */
     void execute ()
     {
-        vector<size_t> idx;
-        vector<Tmp>    tmp;
+        std::vector<size_t> idx;
+        std::vector<Tmp>    tmp;
 
         for (int ii=_deb; ii <=_fin; ii++)
         {
@@ -1475,7 +1453,7 @@ void PartitionsByVectorCommand<span>::executeSort ()
 {
     TIME_INFO (this->_timeInfo, "2.sort");
 
-    vector<ICommand*> cmds;
+    std::vector<ICommand*> cmds;
 
     int nwork = 256 / this->_nbCores;
 
@@ -1602,7 +1580,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
     TIME_INFO (this->_timeInfo, "3.dump");
 
     int nbkxpointers = 453; //6 for k1 mer, 27 for k2mer, 112 for k3mer  453 for k4mer
-    vector< KxmerPointer<span>*> vec_pointer (nbkxpointers);
+    std::vector< KxmerPointer<span>*> vec_pointer (nbkxpointers);
     int best_p;
 
     std::priority_queue< kxp, std::vector<kxp>,kxpcomp > pq;
@@ -1633,7 +1611,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
     int maxr = 63;
 
     //prefix1
-    for(unsigned int ii=0; ii<4; ii++)
+    for(size_t ii=0; ii<4; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(1,0) ,1,1,lowr,maxr,this->_kmerSize, _radix_sizes + IX(1, 0), _bankIdMatrix);
         lowr += 64;
@@ -1649,7 +1627,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix1
     lowr = 0; maxr = 63;
-    for(unsigned int ii=0; ii<4; ii++)
+    for(size_t ii=0; ii<4; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(2,0),1,2,lowr,maxr,this->_kmerSize, _radix_sizes + IX(2, 0), _bankIdMatrix);
         lowr += 64;
@@ -1658,7 +1636,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix2
     lowr = 0; maxr = 15;
-    for(unsigned int ii=0; ii<16; ii++)
+    for(size_t ii=0; ii<16; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(2,0),2,2,lowr,maxr,this->_kmerSize, _radix_sizes + IX(2, 0), _bankIdMatrix);
         lowr += 16;
@@ -1674,7 +1652,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix1
     lowr = 0; maxr = 63;
-    for(unsigned int ii=0; ii<4; ii++)
+    for(size_t ii=0; ii<4; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(3,0),1,3,lowr,maxr,this->_kmerSize, _radix_sizes + IX(3, 0), _bankIdMatrix);
         lowr += 64;
@@ -1683,7 +1661,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix2
     lowr = 0; maxr = 15;
-    for(unsigned int ii=0; ii<16; ii++)
+    for(size_t ii=0; ii<16; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(3,0),2,3,lowr,maxr,this->_kmerSize, _radix_sizes + IX(3, 0), _bankIdMatrix);
         lowr += 16;
@@ -1692,7 +1670,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix3
     lowr = 0; maxr = 3;
-    for(unsigned int ii=0; ii<64; ii++)
+    for(size_t ii=0; ii<64; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(3,0),3,3,lowr,maxr,this->_kmerSize, _radix_sizes + IX(3, 0), _bankIdMatrix);
         lowr += 4;
@@ -1708,7 +1686,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix1
     lowr = 0; maxr = 63;
-    for(unsigned int ii=0; ii<4; ii++)
+    for(size_t ii=0; ii<4; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),1,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
         lowr += 64;
@@ -1717,7 +1695,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix2
     lowr = 0; maxr = 15;
-    for(unsigned int ii=0; ii<16; ii++)
+    for(size_t ii=0; ii<16; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),2,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
         lowr += 16;
@@ -1726,7 +1704,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix3
     lowr = 0; maxr = 3;
-    for(unsigned int ii=0; ii<64; ii++)
+    for(size_t ii=0; ii<64; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),3,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
         lowr += 4;
@@ -1735,7 +1713,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
 
     //prefix4
     lowr = 0; maxr = 0;
-    for(unsigned int ii=0; ii<256; ii++)
+    for(size_t ii=0; ii<256; ii++)
     {
         vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),4,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
         lowr += 1;
@@ -1745,7 +1723,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
     //fill the  priority queue with the first elems
     for (int ii=0; ii<nbkxpointers; ii++)
     {
-        if(vec_pointer[ii]->next())  {  pq.push(kxp(ii,vec_pointer[ii]->value()));  }
+        if(vec_pointer[ii]->next())  {  pq.emplace(ii,vec_pointer[ii]->value());  }
     }
 
     if (pq.size() != 0) // everything empty, no kmer at all
@@ -1773,7 +1751,7 @@ void PartitionsByVectorCommand<span>::executeDump ()
             if (vec_pointer[best_p]->value() != previous_kmer )
             {
                 //if diff, changes to new array, get new min pointer
-                pq.push(kxp(best_p,vec_pointer[best_p]->value())); //push new val of this pointer in pq, will be counted later
+                pq.emplace(best_p,vec_pointer[best_p]->value()); //push new val of this pointer in pq, will be counted later
 
                 best_p = pq.top().first ; pq.pop();
 
@@ -1821,7 +1799,7 @@ PartitionsByVectorCommand_multibank<span>:: PartitionsByVectorCommand_multibank 
 																				 size_t              nbCores,
 																				 size_t              kmerSize,
 																				 MemAllocator&       pool,
-																				 vector<size_t>&     offsets
+																				 std::vector<size_t>&offsets
 																				 )
 : PartitionsCommand_multibank<span> (partition, processor, cacheSize,  progress, timeInfo, pInfo, passi, parti,nbCores,kmerSize,pool),
 _radix_kmers (0), _bankIdMatrix(0), _radix_sizes(0), _r_idx(0), _nbItemsPerBankPerPart(offsets)
@@ -2001,7 +1979,7 @@ void PartitionsByVectorCommand_multibank<span>::executeSort ()
 {
 	TIME_INFO (this->_timeInfo, "2.sort");
 	
-	vector<ICommand*> cmds;
+	std::vector<ICommand*> cmds;
 	
 	int nwork = 256 / this->_nbCores;
 	
@@ -2035,7 +2013,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	TIME_INFO (this->_timeInfo, "3.dump");
 	
 	int nbkxpointers = 453; //6 for k1 mer, 27 for k2mer, 112 for k3mer  453 for k4mer
-	vector< KxmerPointer<span>*> vec_pointer (nbkxpointers);
+	std::vector< KxmerPointer<span>*> vec_pointer (nbkxpointers);
 	int best_p;
 	
 	std::priority_queue< kxp, std::vector<kxp>,kxpcomp > pq;
@@ -2066,7 +2044,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	int maxr = 63;
 	
 	//prefix1
-	for(unsigned int ii=0; ii<4; ii++)
+	for(size_t ii=0; ii<4; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(1,0) ,1,1,lowr,maxr,this->_kmerSize, _radix_sizes + IX(1, 0), _bankIdMatrix);
 		lowr += 64;
@@ -2082,7 +2060,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix1
 	lowr = 0; maxr = 63;
-	for(unsigned int ii=0; ii<4; ii++)
+	for(size_t ii=0; ii<4; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(2,0),1,2,lowr,maxr,this->_kmerSize, _radix_sizes + IX(2, 0), _bankIdMatrix);
 		lowr += 64;
@@ -2091,7 +2069,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix2
 	lowr = 0; maxr = 15;
-	for(unsigned int ii=0; ii<16; ii++)
+	for(size_t ii=0; ii<16; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(2,0),2,2,lowr,maxr,this->_kmerSize, _radix_sizes + IX(2, 0), _bankIdMatrix);
 		lowr += 16;
@@ -2107,7 +2085,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix1
 	lowr = 0; maxr = 63;
-	for(unsigned int ii=0; ii<4; ii++)
+	for(size_t ii=0; ii<4; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(3,0),1,3,lowr,maxr,this->_kmerSize, _radix_sizes + IX(3, 0), _bankIdMatrix);
 		lowr += 64;
@@ -2116,7 +2094,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix2
 	lowr = 0; maxr = 15;
-	for(unsigned int ii=0; ii<16; ii++)
+	for(size_t ii=0; ii<16; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(3,0),2,3,lowr,maxr,this->_kmerSize, _radix_sizes + IX(3, 0), _bankIdMatrix);
 		lowr += 16;
@@ -2125,7 +2103,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix3
 	lowr = 0; maxr = 3;
-	for(unsigned int ii=0; ii<64; ii++)
+	for(size_t ii=0; ii<64; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(3,0),3,3,lowr,maxr,this->_kmerSize, _radix_sizes + IX(3, 0), _bankIdMatrix);
 		lowr += 4;
@@ -2141,7 +2119,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix1
 	lowr = 0; maxr = 63;
-	for(unsigned int ii=0; ii<4; ii++)
+	for(size_t ii=0; ii<4; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),1,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
 		lowr += 64;
@@ -2150,7 +2128,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix2
 	lowr = 0; maxr = 15;
-	for(unsigned int ii=0; ii<16; ii++)
+	for(size_t ii=0; ii<16; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),2,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
 		lowr += 16;
@@ -2159,7 +2137,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix3
 	lowr = 0; maxr = 3;
-	for(unsigned int ii=0; ii<64; ii++)
+	for(size_t ii=0; ii<64; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),3,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
 		lowr += 4;
@@ -2168,7 +2146,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	
 	//prefix4
 	lowr = 0; maxr = 0;
-	for(unsigned int ii=0; ii<256; ii++)
+	for(size_t ii=0; ii<256; ii++)
 	{
 		vec_pointer[pidx++] = new KxmerPointer<span> (_radix_kmers+ IX(4,0),4,4,lowr,maxr,this->_kmerSize, _radix_sizes + IX(4, 0), _bankIdMatrix);
 		lowr += 1;
@@ -2178,7 +2156,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 	//fill the  priority queue with the first elems
 	for (int ii=0; ii<nbkxpointers; ii++)
 	{
-		if(vec_pointer[ii]->next())  {  pq.push(kxp(ii,vec_pointer[ii]->value()));  }
+		if(vec_pointer[ii]->next())  {  pq.emplace(ii,vec_pointer[ii]->value());  }
 	}
 	
 	if (pq.size() != 0) // everything empty, no kmer at all
@@ -2206,7 +2184,7 @@ void PartitionsByVectorCommand_multibank<span>::executeDump ()
 			if (vec_pointer[best_p]->value() != previous_kmer )
 			{
 				//if diff, changes to new array, get new min pointer
-				pq.push(kxp(best_p,vec_pointer[best_p]->value())); //push new val of this pointer in pq, will be counted later
+				pq.emplace(best_p,vec_pointer[best_p]->value()); //push new val of this pointer in pq, will be counted later
 				
 				best_p = pq.top().first ; pq.pop();
 				
