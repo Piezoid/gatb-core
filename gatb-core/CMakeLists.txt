@@ -98,7 +98,7 @@ endif()
 ################################################################################
 # GENERAL DEFINITIONS
 ################################################################################
-set (LIBRARY_COMPILE_DEFINITIONS "-std=c++11")
+set (LIBRARY_COMPILE_DEFINITIONS "-std=c++17")
 set (LIB_COMPILE_WARNINGS "-Wall -Wno-unused-function -Wno-format -Wno-unknown-pragmas") # last one is exclusively for BooPHF
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
