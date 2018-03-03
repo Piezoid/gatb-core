@@ -108,6 +108,7 @@ struct Kmer
     class ModelDirect;
     class ModelCanonical;
     template<class Model, class Comparator> class ModelMinimizer;
+    class Count;
 
     /** Now, we need to define what is a kmer for each kind of model.
      *
@@ -391,7 +392,11 @@ struct Kmer
          * The simple way to get the value of the kmer is done with the 'value' method.
          *
          * Note that, according to the true type of T, this Kmer typedef may have more or less methods. */
-        typedef T Kmer;
+        using Kmer = T;
+        /** Underlying Integer or variant representation of Kmer */
+        using Type = Type;
+        /** Pair of Type and a count value */
+        using Count = Count;
 
         /** (default) Constructor. The provided (runtime) kmer size must be coherent with the span (static) value.
          * \param[in] sizeKmer : size of kmers handled by the instance.*/
