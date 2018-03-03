@@ -114,10 +114,10 @@ namespace dp    {
  *
  *   it has the same benefits as the listed benefits of the Iterator class, IMHO
  */
-template <class Item> class Iterator : public system::SmartPointer
+template <class _Item> class Iterator : public system::SmartPointer
 {
 public:
-
+    using Item = _Item;
     /** */
     Iterator () : _item(&_default), _isRunning(IDDLE) {}
 
@@ -137,7 +137,7 @@ public:
     /** Method that returns the current iterated item. Note that the returned type is the template type.
         \return the current item in the iteration.
     */
-    virtual Item& item () = 0;
+    virtual Item& item () { return *_item; }
 
     /** Operator overload as a shortcut for the 'item' method. */
     Item* operator-> ()  { return &item(); }
