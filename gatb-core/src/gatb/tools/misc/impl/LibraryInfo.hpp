@@ -52,11 +52,11 @@ public:
      */
     static IProperties& getInfo()
     {
-        static system::SmartObject singleton;
+        std::shared_ptr<IProperties> singleton;
 
-        if (singleton.hasRef() == false)
+        if (!singleton)
         {
-            IProperties* props = new Properties();
+            singleton = std::make_shared<Properties>();
 
             props->add (0, "gatb-core-library", "");
             props->add (1, "version",        "%s", system::impl::System::info().getVersion().c_str());
@@ -67,10 +67,8 @@ public:
             //props->add (1, "build_options",  "%s", system::impl::System::info().getBuildOptions().c_str());
             props->add (1, "build_kmer_size", "%s", KSIZE_STRING);
             //props->add (1, "custom_memalloc", "%d", CUSTOM_MEM_ALLOC);
-
-            singleton.setRef (props);
         }
-        return * (dynamic_cast<IProperties*>(singleton.getRef()));
+        return *singleton;
     }
 
     /** Display information about the GATB-CORE library

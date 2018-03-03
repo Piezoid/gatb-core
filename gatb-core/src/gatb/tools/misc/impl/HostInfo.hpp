@@ -51,11 +51,11 @@ public:
      */
     static IProperties& getInfo()
     {
-        static system::SmartObject singleton;
+        std::shared_ptr<IProperties> singleton;
 
-        if (singleton.hasRef() == false)
+        if (!singleton)
         {
-            IProperties* props = new Properties();
+            singleton = std::make_shared<Properties>();
 
             props->add (0, "host");
             props->add (1, "name",             "%s",   system::impl::System::info().getHostName().c_str());
@@ -67,7 +67,7 @@ public:
 
             singleton.setRef (props);
         }
-        return * (dynamic_cast<IProperties*>(singleton.getRef()));
+        return *singleton;
     }
 };
 
