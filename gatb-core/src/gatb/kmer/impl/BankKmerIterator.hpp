@@ -42,8 +42,9 @@ namespace impl      {
 
 /* \brief Kmer iterator on data sequences from some bank.
  */
+template<typename KmerModel=Kmer<>::ModelDirect>
 class BankKmerIterator :
-    public tools::dp::Iterator<kmer_type>,
+    public tools::dp::Iterator<typename KmerModel::Type>,
     public tools::dp::impl::AbstractSubjectIterator
 {
 public:
@@ -145,7 +146,7 @@ public:
     }
 
     /** \copydoc tools::dp::Iterator::item */
-    kmer_type& item ()  { return _itKmer.item(); }
+    typename KmerModel::Type& item ()  { return _itKmer.item(); }
 
 private:
 
@@ -154,7 +155,7 @@ private:
     void setItSeq (tools::dp::Iterator<bank::Sequence>* itSeq)  { SP_SETATTR(itSeq); }
 
     /** Inner loop iterator on kmer. */
-    KmerModel::Iterator _itKmer;
+    typename KmerModel::Iterator _itKmer;
 
     /** Shortcut (for performance). */
     bool _isDone;
@@ -167,17 +168,17 @@ private:
 
 /* \brief Kmer iterator on data sequences from some bank.
  */
-template <typename kmer_type> class BankVectorKmerIterator :
-        public tools::dp::Iterator<std::vector<kmer_type> >,
+template<typename KmerModel=kmer::impl::Kmer<>::ModelDirect>
+class BankVectorKmerIterator :
+        public tools::dp::Iterator<std::vector<typename KmerModel::Type> >,
         public tools::dp::impl::AbstractSubjectIterator
 {
-public:
-
+public: 
     /** Constructor.
      * \param[in] bank : the bank whose sequences are to be iterated.
      * \param[in] model : kmer model
      */
-    BankVectorKmerIterator (bank::IBank& bank, KmerModel<kmer_type>& model)
+    BankVectorKmerIterator (bank::IBank& bank, KmerModel& model)
         : _model(model), _itSeq(0), _isDone(true),  _moduloMask(1), _idx(0)
     {
         /** We create an iterator over the sequences of the provided bank.
@@ -256,12 +257,9 @@ public:
         return _isDone;
     }
 
-    /** \copydoc tools::dp::Iterator::item */
-    std::vector<kmer_type>& item ()  { return *(this->_item); }
-
 private:
 
-    KmerModel<kmer_type>& _model;
+    KmerModel& _model;
 
     /** Outer loop iterator on Sequence. */
     tools::dp::Iterator<bank::Sequence>* _itSeq;
