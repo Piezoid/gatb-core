@@ -48,25 +48,25 @@ class LibraryInfo
 public:
 
     /** Get information about the GATB-CORE library
-     * \return information as a IProperties instance
+     * \return information as a Properties instance
      */
-    static IProperties& getInfo()
+    static Properties& getInfo()
     {
-        std::shared_ptr<IProperties> singleton;
+        std::shared_ptr<Properties> singleton;
 
         if (!singleton)
         {
             singleton = std::make_shared<Properties>();
 
-            props->add (0, "gatb-core-library", "");
-            props->add (1, "version",        "%s", system::impl::System::info().getVersion().c_str());
-            props->add (1, "git_sha1",       "%s", STR_GIT_SHA1);
-            props->add (1, "build_date",     "%s", system::impl::System::info().getBuildDate().c_str());
-            props->add (1, "build_system",   "%s", system::impl::System::info().getBuildSystem().c_str());
-            props->add (1, "build_compiler", "%s", system::impl::System::info().getBuildCompiler().c_str());
-            //props->add (1, "build_options",  "%s", system::impl::System::info().getBuildOptions().c_str());
-            props->add (1, "build_kmer_size", "%s", KSIZE_STRING);
-            //props->add (1, "custom_memalloc", "%d", CUSTOM_MEM_ALLOC);
+            singleton->add (0, "gatb-core-library", "");
+            singleton->add (1, "version",        "%s", system::impl::System::info().getVersion().c_str());
+            singleton->add (1, "git_sha1",       "%s", STR_GIT_SHA1);
+            singleton->add (1, "build_date",     "%s", system::impl::System::info().getBuildDate().c_str());
+            singleton->add (1, "build_system",   "%s", system::impl::System::info().getBuildSystem().c_str());
+            singleton->add (1, "build_compiler", "%s", system::impl::System::info().getBuildCompiler().c_str());
+            //singleton->add (1, "build_options",  "%s", system::impl::System::info().getBuildOptions().c_str());
+            singleton->add (1, "build_kmer_size", "%s", KSIZE_STRING);
+            //singleton->add (1, "custom_memalloc", "%d", CUSTOM_MEM_ALLOC);
         }
         return *singleton;
     }

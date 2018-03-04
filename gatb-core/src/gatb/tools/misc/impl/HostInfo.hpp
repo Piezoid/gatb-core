@@ -47,15 +47,15 @@ class HostInfo
 public:
 
     /** Get information about host
-     * \return information as a IProperties instance
+     * \return information as a Properties instance
      */
-    static IProperties& getInfo()
+    static Properties& getInfo()
     {
-        std::shared_ptr<IProperties> singleton;
+        static std::unique_ptr<Properties> props;
 
-        if (!singleton)
+        if (!props)
         {
-            singleton = std::make_shared<Properties>();
+            props = std::make_unique<Properties>();
 
             props->add (0, "host");
             props->add (1, "name",             "%s",   system::impl::System::info().getHostName().c_str());
@@ -64,10 +64,8 @@ public:
             props->add (1, "disk_current_dir", "%.1f", (double)system::impl::System::file().getAvailableSpace(system::impl::System::file().getCurrentDirectory()) / (double)system::MBYTE);
             props->add (1, "max_file_nb",      "%lld", system::impl::System::file().getMaxFilesNumber());
             props->add (1, "pid",              "%d",   system::impl::System::thread().getProcess());
-
-            singleton.setRef (props);
         }
-        return *singleton;
+        return *props;
     }
 };
 
