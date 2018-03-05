@@ -179,7 +179,7 @@ protected:
 
     virtual void fillBuffer (double elapsed);
 
-    system::ISystemInfo::CpuInfo* _cpuinfo;
+    std::shared_ptr<system::ISystemInfo::CpuInfo> _cpuinfo;
     void setCpuInfo (system::ISystemInfo::CpuInfo* cpuinfo)  { SP_SETATTR(cpuinfo); }
 
     u_int64_t _memMax;
@@ -191,14 +191,9 @@ protected:
 class ProgressProxy : public dp::IteratorListener
 {
 public:
+    ProgressProxy (std::unique_ptr<dp::IteratorListener> ref)  : _ref(std::move(ref)) {}
 
-    ProgressProxy ()  : _ref(0) {}
-
-    ProgressProxy (dp::IteratorListener* ref)  : _ref(0) { setRef(ref); }
-
-    ProgressProxy (const ProgressProxy& p) : _ref(0) { setRef(p._ref); }
-
-    ~ProgressProxy ()  { setRef(0); }
+    virtual ~ProgressProxy ()  {}
 
     /** Initialization of the object. */
     void init ()  { _ref->init(); }
@@ -220,11 +215,10 @@ public:
     /** \copydoc dp::IteratorListener::setMessage*/
     void setMessage (const std::string& msg)  { _ref->setMessage (msg); }
 
-    dp::IteratorListener* getRef() const  { return _ref; }
+    dp::IteratorListener& getRef() const  { return *_ref; }
 
 private:
-    dp::IteratorListener* _ref;
-    void setRef (dp::IteratorListener* ref)  { SP_SETATTR(ref); }
+    std::unique_ptr<dp::IteratorListener> _ref;
 };
 
 /********************************************************************************/
@@ -234,14 +228,10 @@ class ProgressSynchro : public ProgressProxy
 {
 public:
 
-    ProgressSynchro () : _synchro(0)  {}
+    ProgressSynchro (std::unique_ptr<dp::IteratorListener> ref, system::ISynchronizer* synchro)
+        : ProgressProxy (std::move(ref)), _synchro(synchro)  {}
 
-    ProgressSynchro (dp::IteratorListener* ref, system::ISynchronizer* synchro)
-        : ProgressProxy (ref), _synchro(0)  { setSynchro(synchro); }
-
-    ProgressSynchro (const ProgressSynchro& p) : ProgressProxy(p.getRef()), _synchro(0)  {  setSynchro(p._synchro); }
-
-    ~ProgressSynchro ()  { setSynchro (0); }
+    virtual ~ProgressSynchro ()  { }
 
     /** \copydoc dp::IteratorListener::init */
     void init ()  { system::LocalSynchronizer l(_synchro); ProgressProxy::init(); }
@@ -263,8 +253,7 @@ public:
 
 private:
 
-    system::ISynchronizer* _synchro;
-    void setSynchro (system::ISynchronizer* synchro)  { SP_SETATTR(synchro); }
+    std::shared_ptr<system::ISynchronizer> _synchro;
 };
 
 /********************************************************************************/

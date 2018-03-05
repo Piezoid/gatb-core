@@ -48,7 +48,7 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 BankAlbum::BankAlbum (const std::string& name, bool deleteIfExists) : _name(name)
 {
     /** We get a handle on the file given its name. */
-    system::IFile* file = getFile (name, deleteIfExists ? "w+" : NULL);
+    std::unique_ptr<system::IFile> file = getFile (name, deleteIfExists ? "w+" : NULL);
 
     /** We check that the provided name exists in filesystem. */
     if (file != 0)
@@ -84,8 +84,6 @@ BankAlbum::BankAlbum (const std::string& name, bool deleteIfExists) : _name(name
                 _banksUri.push_back (bankUri);
             }
         }
-
-        delete file;
     }
     else
     {
@@ -180,34 +178,21 @@ bool BankAlbum::isAlbumValid (const std::string& uri)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankAlbum::addBank (const std::string& bankUri)
+IBank& BankAlbum::addBank (const std::string& bankUri)
 {
-    IBank* result = 0;
-
     DEBUG (("BankAlbum::add '%s'\n", bankUri.c_str() ));
 
     /** We add the uri into the album file. */
-    system::IFile* file = getFile (_name);
+    auto file = getFile (_name);
 
-    if (file != 0)
-    {
-        /** We write the uri in the file. */
-        file->print ("%s\n", bankUri.c_str());
+    /** We write the uri in the file. */
+    file->print ("%s\n", bankUri.c_str());
 
-        /** We create a new bank. */
-        result = Bank::open(bankUri);
+    /** We memorize the uri of this bank. */
+    _banksUri.push_back (bankUri);
 
-        /** We put it into the album. */
-        BankComposite::addBank (result);
-
-        /** We memorize the uri of this bank. */
-        _banksUri.push_back (bankUri);
-
-        /** Cleanup. */
-        delete file;
-    }
-
-    return result;
+    /** We create a new bank in the album. */
+    return BankComposite::addBank (Bank::open(bankUri));
 }
 
 /*********************************************************************
@@ -218,37 +203,24 @@ IBank* BankAlbum::addBank (const std::string& bankUri)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankAlbum::addBank (const std::string& directory, const std::string& bankName, bool output_fastq, bool output_gz)
+IBank& BankAlbum::addBank (const std::string& directory, const std::string& bankName, bool output_fastq, bool output_gz)
 {
-    IBank* result = 0;
-
     DEBUG (("BankAlbum::add '%s'\n", bankName.c_str() ));
 
     /** We add the uri into the album file. */
-    system::IFile* file = getFile (_name, "a+");
+    auto file = getFile (_name, "a+");
 
-    if (file != 0)
-    {
-        /** We build the bank uri. */
-        string bankUri = directory + "/" + bankName;
+    /** We build the bank uri. */
+    string bankUri = directory + "/" + bankName;
 
-        /** We write the uri in the file. */
-        file->print ("%s\n", bankName.c_str());
+    /** We write the uri in the file. */
+    file->print ("%s\n", bankName.c_str());
 
-        /** We create a new FASTA bank. */
-        result = new BankFasta (bankUri, output_fastq, output_gz);
+    /** We memorize the uri of this bank. */
+    _banksUri.push_back (bankUri);
 
-        /** We put it into the album. */
-        BankComposite::addBank (result);
-
-        /** We memorize the uri of this bank. */
-        _banksUri.push_back (bankUri);
-
-        /** Cleanup. */
-        delete file;
-    }
-
-    return result;
+    /** We create a new FASTA bank in the album. */
+    return BankComposite::addBank (std::make_unique<BankFasta>(bankUri, output_fastq, output_gz));
 }
 
 /*********************************************************************
@@ -259,13 +231,16 @@ IBank* BankAlbum::addBank (const std::string& directory, const std::string& bank
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-system::IFile* BankAlbum::getFile (const std::string& name, const char* mode)
+std::unique_ptr<system::IFile> BankAlbum::getFile (const std::string& name, const char* mode)
 {
     /** We check whether the file already exists or not. */
     if (mode==NULL) { mode = System::file().doesExist(name) == true ? "r+" : "w+"; }
 
     /** We create a handle on the file. */
-    return System::file().newFile (name, mode);
+    auto file = System::file().newFile (name, mode);
+    if(!file)
+        throw Exception("Counldn't open file \"%s\" with mode %s", name.c_str(), mode);
+    return file;
 }
 
 /*********************************************************************
@@ -307,7 +282,7 @@ void BankAlbum::remove ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankAlbumFactory::createBank (const std::string& uri)
+std::unique_ptr<IBank> BankAlbumFactory::createBank (const std::string& uri)
 {
     /** We check whether the uri is a "multiple" bank, i.e. a list (comma separated) of FASTA banks URIs. */
     tools::misc::impl::TokenizerIterator it (uri.c_str(), ",");
@@ -321,7 +296,7 @@ IBank* BankAlbumFactory::createBank (const std::string& uri)
     {
         DEBUG (("BankAlbumFactory::createBank : count>1 (%d)\n", names.size()));
 
-        vector<IBank*> banks;
+        vector<std::unique_ptr<IBank>> banks;
         for (size_t i=0; i<names.size(); i++)
         {
             DEBUG (("   %s\n", names[i].c_str()));
@@ -330,7 +305,7 @@ IBank* BankAlbumFactory::createBank (const std::string& uri)
             banks.push_back (Bank::open (names[i]));
         }
         /** We return a composite bank. */
-        return new BankComposite (banks);
+        return std::make_unique<BankComposite> (std::move(banks));
     }
 
     /** SECOND CASE : an album file. */
@@ -340,11 +315,11 @@ IBank* BankAlbumFactory::createBank (const std::string& uri)
 
         DEBUG (("BankAlbumFactory::createBank : count==1  isAlbumValid=%d\n", isAlbumValid));
 
-        if (isAlbumValid == true)  {  return new BankAlbum (uri);  }
+        if (isAlbumValid == true)  {  return std::make_unique<BankAlbum>(uri);  }
     }
 
-    /** Nothing worked => return 0. */
-    return 0;
+    /** Nothing worked */
+    return {};
 }
 
 /********************************************************************************/

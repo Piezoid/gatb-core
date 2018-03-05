@@ -25,13 +25,18 @@
  *  This file holds interfaces related to the Collection interface
  */
 
-#ifndef _GATB_CORE_TOOLS_COLLECTIONS_COLLECTION_HPP_
-#define _GATB_CORE_TOOLS_COLLECTIONS_COLLECTION_HPP_
+#ifndef _GATB_CORE_TOOLS_COLLECTIONS_API_COLLECTION_HPP_
+#define _GATB_CORE_TOOLS_COLLECTIONS_API_COLLECTION_HPP_
 
 /********************************************************************************/
 
 #include <gatb/tools/collections/api/Iterable.hpp>
 #include <gatb/tools/collections/api/Bag.hpp>
+#include <gatb/tools/misc/impl/Stringify.hpp>
+#include <gatb/system/impl/System.hpp>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 
 /********************************************************************************/
 namespace gatb          {
@@ -40,47 +45,100 @@ namespace tools         {
 namespace collections   {
 /********************************************************************************/
 
-/** \brief Collection interface
+/** \brief Abstract implementation of the Collection interface.
  *
- * The Collection interface is the union of a Bag and an Iterable interfaces
+ * This class implements the Collection interface by delegating the job to an instance
+ * of Bag and an instance of Iterable.
  *
- * It is also to get/set properties (as [key,value]) to collections.
+ * All the methods are delegated to one of these two instances.
  */
-template <class Item> class Collection : public Bag<Item>, public Iterable<Item>
+template <class Item>
+class Collection
 {
 public:
 
+    /** Constructor.
+     * \param bag      : reference on the bag delegate.
+     * \param iterable : reference on the iterable delegate
+     */
+    Collection (const std::shared_ptr<Bag<Item>>& bag,
+                        const std::shared_ptr<Iterable<Item>>& iterable)
+        : _bag(bag), _iterable(iterable)
+    {}
+
     /** Destructor. */
-    virtual ~Collection () {}
+    virtual ~Collection() {}
 
-    /** \return the bag instance. */
-    virtual Bag<Item>* bag() = 0;
+    /** \copydoc Collection::bag */
+    const std::shared_ptr<Bag<Item>>& bag() { return _bag; }
 
-    /** \return the iterable instance. */
-    virtual Iterable<Item>* iterable() = 0;
+    /** \copydoc Collection::iterable */
+    const std::shared_ptr<Iterable<Item>>& iterable()  { return _iterable; }
 
-    /** Remove physically the collection. */
-    virtual void remove () = 0;
+    /** \copydoc Iterable::iterator */
+    dp::Iterator<Item>* iterator ()  { return _iterable->iterator(); }
 
-    /** Add a property to the collection.
-     * \param[in] key : key of the property
-     * \param[in] value  : value of the property. */
-    virtual void addProperty (const std::string& key, const std::string value) = 0;
+    /** \copydoc Iterable::getNbItems */
+    int64_t getNbItems ()  { return _iterable->getNbItems(); }
+
+    /** \copydoc Iterable::estimateNbItems */
+    int64_t estimateNbItems () { return _iterable->estimateNbItems(); }
+
+    /** \copydoc Iterable::getItems */
+    Item* getItems (Item*& buffer)  { 
+        //std::cout << "CollectionAsbtract getItems called" << std::endl;
+        return _iterable->getItems(buffer); }
+
+    /** \copydoc Iterable::getItems(Item*& buffer, size_t start, size_t nb) */
+    size_t getItems (Item*& buffer, size_t start, size_t nb)  { 
+        //std::cout << "CollectionAsbtract getItems called" << std::endl;
+        return _iterable->getItems (buffer, start, nb); }
+
+    /** \copydoc Bag::insert */
+    void insert (const Item& item)  { _bag->insert (item); }
+
+    /** \copydoc Bag::insert(const std::vector<Item>& items, size_t length) */
+    void insert (const std::vector<Item>& items, size_t length)  { _bag->insert (items, length); }
+
+    /** \copydoc Bag::insert(const Item* items, size_t length) */
+    void insert (const Item* items, size_t length)  { _bag->insert (items, length); }
+
+    /** \copydoc Bag::flush */
+    void flush ()  { _bag->flush(); }
 
     /** Add a property to the collection.
      * \param[in] key : key of the property
      * \param[in] format  : printf like arguments
      * \param[in] ... : variable arguments. */
-    virtual void addProperty (const std::string& key, const char* format, ...) = 0;
+    virtual void addProperty (const std::string& key, const std::string value) = 0;
+
+    /** \copydoc Collection::addProperty */
+    void addProperty (const std::string& key, const char* format ...)
+    {
+        va_list args;
+        va_start (args, format);
+        this->addProperty (key, misc::impl::Stringify::format(format, args));
+        va_end (args);
+    }
 
     /** Retrieve a property for a given key
      * \param[in] key : key of the property to be retrieved
      * \return the value of the property. */
     virtual std::string getProperty (const std::string& key) = 0;
+
+     /** Remove physically the collection. */
+    virtual void remove() {}
+
+protected:
+    void setBag(const std::shared_ptr<Bag<Item>>& bag) { _bag = bag; }
+    void setIterable(const std::shared_ptr<Iterable<Item>>& iterable) { _iterable = iterable; }
+private:
+    std::shared_ptr<Bag<Item>> _bag;
+    std::shared_ptr<Iterable<Item>> _iterable;
 };
 
 /********************************************************************************/
 } } } } /* end of namespaces. */
 /********************************************************************************/
 
-#endif /* _GATB_CORE_TOOLS_COLLECTIONS_COLLECTION_HPP_ */
+#endif /* _GATB_CORE_TOOLS_COLLECTIONS_API_COLLECTION_HPP_ */

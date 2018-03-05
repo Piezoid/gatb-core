@@ -56,10 +56,10 @@ template <class Item> class IteratorFile : public dp::Iterator<Item>
 public:
 
     /** Constructor. */
-    IteratorFile () : _file(0), _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(0), _isDone(true) {}
+    IteratorFile () : _file(), _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(0), _isDone(true) {}
 
     IteratorFile (const IteratorFile& it):
-        _filename(it._filename), _file(0),  _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(it._cacheItemsNb), _isDone(true)
+        _filename(it._filename), _file(),  _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(it._cacheItemsNb), _isDone(true)
     {
         _file    = system::impl::System::file().newFile (_filename, "rb");
         _buffer  = (Item*) MALLOC (sizeof(Item) * _cacheItemsNb);
@@ -68,7 +68,7 @@ public:
 
     /** Constructor. */
     IteratorFile (const std::string& filename, size_t cacheItemsNb=10000) :
-        _filename(filename), _file(0),  _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(cacheItemsNb), _isDone(true)
+        _filename(filename), _file(),  _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(cacheItemsNb), _isDone(true)
 
     {
         _file    = system::impl::System::file().newFile (filename, "rb");
@@ -76,9 +76,8 @@ public:
     }
 
     /** Destructor. */
-    ~IteratorFile ()
+    virtual ~IteratorFile ()
     {
-        if (_file)  { delete _file;  }
         if (_buffer) { FREE (_buffer); }
     }
 
@@ -144,7 +143,7 @@ public:
 
 private:
     std::string     _filename;
-    system::IFile*  _file;
+    std::unique_ptr<system::IFile>  _file;
     Item*           _buffer;
     int             _cpt_buffer;
     int             _idx;
@@ -169,13 +168,12 @@ public:
      */
     IterableFile (const std::string& filename, size_t cacheItemsNb=10000)
         :   _filename(filename), _cacheItemsNb (cacheItemsNb), 
-        _file(0)  // hacking my own iterator, for getItems, separate from IteratorFile. dirty, but nothing used to work at all. _file is used in getItems() only
+        _file()  // hacking my own iterator, for getItems, separate from IteratorFile. dirty, but nothing used to work at all. _file is used in getItems() only
     {
         // if the file doesn't exist (meaning that BagFile hasn't created it yet), let's create it just for the sake of it. but then we'll open it just for reading
         if (!system::impl::System::file().doesExist(filename))
             {
                 auto   _file2 = system::impl::System::file().newFile (filename, "wb");
-                delete _file2;
             }
         /* _file should be initialized here but actually, the iterator() method will also create its own file.
          * so, instead of opening _file here, let's wait until getItems() is actually called (sometimes it won't).
@@ -183,9 +181,7 @@ public:
     }
 
     /** Destructor. */
-    ~IterableFile () {
-        if (_file)  { delete _file;  }
-    }
+    ~IterableFile () {}
 
     /** \copydoc Iterable::iterator */
     dp::Iterator<Item>* iterator ()  { return new IteratorFile<Item> (_filename, _cacheItemsNb); }
@@ -223,7 +219,7 @@ public:
 private:
     std::string     _filename;
     size_t          _cacheItemsNb;
-    system::IFile*  _file;
+    std::unique_ptr<system::IFile>  _file;
 };
     
 /********************************************************************************/
@@ -343,28 +339,23 @@ template <class Item> class IteratorCountCompressedFile : public dp::Iterator<It
 public:
     
     /** Constructor. */
-    IteratorCountCompressedFile () : _file(0), _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(0), _isDone(true),_abundance(0) {}
+    IteratorCountCompressedFile () : _file(), _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(0), _isDone(true),_abundance(0) {}
     
     IteratorCountCompressedFile (const IteratorCountCompressedFile& it):
-    _filename(it._filename), _file(0),  _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(it._cacheItemsNb), _isDone(true),_abundance(0)
-    {
-        _file    = system::impl::System::file().newFile (_filename, "rb");
-        _buffer  = (u_int8_t*) MALLOC (sizeof(u_int8_t) * _cacheItemsNb);
-    }
+        IteratorCountCompressedFile(it._filename, it._cacheItemsNb)
+    {}
     
     /** Constructor. */
     IteratorCountCompressedFile (const std::string& filename, size_t cacheItemsNb=10000) :
-    _filename(filename), _file(0),  _buffer(0), _cpt_buffer(0), _idx(0), _cacheItemsNb(cacheItemsNb), _isDone(true),_abundance(0)
+    _filename(filename), _file(system::impl::System::file().newFile (filename, "rb")),
+      _buffer((u_int8_t*) MALLOC (sizeof(u_int8_t) * cacheItemsNb)),
+      _cpt_buffer(0), _idx(0), _cacheItemsNb(cacheItemsNb), _isDone(true),_abundance(0)
     
-    {
-        _file    = system::impl::System::file().newFile (filename, "rb");
-        _buffer  = (u_int8_t*) MALLOC (sizeof(u_int8_t) * _cacheItemsNb);
-    }
+    {}
     
     /** Destructor. */
-    ~IteratorCountCompressedFile ()
+    virtual ~IteratorCountCompressedFile ()
     {
-        if (_file)  { delete _file;  }
         if (_buffer) { FREE (_buffer); }
     }
     
@@ -440,7 +431,7 @@ public:
     
 private:
     std::string     _filename;
-    system::IFile*  _file;
+    std::unique_ptr<system::IFile>  _file;
     u_int8_t*       _buffer;
     int             _cpt_buffer; // how many unread bytes are remaining in the buffer
     int             _idx; // where we should read the next elem in the buffer

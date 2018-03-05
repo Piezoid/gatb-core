@@ -28,9 +28,9 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/designpattern/api/ICommand.hpp>
+#include <gatb/tools/designpattern/impl/Command.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
-#include <gatb/tools/misc/api/IProperty.hpp>
+#include <gatb/tools/misc/impl/Property.hpp>
 #include <gatb/tools/misc/api/StringsRepository.hpp>
 #include <gatb/tools/misc/impl/TimeInfo.hpp>
 #include <gatb/tools/misc/impl/OptionsParser.hpp>
@@ -39,6 +39,7 @@
 
 #include <string>
 #include <list>
+#include <algorithm>
 
 /********************************************************************************/
 namespace gatb      {
@@ -60,10 +61,20 @@ public:
      * \param[in] name: name of the algorithm.
      * \param[in] nbCores : number of cores to be used for this algorithm.
      * \param[in] input : extra options for configuring the algorithm. */
-    Algorithm (const std::string& name, int nbCores=-1, gatb::core::tools::misc::IProperties* input=0);
+    Algorithm (const std::string& name, int64_t nbCores=-1)
+        : Algorithm(name, nbCores, {})
+    { _info.add (0, _name); }
+
+    Algorithm (const std::string& name, int64_t nbCores, gatb::core::tools::misc::Properties input):
+      _name(name), _input(std::move(input)),
+      _dispatcher(std::max( int64_t(0),
+                            std::max(_input.getInt(STR_NB_CORES).value_or(int64_t(-1)),
+                                     nbCores)
+                            ))
+    {}
 
     /** Destructor. */
-    virtual ~Algorithm ();
+    virtual ~Algorithm () {}
 
     /** Get tool name
      * \return the algorithm name. */
@@ -78,33 +89,35 @@ public:
     /** Get the parsed options as a properties instance
      * \return the parsed options.
      */
-    virtual IProperties*            getInput      ()  { return _input;      }
+    virtual const Properties&            getInput      () const { return _input;      }
+    virtual       Properties&            getInput      ()       { return _input;      }
 
     /** Get output results as a properties instance
      * \return the output results
      */
-    virtual IProperties*            getOutput     ()  { return _output;     }
+    virtual const Properties&            getOutput     () const { return _output;     }
 
     /** Get statistics information about the execution of the tool
      * \return the statistics
      */
-    virtual IProperties*            getInfo       ()  { return _info;       }
+    virtual       Properties&            getInfo       ()       { return _info;       }
+    virtual const Properties&            getInfo       () const { return _info;       }
 
     /** Get an option parser configured with recognized options for the tool
      * \return the options parser instance
      */
-    virtual dp::IDispatcher*        getDispatcher ()  { return _dispatcher; }
+    virtual const dp::IDispatcher&        getDispatcher ()  { return _dispatcher; }
 
     /** Get a TimeInfo instance for the tool. This object can be used for gathering
      * execution times of some parts of the \ref execute method.
      * \return the time info instance.
      */
-    virtual TimeInfo&               getTimeInfo   ()  { return _timeInfo;   }
+    virtual       TimeInfo&               getTimeInfo   ()  { return _timeInfo;   }
 
     /** Get information about operating system resources used during the execution.
      * \return operating system information.
      */
-    virtual IProperties*            getSystemInfo ()  { return _systemInfo; }
+    virtual       Properties&            getSystemInfo ()  { return _systemInfo; }
 
     /** Create an iterator for the given iterator. If the verbosity is enough, progress bar information
      * can be displayed.
@@ -119,23 +132,16 @@ public:
         dp::Iterator<Item>* iter,
         size_t nbIterations=0,
         const char* message=0,
-        dp::IteratorListener* listener = 0
+        std::shared_ptr<dp::IteratorListener> listener = {}
     )
     {
         if (nbIterations > 0 && message != 0)
         {
             //  We create some listener to be notified every 1000 iterations and attach it to the iterator.
             if (listener == 0)  { listener = createIteratorListener (nbIterations, message); }
-
-            dp::impl::SubjectIterator<Item>* iterSubject = new dp::impl::SubjectIterator<Item> (iter, nbIterations/100);
-            iterSubject->addObserver (listener);
-
-            /** We assign the used iterator to be the subject iterator. */
-            iter = iterSubject;
+            return new dp::impl::SubjectIterator<Item>(iter, nbIterations/100, listener);
         }
-
-        /** We return the result. */
-        return iter;
+        else return iter;
     }
 
     /** Creates an iterator listener according to the verbosity level.
@@ -143,7 +149,7 @@ public:
      * \param[in] message : progression message
      * \return an iterator listener.
      */
-    virtual dp::IteratorListener* createIteratorListener (size_t nbIterations, const char* message);
+    virtual std::unique_ptr<dp::IteratorListener> createIteratorListener (size_t nbIterations, const char* message);
 
 
     /********************************************************************************/
@@ -159,11 +165,11 @@ public:
 
         try {
             // We parse the user options.
-            tools::misc::IProperties* options = parser->parse (argc, argv);
+            tools::misc::Properties& options = parser->parse (argc, argv);
 
             // We apply the functor that calls the correct implementation of the functor
             // according to the kmer size value.
-            tools::math::Integer::apply<Functor> (options->getInt (STR_KMER_SIZE), options);
+            tools::math::Integer::apply<Functor> (options.getInt (STR_KMER_SIZE), options);
         }
 
         catch (tools::misc::impl::OptionFailure& e)  {  return e.displayErrors (std::cerr);                         }
@@ -175,32 +181,18 @@ public:
 protected:
 
     /** Computes the uri from an uri (ie add a prefix if any). */
-    std::string getUriByKey (const std::string& key)  { return getUri (getInput()->getStr(key)); }
+    std::string getUriByKey (const std::string& key)  { return getUri (getInput().getStr(key).value()); }
 
     /** Computes the uri from an uri (ie add a prefix if any). */
-    std::string getUri (const std::string& str)  { return getInput()->getStr(STR_PREFIX) + str; }
-
-    /** Setters. */
-    void setInput      (IProperties*            input)       { SP_SETATTR (input);      }
-    void setOutput     (IProperties*            output)      { SP_SETATTR (output);     }
-    void setInfo       (IProperties*            info)        { SP_SETATTR (info);       }
-    void setSystemInfo (IProperties*            systemInfo)  { SP_SETATTR (systemInfo); }
-    void setDispatcher (dp::IDispatcher*        dispatcher)  { SP_SETATTR (dispatcher); }
+    std::string getUri (const std::string& str)  { return getInput().getStr(STR_PREFIX).value() + str; }
 
 private:
 
     /** Name of the tool (set at construction). */
     std::string _name;
+    Properties _input, _output, _info, _systemInfo;
 
-    IProperties* _input;
-
-    IProperties* _output;
-
-    IProperties* _info;
-
-    IProperties* _systemInfo;
-
-    dp::IDispatcher* _dispatcher;
+    dp::impl::Dispatcher _dispatcher;
 
     /** */
     TimeInfo _timeInfo;

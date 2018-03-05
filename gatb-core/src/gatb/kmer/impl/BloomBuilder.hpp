@@ -36,7 +36,7 @@
 #include <gatb/tools/designpattern/api/Iterator.hpp>
 #include <gatb/tools/designpattern/impl/Command.hpp>
 
-#include <gatb/tools/misc/api/IProperty.hpp>
+#include <gatb/tools/misc/impl/Property.hpp>
 #include <gatb/tools/misc/impl/TimeInfo.hpp>
 
 #include <gatb/tools/math/NativeInt8.hpp>
@@ -101,7 +101,7 @@ public:
      * \return the IBloom instance. */
     tools::collections::impl::IBloom<Type>*  build (
         tools::dp::Iterator<Count>* itKmers,
-        tools::misc::IProperties* stats=0
+        tools::misc::Properties* stats=0
     )
     {
         tools::misc::impl::TimeInfo ti;
@@ -133,7 +133,7 @@ public:
      * \param[in] stats : properties object to be filled by statistics gathered during the build. */
     tools::collections::impl::IBloom<Type>*  load (
         tools::collections::Iterable<tools::math::NativeInt8>* bloomIterable,
-        tools::misc::IProperties* stats = 0)
+        tools::misc::Properties* stats = 0)
     {
         tools::misc::impl::TimeInfo ti;
         TIME_INFO (ti, "load_bloom");

@@ -112,7 +112,7 @@ public:
         int64_t   _rank;
         bool      _isDone;
 
-        tools::misc::Data* _dataRef;
+        std::shared_ptr<tools::misc::Data> _dataRef;
         void setDataRef (tools::misc::Data* dataRef)  { SP_SETATTR(dataRef); }
     };
 

@@ -44,38 +44,6 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-BankSplitter::BankSplitter (
-    IBank*   reference,
-    size_t   readMeanSize,
-    size_t   overlap,
-    u_int8_t coverage
-)
-    : _reference (0), _readMeanSize(readMeanSize), _coverage(coverage), _overlap(overlap)
-{
-    setReference (reference);
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-BankSplitter::~BankSplitter ()
-{
-    setReference (0);
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
 void BankSplitter::estimate (u_int64_t& number, u_int64_t& totalSize, u_int64_t& maxSize)
 {
     gatb::core::tools::dp::Iterator<gatb::core::bank::Sequence>* itSeq = _reference->iterator();

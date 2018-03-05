@@ -111,7 +111,7 @@ public:
         tools::collections::Iterable<Type>*   solidKmers,
         unsigned int                          nbCores,
         bool                                  buildOrLoad,
-        tools::misc::IProperties*   options    = 0
+            tools::misc::Properties           options = {}
     );
 
     /** Destructor. */
@@ -128,9 +128,9 @@ public:
      * the map instance will be still alive (ie. not deleted) even if the MPHFAlgorithm
      * instance that built it is deleted first.
      * \return the map instance. */
-    AbundanceMap* getAbundanceMap () const  { return _abundanceMap; }
-    NodeStateMap* getNodeStateMap () const  { return _nodeStateMap; }
-    NodeStateMap* getAdjacencyMap () const  { return _adjacencyMap; }
+    const std::shared_ptr<AbundanceMap>& getAbundanceMap () const  { return _abundanceMap; }
+    const std::shared_ptr<NodeStateMap>& getNodeStateMap () const  { return _nodeStateMap; }
+    const std::shared_ptr<AdjacencyMap>& getAdjacencyMap () const  { return _adjacencyMap; }
 
 private:
 
@@ -141,17 +141,17 @@ private:
     size_t                       _nb_abundances_above_precision;
 
     /** Iterable on the couples [kmer,abundance] */
-    tools::collections::Iterable<Count>* _solidCounts;
+    std::shared_ptr<tools::collections::Iterable<Count>> _solidCounts;
     void setSolidCounts (tools::collections::Iterable<Count>* solidCounts)  {  SP_SETATTR(solidCounts); }
 
     /** Iterable on the kmers */
-    tools::collections::Iterable<Type>* _solidKmers;
+    std::shared_ptr<tools::collections::Iterable<Type>> _solidKmers;
     void setSolidKmers (tools::collections::Iterable<Type>* solidKmers)  {  SP_SETATTR(solidKmers); }
 
     /** Hash table instance. */
-    AbundanceMap* _abundanceMap;
-    NodeStateMap* _nodeStateMap;
-    AdjacencyMap* _adjacencyMap;
+    std::shared_ptr<AbundanceMap> _abundanceMap;
+    std::shared_ptr<NodeStateMap> _nodeStateMap;
+    std::shared_ptr<AdjacencyMap> _adjacencyMap;
     void setAbundanceMap (AbundanceMap* abundanceMap)  { SP_SETATTR(abundanceMap); }
     void setNodeStateMap (NodeStateMap* nodeStateMap)  { SP_SETATTR(nodeStateMap); }
     void setAdjacencyMap (AdjacencyMap* adjacencyMap)  { SP_SETATTR(adjacencyMap); }
@@ -170,14 +170,29 @@ private:
      * emphf, so we have to hack it some stuff here). */
     class ProgressCustom : public tools::misc::impl::ProgressProxy
     {
+        static constexpr const char* messages[] = {
+            "MPHF: initialization                   ",
+            "MPHF: build hash function              ",
+            "MPHF: assign values                    ",
+            "MPHF: populate                         "
+        };
     public:
-        ProgressCustom (tools::dp::IteratorListener* ref);  void reset (u_int64_t ntasks);
+        ProgressCustom (std::unique_ptr<tools::dp::IteratorListener> ref)
+            : tools::misc::impl::ProgressProxy (std::move(ref)), nbReset(0) {}
+        void reset (u_int64_t ntasks) {
+            const char* label = nbReset < sizeof(messages)/sizeof(messages[0]) ? messages[nbReset++] : "other";
+
+            getRef()->reset(ntasks);
+            getRef()->setMessage (label);
+            getRef()->init();
+        }
+
     private:
         size_t nbReset;
     };
 
     /** Progress instance. */
-    tools::dp::IteratorListener* _progress;
+    std::shared_ptr<tools::dp::IteratorListener> _progress;
     void setProgress (tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
 	
 };

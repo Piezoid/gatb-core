@@ -166,7 +166,7 @@ public:
 
     /** Get some properties about the count processor.
      * \return properties. */
-    virtual tools::misc::impl::Properties getProperties() const = 0;
+    virtual tools::misc::Properties getProperties() const = 0;
 
     /** Get a vector of instances in case of the current object is a composite.
      * \return a vector of ICountProcessor instance. */

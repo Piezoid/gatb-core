@@ -103,7 +103,7 @@ public:
     /****************************************/
     /**               MISC                  */
     /****************************************/
-    tools::misc::impl::Properties getProperties() const;
+    tools::misc::Properties getProperties() const;
 
     /** Load config properties from a storage object.
      * \param[in] group : group where the repartition table has to be loaded */

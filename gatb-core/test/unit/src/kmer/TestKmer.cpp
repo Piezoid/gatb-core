@@ -328,7 +328,7 @@ public:
     void kmer_minimizer ()
     {
         /** NOTE: sequences should be big enough to get kmers up to 128. */
-        vector<IBank*> banks;
+        vector<std::unique_ptr<IBank>> banks;
         banks.push_back (new BankStrings ("ACCATGTATAATTATAAGTAGGTACCTATTTTTTTATTTTAAACTGAAATTCAATATTATATAGGCAAAGAT"
                                           "TCCCCAGGCCCCTACACCCAATGTGGAACCGGGGTCCCGAATGAAAATGCTGCTGTTCCCTGGAGGTGTTCT", NULL));
         banks.push_back (Bank::open (DBPATH("reads1.fa")));
@@ -349,7 +349,7 @@ public:
         {
             for (size_t b=0; b<banks.size(); b++)
             {
-                IBank* bank = banks[b];   LOCAL(bank);
+                std::unique_ptr<IBank> bank = banks[b];   LOCAL(bank);
 
                 for (size_t i=0; i<ARRAY_SIZE(kmerSizes); i++)
                 {

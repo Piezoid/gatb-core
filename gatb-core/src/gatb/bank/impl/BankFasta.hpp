@@ -241,7 +241,7 @@ class BankFastaFactory : public IBankFactory
 public:
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri);
+    std::unique_ptr<IBank> createBank (const std::string& uri);
 };
 
 /********************************************************************************/

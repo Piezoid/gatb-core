@@ -93,12 +93,12 @@ public:
         } ;
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();  LOCAL (params);
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MINIMIZER_SIZE,     miniSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();  LOCAL (params);
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MINIMIZER_SIZE,     miniSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
         /** We create a SortingCountAlgorithm object. */
         SortingCountAlgorithm<> sortingCount (new BankStrings (seqs, ARRAY_SIZE(seqs)), params);

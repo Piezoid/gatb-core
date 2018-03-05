@@ -28,10 +28,10 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/designpattern/api/ICommand.hpp>
+#include <gatb/tools/designpattern/impl/Command.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
 #include <gatb/tools/collections/api/Iterable.hpp>
-#include <gatb/tools/misc/api/IProperty.hpp>
+#include <gatb/tools/misc/impl/Property.hpp>
 #include <gatb/tools/misc/impl/TimeInfo.hpp>
 #include <gatb/tools/misc/impl/OptionsParser.hpp>
 #include <gatb/tools/misc/api/StringsRepository.hpp>
@@ -91,55 +91,59 @@ public:
      * \return the tool name. */
     std::string getName () const  { return _name; }
 
-    /** Run the tool with input parameters provided as a IProperties instance
+    /** Run the tool with input parameters provided as a Properties instance
      * \param[in] input : input parameters
-     * \return the parsed options as a IProperties instance
+     * \return the parsed options as a Properties instance
      */
-    virtual IProperties* run (IProperties* input);
+    Properties& run (Properties &input);
 
     /** Run the tool with input parameters provided as a couple [argc,argv]
      * \param[in] argc : number of arguments
      * \param[in] argv : array of arguments
-     * \return the parsed options as a IProperties instance
+     * \return the parsed options as a Properties instance
      */
-    virtual IProperties* run (int argc, char* argv[]);
+    Properties& run (int argc, char* argv[]);
 
+protected:
     /** Subclasses must implement this method; this is where the actual job of
      * the tool has to be done.
      */
     virtual void execute () = 0;
 
+    /** Sublcass may override the default options parser here */
+    virtual void configureParser(IOptionsParser&);
+
     /** Get the parsed options as a properties instance
      * \return the parsed options.
      */
-    virtual IProperties*            getInput      ()  { return _input;      }
+    Properties&            getInput      ()  { return _input;      }
 
     /** Get output results as a properties instance
      * \return the output results
      */
-    virtual IProperties*            getOutput     ()  { return _output;     }
+    Properties&            getOutput     ()  { return _output;     }
 
     /** Get statistics information about the execution of the tool
      * \return the statistics
      */
-    virtual IProperties*            getInfo       ()  { return _info;       }
+    Properties&            getInfo       ()  { return _info;       }
 
     /** Get an option parser configured with recognized options for the tool
      * \return the options parser instance
      */
-    virtual IOptionsParser*         getParser     ()  { return _parser;     }
+    const IOptionsParser&  getParser     () const { return _parser;     }
 
     /** Get a dispatched that can be used for parallelization. The option "-nb-cores" can
      * be used, and thus the provided number is used for configuring the dispatcher.
      * \return the dispatcher for the tool
      */
-    virtual dp::IDispatcher*        getDispatcher ()  { return _dispatcher; }
+    dp::IDispatcher&        getDispatcher ()  { return *_dispatcher; }
 
     /** Get a TimeInfo instance for the tool. This object can be used for gathering
      * execution times of some parts of the \ref execute method.
      * \return the time info instance.
      */
-    virtual TimeInfo&               getTimeInfo   ()  { return _timeInfo;   }
+    TimeInfo&               getTimeInfo   ()  { return _timeInfo;   }
 
     /** Create an iterator for the given iterable. If the verbosity is enough, progress bar information
      * can be displayed.
@@ -147,7 +151,8 @@ public:
      * \param[in] message : message used if progress information has to be displayed
      * \return the created iterator.
      */
-    template<typename Item> dp::Iterator<Item>* createIterator (collections::Iterable<Item>& iterable, const char* message=0)
+    template<typename Item> std::unique_ptr<dp::Iterator<Item>>
+    createIterator (collections::Iterable<Item>& iterable, const char* message=0)
     {
         int64_t nbItems = (iterable.getNbItems() >= 0 ? iterable.getNbItems() : iterable.estimateNbItems());
         return createIterator (iterable.iterator(), nbItems, message);
@@ -160,12 +165,13 @@ public:
      * \param[in] message : message used if progress information has to be displayed
      * \return the created iterator.
      */
-    template<typename Item> dp::Iterator<Item>* createIterator (dp::Iterator<Item>* iter, size_t nbIterations=0, const char* message=0)
+    template<typename Item> std::unique_ptr<dp::Iterator<Item>>
+    createIterator (std::unique_ptr<dp::Iterator<Item>> iter, size_t nbIterations=0, const char* message=0)
     {
         if (nbIterations > 0 && message != 0)
         {
             //  We create some listener to be notified every 1000 iterations and attach it to the iterator.
-            dp::impl::SubjectIterator<Item>* iterSubject = new dp::impl::SubjectIterator<Item> (iter, nbIterations/100);
+            auto iterSubject = std::make_unique<dp::impl::SubjectIterator<Item>> (std::move(iter), nbIterations/100);
             iterSubject->addObserver (createIteratorListener (nbIterations, message));
 
             /** We assign the used iterator to be the subject iterator. */
@@ -181,12 +187,12 @@ public:
      * \param[in] message : progression message
      * \return an iterator listener.
      */
-    virtual dp::IteratorListener* createIteratorListener (size_t nbIterations, const char* message);
+    dp::IteratorListener* createIteratorListener (size_t nbIterations, const char* message);
 
     /** Displays information about the GATB library
      * \param[in] os : output stream used for dumping library information
      */
-    virtual void displayVersion(std::ostream& os);
+    void displayVersion(std::ostream& os);
 
 	
 	
@@ -200,28 +206,17 @@ public:
 	void setVersion(void (*user_Version)(void * target)) {     if(user_Version != NULL) userDisplayVersion = user_Version; }
 	void setVersionTarget(void * versionTarget) { _versionTarget = versionTarget;}
 
-	
-protected:
-
     /** */
-    virtual void preExecute  ();
-    virtual void postExecute ();
+    void preExecute  ();
+    void postExecute ();
 
     /** Computes the uri from an uri (ie add a prefix if any). */
-    std::string getUriByKey (const std::string& key)  { return getUri (getInput()->getStr(key)); }
+    std::string getUriByKey (const std::string& key)  { return getUri (getInput().getStr(key).value()); }
 
     /** Computes the uri from an uri (ie add a prefix if any). */
-    std::string getUri (const std::string& str)  { return getInput()->getStr(STR_PREFIX) + str; }
+    std::string getUri (const std::string& str)  { return getInput().getStr(STR_PREFIX).value() + str; }
 
-    /** Setters. */
-    void setInput      (IProperties*            input)       { SP_SETATTR (input);      }
-    void setOutput     (IProperties*            output)      { SP_SETATTR (output);     }
-    void setInfo       (IProperties*            info)        { SP_SETATTR (info);       }
-    void setParser     (IOptionsParser*         parser)      { SP_SETATTR (parser);     }
-    void setDispatcher (dp::IDispatcher*        dispatcher)  { SP_SETATTR (dispatcher); }
-
-protected:
-
+private:
 	
 	//pointer to function to display help
 	void (*userDisplayHelp)(void * target);
@@ -235,15 +230,11 @@ protected:
     /** Name of the tool (set at construction). */
     std::string _name;
 
-    IProperties* _input;
+    Properties _input, _output, _info;
 
-    IProperties* _output;
+    impl::OptionsParser _parser;
 
-    IProperties* _info;
-
-    IOptionsParser* _parser;
-
-    dp::IDispatcher* _dispatcher;
+    std::unique_ptr<dp::IDispatcher> _dispatcher;
 
     /** */
     TimeInfo _timeInfo;
@@ -251,66 +242,6 @@ protected:
     friend class ToolComposite;
 };
 
-/********************************************************************************/
-
-/* DEPRECATED. */
-class ToolComposite : public Tool
-{
-public:
-
-    /** Constructor.
-     * \param[in] name: name of the tool. */
-    ToolComposite (const std::string& name = "tool");
-
-    /** */
-    ~ToolComposite ();
-
-    /** */
-    IProperties* run (int argc, char* argv[]);
-
-    /** */
-    void add (Tool* tool);
-
-private:
-
-    std::list<Tool*> _tools;
-
-    /** */
-    void execute ();
-    void preExecute  ();
-    void postExecute ();
-};
-
-/********************************************************************************/
-
-/* DEPRECATED. */
-class ToolProxy : public Tool
-{
-public:
-
-    /** */
-    ToolProxy (Tool* ref) : Tool("proxy"), _ref (ref)  {}
-
-    /** */
-    virtual IOptionsParser* getParser ()  {  return _ref->getParser();  }
-
-    /** */
-    virtual IProperties* getInput  ()  { return _ref->getInput();     }
-    virtual IProperties* getOutput ()  { return _ref->getOutput();    }
-    virtual IProperties* getInfo   ()  { return _ref->getInfo();      }
-
-    /** */
-    virtual dp::IDispatcher*    getDispatcher ()   { return _ref->getDispatcher(); }
-
-    /** */
-    virtual TimeInfo&    getTimeInfo ()   { return _ref->getTimeInfo (); }
-
-    /** */
-    Tool* getRef ()  { return _ref; }
-
-private:
-    Tool* _ref;
-};
 
 /********************************************************************************/
 } } } } } /* end of namespaces. */

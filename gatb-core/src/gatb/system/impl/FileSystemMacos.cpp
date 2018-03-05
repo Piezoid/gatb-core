@@ -87,7 +87,7 @@ size_t FileSystemMacos::getMaxFilesNumber ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IFile* FileSystemMacos::newFile (const Path& path, const char* mode)
+std::unique_ptr<IFile> FileSystemMacos::newFile (const Path& path, const char* mode)
 {
     return new MacosFile (path.c_str(), mode);
 }
@@ -100,7 +100,7 @@ IFile* FileSystemMacos::newFile (const Path& path, const char* mode)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IFile* FileSystemMacos::newFile (const Path& dirpath, const Path& filename, const char* mode)
+std::unique_ptr<IFile> FileSystemMacos::newFile (const Path& dirpath, const Path& filename, const char* mode)
 {
     /** We build the full file path. */
     stringstream ss;

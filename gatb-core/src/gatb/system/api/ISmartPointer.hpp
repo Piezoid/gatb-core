@@ -103,6 +103,8 @@ class SmartPointer : public virtual ISmartPointer
 
 #define LOCAL(object)  std::shared_ptr<std::remove_reference_t<decltype(*(object))>> __##object (object)
 
+#define SP_SETATTR(member) _##member = std::shared_ptr<std::remove_reference_t<decltype(*(member))>>(member)
+
 
 /********************************************************************************/
 } } } /* end of namespaces. */

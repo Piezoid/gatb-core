@@ -58,7 +58,7 @@ public:
      * \param[in] bank : bank to be converted (likely in FASTA format)
      * \param[in] kmerSize : kmer size
      * \param[in] outputUri : uri of the output binary bank. */
-    BankConverterAlgorithm (IBank* bank, size_t kmerSize, const std::string& outputUri);
+    BankConverterAlgorithm (std::unique_ptr<IBank> bank, size_t kmerSize, const std::string& outputUri);
 
     /** Constructor. Used only to retrieved statistics/information gathered during
      * a previous execution of a BankConverterAlgorithm instance
@@ -66,28 +66,25 @@ public:
     BankConverterAlgorithm (tools::storage::impl::Storage& storage);
 
     /** Destructor. */
-    ~BankConverterAlgorithm ();
+    virtual ~BankConverterAlgorithm ();
 
     /** \copydoc gatb::core::tools::misc::impl::Algorithm::execute */
     void execute ();
 
     /** Return the output binary bank
      * \return the IBank instance */
-    IBank* getResult ()  { return _bankOutput; }
+    IBank& getResult ()  { return *_bankOutput; }
 
 private:
 
     tools::misc::BankConvertKind _kind;
 
-    IBank*      _bankInput;
-    void setBankInput (IBank* bankInput)  { SP_SETATTR(bankInput); }
-
-    IBank*      _bankOutput;
-    void setBankOutput (IBank* bankOutput)  { SP_SETATTR(bankOutput); }
+    std::unique_ptr<IBank>      _bankInput;
+    std::unique_ptr<IBank>      _bankOutput;
 
     std::string _outputUri;
 
-    bank::IBank* createBank (
+    std::unique_ptr<bank::IBank> createBank (
         tools::dp::Iterator<bank::Sequence>* inputSequences,
         size_t nbInputSequences,
         const std::string& outputName,

@@ -52,7 +52,7 @@ template <typename Item> class BagFile : public Bag<Item>, public system::SmartP
 public:
 
     /** Constructor. */
-    BagFile (const std::string& filename) : _filename(filename), _file(0)
+    BagFile (const std::string& filename) : _filename(filename), _file()
     {
         /** We first erase the file. */
         //system::impl::System::file().remove (filename); // NOTE: before, the file was erased. Not anymore now, because GraphUnitigs sometimes reopens the same file (through this function) and wants to read it. I checked with minia, it's fine to not remove the file, there is no endless appending going on. But, some unit tests assumed that the file was deleted, so I had to modify them.
@@ -67,10 +67,7 @@ public:
     }
 
     /** Destructor. */
-    ~BagFile ()
-    {
-        if (_file)  { delete _file; }
-    }
+    virtual ~BagFile () {}
 
     /** Get the name of the file.
      * \return the file name.  */
@@ -101,7 +98,7 @@ public:
 
 private:
     std::string _filename;
-    system::IFile* _file;
+    std::unique_ptr<system::IFile> _file;
 };
 
     
@@ -154,7 +151,7 @@ public:
     
 private:
     std::string _filename;
-    system::IFile* _file;
+    std::unique_ptr<system::IFile> _file;
     gzFile  _gzfile;
 };
 
@@ -167,7 +164,7 @@ template <typename Item> class BagCountCompressedFile : public Bag<Item>, public
 public:
     
     /** Constructor. */
-    BagCountCompressedFile (const std::string& filename) : _filename(filename), _file(0),_previous()
+    BagCountCompressedFile (const std::string& filename) : _filename(filename), _file(),_previous()
     {
         /** We first erase the file. */
         system::impl::System::file().remove (filename);
@@ -183,11 +180,9 @@ public:
     }
     
     /** Destructor. */
-    ~BagCountCompressedFile ()
+    virtual ~BagCountCompressedFile ()
     {
         //printf("In %llu B  (%llu MB ) Out %llu  B  (%llu MB ) ratio  %f \n",_sizeInput,_sizeInput/(1024LL*1024LL), _sizeOutput,_sizeOutput/(1024LL*1024LL), _sizeInput / (float) _sizeOutput);
-
-        if (_file)  { delete _file; }
         free( _bufferOut );
     }
     
@@ -285,7 +280,7 @@ private:
 
     
     std::string _filename;
-    system::IFile* _file;
+    std::unique_ptr<system::IFile> _file;
     Item _previous;
     u_int64_t _sizeOutput;
     u_int64_t _sizeInput;

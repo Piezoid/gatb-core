@@ -26,9 +26,9 @@ static const char* STR_EMAIL_FORMAT = "-email-fmt";
 static const char* STR_CHECK        = "-check";
 static const char* STR_CHECK_DUMP   = "-check-dump";
 
-int    manageException (IProperties* options, const std::string& message);
-void   sendEmail       (IProperties* options, IProperties* graphInfo);
-size_t checkResult     (const Graph& graph, IProperties* inputProps);
+int    manageException (Properties& options, const std::string& message);
+void   sendEmail       (Properties& options, Properties& graphInfo);
+size_t checkResult     (const Graph& graph, Properties& inputProps);
 
 /********************************************************************************/
 int main (int argc, char* argv[])
@@ -60,19 +60,19 @@ int main (int argc, char* argv[])
         }
 
         /** We parse the user options. */
-        IProperties* props = parser->parse (argc, argv);
+        Properties& props = parser->parse (argc, argv);
 
         /** We create the graph with the provided options. */
         Graph graph = Graph::create (props);
 
         /** We may have to check the result. */
-        if (props->get (STR_CHECK) != 0)  {  nbErrors = checkResult (graph, props);  }
+        if (props.get (STR_CHECK) != 0)  {  nbErrors = checkResult (graph, props);  }
 
         /** We dump some information about the graph. */
-        if (props->getInt(STR_VERBOSE) > 0)  {  std::cout << graph.getInfo() << std::endl;  }
+        if (props.getInt(STR_VERBOSE) > 0)  {  std::cout << graph.getInfo() << std::endl;  }
 
         /** We may have to send statistics by email. */
-        if (props->get(STR_EMAIL))  {  sendEmail (props, &graph.getInfo());  }
+        if (props.get(STR_EMAIL))  {  sendEmail (props, &graph.getInfo());  }
     }
     catch (OptionFailure& e)
     {
@@ -95,7 +95,7 @@ int main (int argc, char* argv[])
 }
 
 /********************************************************************************/
-void sendEmail (IProperties* options, IProperties* graphInfo)
+void sendEmail (Properties& options, Properties& graphInfo)
 {
     std::string outfmt = options->getStr(STR_EMAIL_FORMAT);
 
@@ -128,7 +128,7 @@ void sendEmail (IProperties* options, IProperties* graphInfo)
 }
 
 /********************************************************************************/
-int manageException (IProperties* options, const std::string& message)
+int manageException (Properties& options, const std::string& message)
 {
     std::cout << std::endl << "EXCEPTION: " << message << std::endl;
 
@@ -142,14 +142,14 @@ int manageException (IProperties* options, const std::string& message)
 }
 
 /********************************************************************************/
-size_t checkResult (const Graph& graph, IProperties* inputProps)
+size_t checkResult (const Graph& graph, Properties& inputProps)
 {
     size_t nbErrors = 0;
 
     string filecheck = inputProps->getStr(STR_CHECK);
 
     /** We get the graph properties. */
-    IProperties& graphProps = graph.getInfo();
+    Properties& graphProps = graph.getInfo();
 
     /** We read the check file. */
     Properties checkProps;  checkProps.readFile (filecheck);

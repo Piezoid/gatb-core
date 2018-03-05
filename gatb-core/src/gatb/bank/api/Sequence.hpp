@@ -118,7 +118,7 @@ struct Sequence
      * \param[in] ref : the referred Data instance holding the genomic data
      * \param[in] offset : starting index in the referred data
      * \param[in] length : length of the genomic data of the current sequence. */
-    void setDataRef (tools::misc::Data* ref, int offset, int length)  {  _data.setRef (ref, offset, length);  }
+    void setDataRef (std::shared_ptr<tools::misc::Data>& ref, int offset, int length)  {  _data.setRef (ref, offset, length);  }
 
     /** Set the index of the sequence. Typically, it should be called by a IBank iterator that knows what is
      * the index of the currently iterated sequence.

@@ -101,7 +101,7 @@ public:
         tools::misc::BloomKind      bloomKind     = tools::misc::BLOOM_DEFAULT,
         tools::misc::DebloomKind    debloomKind = tools::misc::DEBLOOM_DEFAULT,
         const std::string&          debloomUri = "debloom",
-        tools::misc::IProperties*   options    = 0
+        tools::misc::Properties     options    = {}
     );
 
     /** Constructor
@@ -128,7 +128,7 @@ public:
 
     /** Get the bloom/cFP container.
      * \return the container. */
-    debruijn::IContainerNode<Type>* getContainerNode ()  { return _container; }
+    const std::shared_ptr<debruijn::IContainerNode<Type>> getContainerNode () const { return _container; }
 
     /** Get the number of bits per kmer
      * \param[in] kmerSize : kmer size
@@ -144,8 +144,8 @@ protected:
 
     /** */
     virtual void execute_aux (
-        tools::misc::IProperties* bloomProps,
-        tools::misc::IProperties* cfpProps,
+        tools::misc::Properties& bloomProps,
+        tools::misc::Properties& cfpProps,
         u_int64_t& totalSizeBloom,
         u_int64_t& totalSizeCFP
     );
@@ -153,7 +153,7 @@ protected:
     /** */
     virtual gatb::core::tools::collections::impl::IBloom<Type>* createBloom (
         tools::collections::Iterable<Count>* solidIterable,
-        tools::misc::IProperties* props,
+        tools::misc::Properties& props,
         u_int64_t& totalSizeBloom
     );
 
@@ -179,10 +179,10 @@ protected:
     u_int64_t _criticalNb;
     Type      _criticalChecksum;
 
-    tools::storage::impl::Partition<Count>* _solidIterable;
+    std::shared_ptr<tools::storage::impl::Partition<Count>> _solidIterable;
     void setSolidIterable (tools::storage::impl::Partition<Count>* solidIterable)  {  SP_SETATTR(solidIterable); }
 
-    debruijn::IContainerNode<Type>* _container;
+    std::shared_ptr<debruijn::IContainerNode<Type>> _container;
 
     /* used to be named setContainer, I can see why (input is a IContainerNode, whatever that is). But I renamed it for disambiguation, as there
      * already exists an object named Container, and it's certainly not a Debloom structure */
@@ -190,7 +190,7 @@ protected:
 
     void createCFP (
         gatb::core::tools::collections::Collection<Type>*  criticalCollection,
-        tools::misc::IProperties* props,
+        tools::misc::Properties& props,
         u_int64_t& totalSize
     );
 

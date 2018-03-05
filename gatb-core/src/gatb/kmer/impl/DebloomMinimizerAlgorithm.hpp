@@ -59,7 +59,7 @@ public:
         tools::misc::BloomKind      bloomKind     = tools::misc::BLOOM_DEFAULT,
         tools::misc::DebloomKind    cascadingKind = tools::misc::DEBLOOM_DEFAULT,
         const std::string&          debloomUri = "debloom",
-        tools::misc::IProperties*   options    = 0,
+        tools::misc::Properties     options    = {},
         tools::storage::impl::Group* minimizersGroup = 0
     );
 
@@ -73,8 +73,8 @@ private:
 
     /** */
     void execute_aux (
-        tools::misc::IProperties* bloomProps,
-        tools::misc::IProperties* cfpProps,
+        tools::misc::Properties& bloomProps,
+        tools::misc::Properties& cfpProps,
         u_int64_t& totalSizeBloom,
         u_int64_t& totalSizeCFP
     );

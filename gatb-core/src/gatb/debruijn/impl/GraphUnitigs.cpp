@@ -113,7 +113,7 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (bank::IBank* bank, const char* fmt, ...)
+GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (std::unique_ptr<bank::IBank> bank, const char* fmt, ...)
 {
     IOptionsParser* parser = BaseGraph::getOptionsParser (false);   LOCAL(parser);
     
@@ -156,7 +156,7 @@ GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (const char* fmt,
 
     try
     {
-        return  GraphUnitigsTemplate (parser->parseString(commandLine), true); /* will call the GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* params, bool load_unitigs_after) constructor */
+        return  GraphUnitigsTemplate (parser->parseString(commandLine), true); /* will call the GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::Properties& params, bool load_unitigs_after) constructor */
     }
     catch (OptionFailure& e)
     {
@@ -204,18 +204,18 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (const std::string& uri)
 ** REMARKS :  quick hack,  not supposed to be used outside of tests
 *********************************************************************/
 template<size_t span>
-GraphUnitigsTemplate<span>::GraphUnitigsTemplate (bank::IBank* bank, tools::misc::IProperties* params)
+GraphUnitigsTemplate<span>::GraphUnitigsTemplate (std::unique_ptr<bank::IBank> bank, tools::misc::Properties& params)
 {
     
     /** We get the kmer size from the user parameters. */
-    BaseGraph::_kmerSize = params->getInt (STR_KMER_SIZE);
-    size_t integerPrecision = params->getInt (STR_INTEGER_PRECISION);
+    BaseGraph::_kmerSize = params.getInt (STR_KMER_SIZE).value();
+    size_t integerPrecision = params.getInt (STR_INTEGER_PRECISION).value();
     /** We configure the data variant according to the provided kmer size. */
     BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize, integerPrecision);
     string unitigs_filename = "dummy.unitigs.fa"; // because there's already a bank, but we don't know its name maybe? so just to be safe, i'm setting a dummy unitigs file. anyway, this constructor is only called in tests i think, not by minia for sure.
 
-    params->setInt(STR_REPARTITION_TYPE, 1);
-    params->setInt(STR_MINIMIZER_TYPE, 1);
+    params.setInt(STR_REPARTITION_TYPE, 1);
+    params.setInt(STR_MINIMIZER_TYPE, 1);
 
     /** We build the graph according to the wanted precision. */
     boost::apply_visitor ( build_visitor_solid<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(*this, bank,params),  *(GraphDataVariantFast<span>*)BaseGraph::_variant);
@@ -245,10 +245,10 @@ static string revcomp (const string &s) {
 }
 
 template<size_t span>
-void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_filename, tools::misc::IProperties* props)
+void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_filename, tools::misc::Properties& props)
 {
     /** We may have to stop just after configuration. I don't know if that happens in GraphU though. */
-    if (props->get(STR_CONFIG_ONLY))  { std::cout << "GraphU Config_only! does that happen?" << std::endl; return; }
+    if (props.get(STR_CONFIG_ONLY))  { std::cout << "GraphU Config_only! does that happen?" << std::endl; return; }
 
     //if (!BaseGraph::checkState(BaseGraph::STATE_SORTING_COUNT_DONE))
     if (!checkState(STATE_SORTING_COUNT_DONE))
@@ -258,13 +258,13 @@ void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_fil
         throw system::Exception ("Graph construction failure during build_visitor_postsolid, the input h5 file needs to contain at least solid kmers.");
     }
     
-    bool redo_bcalm = props->get("-redo-bcalm");
-    bool redo_bglue = props->get("-redo-bglue");
-    bool redo_links = props->get("-redo-links");
+    bool redo_bcalm = props.get("-redo-bcalm");
+    bool redo_bglue = props.get("-redo-bglue");
+    bool redo_links = props.get("-redo-links");
 
-    bool skip_bcalm = props->get("-skip-bcalm");
-    bool skip_bglue = props->get("-skip-bglue");
-    bool skip_links = props->get("-skip-links");
+    bool skip_bcalm = props.get("-skip-bcalm");
+    bool skip_bglue = props.get("-skip-bglue");
+    bool skip_links = props.get("-skip-links");
 
     bool do_unitigs = !checkState(STATE_BCALM2_DONE);
     bool do_bcalm = (redo_bcalm || do_unitigs) && (!skip_bcalm);
@@ -274,13 +274,14 @@ void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_fil
     if (do_unitigs || do_bcalm || do_bglue || do_links)
     {
         int nb_threads =
-            props->getInt(STR_NB_CORES);
+            props.getInt(STR_NB_CORES).value();
 
         size_t  kmerSize = BaseGraph::getKmerSize();
-        if (kmerSize != (unsigned int)props->getInt(STR_KMER_SIZE))
-            std::cout << "kmer discrepancy: stored data has kmer size " << kmerSize << " but input command line has " << props->getInt(STR_KMER_SIZE) << std::endl;
+        if (kmerSize != (unsigned int)props.getInt(STR_KMER_SIZE).value())
+            std::cout << "kmer discrepancy: stored data has kmer size " << kmerSize
+                      << " but input command line has " << props.getInt(STR_KMER_SIZE).value() << std::endl;
         // delete this message mater
-        props->setInt(STR_KMER_SIZE, kmerSize);
+        props.setInt(STR_KMER_SIZE, kmerSize);
 
 
         UnitigsConstructionAlgorithm<span> unitigs_algo(BaseGraph::getStorage(), unitigs_filename, nb_threads, props, do_bcalm, do_bglue, do_links);
@@ -293,7 +294,7 @@ void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_fil
         setState(STATE_BCALM2_DONE);
     }
         
-    nb_unitigs = atol (BaseGraph::getGroup().getProperty ("nb_unitigs").c_str());
+    nb_unitigs = std::stol(BaseGraph::getGroup().getProperty ("nb_unitigs"));
 
     /** We save the state at storage root level. */
     BaseGraph::getGroup().setProperty ("state",          Stringify::format("%d", BaseGraph::_state));
@@ -520,7 +521,7 @@ void GraphUnitigsTemplate<span>::load_unitigs(string unitigs_filename)
         std::cout << "loading unitigs from disk to memory" << std::endl;
 
     BankFasta inputBank (unitigs_filename);
-    //bank::IBank* inputBank = Bank::open (unitigs_filename);
+    //std::unique_ptr<bank::IBank> inputBank = Bank::open (unitigs_filename);
     //LOCAL (inputBank);
     //ProgressIterator<bank::Sequence> itSeq (*inputBank, "loading unitigs");
     BankFasta::Iterator itSeq (inputBank);
@@ -802,11 +803,11 @@ SETS: the following variables are set:
     BaseGraph::_state 
 *********************************************************************/
 template<size_t span>
-GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* params, bool load_unitigs_after) 
+GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::Properties& params, bool load_unitigs_after)
 //    : BaseGraph() // call base () constructor // seems to do nothing, maybe it's always called by default
 {
 
-    string storage_type = params->getStr(STR_STORAGE_TYPE);
+    string storage_type = params.getStr(STR_STORAGE_TYPE).value();
     if (storage_type == "hdf5")
     {
         BaseGraph::_storageMode = tools::storage::impl::STORAGE_HDF5;
@@ -823,7 +824,7 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
         {std::cout << "Error: unknown storage type specified: " << storage_type << std::endl; exit(1); }
     }
     
-    string input = params->getStr(STR_URI_INPUT);
+    string input = params.getStr(STR_URI_INPUT).value();
 
     // build_visitor_solid has the following defaults:
     // minimizer size of 8. that one is okay
@@ -831,14 +832,14 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
     // accoring to original BCALM2 graph::create string:
     // -in %s -kmer-size %d -minimizer-size %d -mphf none -bloom none -out %s.h5  -abundance-min %d -verbose 1 -minimizer-type %d -repartition-type 1 -max-memory %d %s
 
-    //if ((!params->get(STR_REPARTITION_TYPE)))  // actually this doesn't seem to work, even when repartition-type isn't specified, it's (!params->get()) doesn't return true. so i'm going to force repartition type to 1, as it was in bcalm2
+    //if ((!params.get(STR_REPARTITION_TYPE)))  // actually this doesn't seem to work, even when repartition-type isn't specified, it's (!params.get()) doesn't return true. so i'm going to force repartition type to 1, as it was in bcalm2
     {
-        params->setInt(STR_REPARTITION_TYPE, 1);
+        params.setInt(STR_REPARTITION_TYPE, 1);
         //std::cout << "setting repartition type to 1" << std::endl;;
     }
-    //if (!params->get(STR_MINIMIZER_TYPE))
+    //if (!params.get(STR_MINIMIZER_TYPE))
     {
-        params->setInt(STR_MINIMIZER_TYPE, 1);
+        params.setInt(STR_MINIMIZER_TYPE, 1);
         //std::cout << "setting repartition type to 1" << std::endl;;
     }
 
@@ -860,9 +861,8 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
 
     string unitigs_filename, prefix;
 
-    if (params->get(STR_URI_OUTPUT))
-        prefix = params->getStr(STR_URI_OUTPUT);
-    else
+    prefix = params.getStr(STR_URI_OUTPUT).value_or("");
+    if (prefix.empty())
     {
         if (load_from_file)
         {
@@ -891,20 +891,18 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
         BaseGraph::setStorage (StorageFactory(BaseGraph::_storageMode).create (input, false, false));
     
         /** We get some properties. */
-        BaseGraph::_state     = (typename GraphUnitigsTemplate<span>::StateMask) atol (BaseGraph::getGroup().getProperty ("state").c_str());
+        BaseGraph::_state     = (typename GraphUnitigsTemplate<span>::StateMask) std::stol(BaseGraph::getGroup().getProperty ("state"));
         
-        BaseGraph::_kmerSize  = atol (BaseGraph::getGroup().getProperty ("kmer_size").c_str());
+        BaseGraph::_kmerSize  = std::stol(BaseGraph::getGroup().getProperty ("kmer_size"));
 
         if (BaseGraph::_kmerSize == 0) /* try the dsk group -> maybe it's a dsk h5 file, not a minia one */
-            BaseGraph::_kmerSize  =    atol (BaseGraph::getGroup("dsk").getProperty ("kmer_size").c_str());
+            BaseGraph::_kmerSize  =    std::stol(BaseGraph::getGroup("dsk").getProperty ("kmer_size"));
         
         // also assume kmer counting is done
         setState(GraphUnitigsTemplate<span>::STATE_SORTING_COUNT_DONE);
         
         /** We get library information in the root of the storage. */
-        string xmlString = BaseGraph::getGroup().getProperty ("xml");
-        stringstream ss; ss << xmlString;   IProperties* props = new Properties(); LOCAL(props);
-        props->readXML (ss);  BaseGraph::getInfo().add (1, props);
+        BaseGraph::getInfo().addXml(BaseGraph::getGroup().getProperty ("xml"));
         
         /** We configure the data variant according to the provided kmer size. */
         BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize);
@@ -924,14 +922,14 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
     else
     {
         /** We get the kmer size from the user parameters. */
-        BaseGraph::_kmerSize = params->getInt (STR_KMER_SIZE);
-        size_t integerPrecision = params->getInt (STR_INTEGER_PRECISION);
+        BaseGraph::_kmerSize = params.getInt (STR_KMER_SIZE).value();
+        size_t integerPrecision = params.getInt (STR_INTEGER_PRECISION).value();
 
         /** We configure the data variant according to the provided kmer size. */
         BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize, integerPrecision);
 
         /** We build a Bank instance for the provided reads uri. */
-        bank::IBank* bank = Bank::open (params->getStr(STR_URI_INPUT));
+        std::unique_ptr<bank::IBank> bank = Bank::open (params.getStr(STR_URI_INPUT).value());
 
         /** We build the graph according to the wanted precision. */
         boost::apply_visitor ( build_visitor_solid<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(*this, bank,params),  *(GraphDataVariantFast<span>*)BaseGraph::_variant);

@@ -159,9 +159,9 @@ namespace gatb        {
 						/* use the hash from another MapMPHF class. hmm is this smartpointer legit?
 						 * also allocate n/x data elements
 						 */
-						void useHashFrom (MapMPHF *other, int x = 1)
+                        void useHashFrom (const MapMPHF& other, int x = 1)
 						{
-							hash = other->hash;
+                            hash = other.hash;
 							
 							/** We resize the vector of Value objects. */
 							data.resize ((unsigned long)((hash.size()) / (unsigned long)x) + 1LL); // that +1 and not (hash.size+x-1) / x

@@ -55,13 +55,6 @@ using namespace gatb::core::tools::math;
 namespace gatb  {  namespace core  {   namespace kmer  {   namespace impl {
 /********************************************************************************/
 
-static const char* messages[] = {
-    "MPHF: initialization                   ",
-    "MPHF: build hash function              ",
-    "MPHF: assign values                    ",
-    "MPHF: populate                         "
-};
-
 /** First tried to set the constant in the hpp file but got the following error:
  *  "error: a function call cannot appear in a constant-expression"
  *  Solved by putting it in the cpp...
@@ -86,9 +79,9 @@ MPHFAlgorithm<span,Abundance_t,NodeState_t>::MPHFAlgorithm (
     Iterable<Type>*     solidKmers,
     unsigned int        nbCores,
     bool                buildOrLoad,
-    IProperties*        options
+    Properties          options
 )
-    :  Algorithm("mphf", nbCores, options), _group(group), _name(name), _buildOrLoad(buildOrLoad),
+    :  Algorithm("mphf", nbCores, std::move(options)), _group(group), _name(name), _buildOrLoad(buildOrLoad),
        _dataSize(0), _nb_abundances_above_precision(0), _solidCounts(0), _solidKmers(0), _abundanceMap(0), _nodeStateMap(0), _adjacencyMap(0), _progress(0)
 {
     /** We keep a reference on the solid kmers. */
@@ -224,7 +217,7 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::populate ()
     _nb_abundances_above_precision = 0;
 
     /** We need a progress object. */
-    tools::dp::IteratorListener* delegate = createIteratorListener(_solidCounts->getNbItems(),messages[3]);  LOCAL (delegate);
+    tools::dp::IteratorListener* delegate = createIteratorListener(_solidCounts->getNbItems(),ProgressCustom::messages[3]);  LOCAL (delegate);
     setProgress (new ProgressCustom(delegate));
 
     SubjectIterator<Count>* itKmers = new SubjectIterator<Count> (_solidCounts->iterator(), _solidCounts->getNbItems()/100);
@@ -277,13 +270,13 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::populate ()
 #endif
 
     /** We gather some statistics. */
-    getInfo()->add (1, "stats");
-    getInfo()->add (2, "nb_keys",               "%ld",  _abundanceMap->size());
-    getInfo()->add (2, "data_size",             "%ld",  _dataSize);
-    getInfo()->add (2, "bits_per_key",          "%.3f", (float)(_dataSize*8)/(float)_abundanceMap->size());
-    getInfo()->add (2, "prec",                  "%d",   MAX_ABUNDANCE);
-    getInfo()->add (2, "nb_abund_above_prec",   "%d",   _nb_abundances_above_precision);
-    getInfo()->add (1, getTimeInfo().getProperties("time"));
+    getInfo().add (1, "stats");
+    getInfo().add (2, "nb_keys",               "%ld",  _abundanceMap->size());
+    getInfo().add (2, "data_size",             "%ld",  _dataSize);
+    getInfo().add (2, "bits_per_key",          "%.3f", (float)(_dataSize*8)/(float)_abundanceMap->size());
+    getInfo().add (2, "prec",                  "%d",   MAX_ABUNDANCE);
+    getInfo().add (2, "nb_abund_above_prec",   "%d",   _nb_abundances_above_precision);
+    getInfo().add (1, getTimeInfo().getProperties("time"));
 }
 
 /*********************************************************************
@@ -327,38 +320,6 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::check ()
     {
         throw Exception ("ERROR during abundance population: itKmers iterated over %d/%d kmers only", nb_iterated, _abundanceMap->size());
     }
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span,typename Abundance_t, typename NodeState_t>
-MPHFAlgorithm<span,Abundance_t,NodeState_t>::ProgressCustom::ProgressCustom (tools::dp::IteratorListener* ref)
-  : tools::misc::impl::ProgressProxy (ref), nbReset(0)
-{
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span,typename Abundance_t, typename NodeState_t>
-void MPHFAlgorithm<span,Abundance_t,NodeState_t>::ProgressCustom::reset (u_int64_t ntasks)
-{
-    const char* label = nbReset < sizeof(messages)/sizeof(messages[0]) ? messages[nbReset++] : "other";
-
-    getRef()->reset(ntasks);
-    getRef()->setMessage (label);
-    getRef()->init();
 }
 
 /********************************************************************************/

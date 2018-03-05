@@ -156,9 +156,9 @@ public:
     /*****************************************************************/
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    tools::misc::impl::Properties getProperties() const
+    tools::misc::Properties getProperties() const
     {
-        tools::misc::impl::Properties result;
+        tools::misc::Properties result;
 
         size_t smallestPartition = ~0;
         size_t biggestPartition  = 0;
@@ -205,13 +205,13 @@ private:
 
     size_t _nbPartsPerPass;
 
-    system::ISynchronizer* _synchronizer;
+    std::shared_ptr<system::ISynchronizer> _synchronizer;
     void setSynchronizer (system::ISynchronizer* synchronizer)  { SP_SETATTR(synchronizer); }
 
-    tools::storage::impl::Partition<Count>* _solidCounts;
+    std::shared_ptr<tools::storage::impl::Partition<Count>> _solidCounts;
     void setSolidCounts (tools::storage::impl::Partition<Count>* solidCounts) { SP_SETATTR(solidCounts); }
 
-    tools::collections::Bag<Count>* _solidKmers;
+    std::shared_ptr<tools::collections::Bag<Count>> _solidKmers;
     void setSolidKmers (tools::collections::Bag<Count>* solidKmers)  {  SP_SETATTR(solidKmers);  }
 
     std::map<std::string,size_t> _namesOccur;

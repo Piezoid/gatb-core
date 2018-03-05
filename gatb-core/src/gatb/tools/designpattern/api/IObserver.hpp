@@ -68,15 +68,15 @@ public:
      */
     InterfaceId getInterface ()  const { return _interface; }
 
+    /** Destructor. */
+    virtual ~EventInfo() {}
+
 protected:
 
     /** Constructor.
      * \param[in] interface : identifier of the interface this EventInfo instance belongs to.
      */
     EventInfo (const InterfaceId& interface) : _interface(interface) {}
-
-    /** Destructor. */
-    virtual ~EventInfo() {}
 
     /** Id of the group the EventInfo is related. This allows to group several EventInfo
      *  subclasses with a common identifier. */

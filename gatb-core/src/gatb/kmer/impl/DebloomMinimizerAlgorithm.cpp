@@ -58,8 +58,7 @@ namespace gatb  {  namespace core  {   namespace kmer  {   namespace impl {
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-DebloomMinimizerAlgorithm<span>::DebloomMinimizerAlgorithm (
-    Group&              bloomGroup,
+DebloomMinimizerAlgorithm<span>::DebloomMinimizerAlgorithm (Group&              bloomGroup,
     Group&              debloomGroup,
     Partition<Count>*    solidIterable,
     size_t              kmerSize,
@@ -69,10 +68,10 @@ DebloomMinimizerAlgorithm<span>::DebloomMinimizerAlgorithm (
     BloomKind           bloomKind,
     DebloomKind         cascadingKind,
     const std::string&  debloomUri,
-    IProperties*        options,
+    Properties options,
     tools::storage::impl::Group* minimizersGroup
 )
-    :  DebloomAlgorithm<span>(bloomGroup, debloomGroup, solidIterable, kmerSize, miniSize, max_memory, nb_cores, bloomKind, cascadingKind, debloomUri, options),
+    :  DebloomAlgorithm<span>(bloomGroup, debloomGroup, solidIterable, kmerSize, miniSize, max_memory, nb_cores, bloomKind, cascadingKind, debloomUri, std::move(options)),
        _groupMinimizers(minimizersGroup)
 {
 }
@@ -111,7 +110,7 @@ struct FunctorKmersExtensionMinimizer
         size_t               _nbPass;
         size_t               _nbPartsPerPass;
         int                  _currentThreadIndex;
-		vector<PartitionCache<Type>*>& _partCacheVec;
+        vector<PartitionCache<Type>> _partCacheVec;
 
         FunctorNeighbors (
             IBloom<Type>*       bloom,
@@ -119,11 +118,11 @@ struct FunctorKmersExtensionMinimizer
             vector<Type>&       solids,
             Partition<Type>*    extentParts,
             Repartitor&         repart,
-			vector<PartitionCache<Type>*>& partCacheVec
+            vector<PartitionCache<Type>> partCacheVec
         )
             : bloom(bloom), _modelMini(modelMini), _solids(solids),
 			  _repart(repart), _currentThreadIndex(-1),
-			  _partCacheVec(partCacheVec)
+              _partCacheVec(std::move(partCacheVec))
         {
             _nbPass = _repart.getNbPasses();
 
@@ -187,9 +186,9 @@ struct FunctorKmersExtensionMinimizer
         Partition<Type>*    extentParts,
         vector<Type>&       solids,
         Repartitor&         repart,
-		vector<PartitionCache<Type>*>& partCacheVec
+        vector<PartitionCache<Type>> partCacheVec
     )
-        : functorNeighbors(bloom,modelMini, solids, extentParts, repart, partCacheVec),  model(model),  bloom(bloom)
+        : functorNeighbors(bloom,modelMini, solids, extentParts, repart, std::move(partCacheVec)),  model(model),  bloom(bloom)
     {
     }
 
@@ -286,8 +285,8 @@ struct FinalizeCmd : public ICommand, public SmartPointer
 *********************************************************************/
 template<size_t span>
 void DebloomMinimizerAlgorithm<span>::execute_aux (
-    IProperties* bloomProps,
-    IProperties* cfpProps,
+    Properties& bloomProps,
+    Properties& cfpProps,
     u_int64_t&   totalSizeBloom,
     u_int64_t&   totalSizeCFP
 )
@@ -322,9 +321,8 @@ void DebloomMinimizerAlgorithm<span>::execute_aux (
 
     /** We use a temporary partition that will hold the neighbors extension of the solid kmers. */
     string partitionsFilename = System::file().getTemporaryFilename("debloom_partitions");
-    Storage* cfpPartitions = StorageFactory(STORAGE_HDF5).create (partitionsFilename, true, false);
-    LOCAL (cfpPartitions);
-    Partition<Type>* debloomParts = & (*cfpPartitions)().getPartition<Type> ("parts", nbPartitions);
+    auto cfpPartitions = StorageFactory(STORAGE_HDF5).create (partitionsFilename, true, false);
+    Partition<Type>& debloomParts = cfpPartitions->root().getPartition<Type> ("parts", nbPartitions);
 
     /*************************************************/
     /** We build the solid neighbors extension.      */
@@ -333,11 +331,9 @@ void DebloomMinimizerAlgorithm<span>::execute_aux (
     	/** We create a vector of PartitionCache available for the process of all solid kmers partition.
     	 *  We have one item per thread.
     	 */
-    	vector<PartitionCache<Type>*> partCacheVec (this->getDispatcher()->getExecutionUnitsNumber());
-    	for (size_t i=0; i<this->getDispatcher()->getExecutionUnitsNumber(); i++)
-    	{
-    		partCacheVec[i] = new PartitionCache<Type> (*debloomParts,1<<12,0);
-    	}
+        vector<PartitionCache<Type>> partCacheVec(
+                    this->getDispatcher()->getExecutionUnitsNumber(),
+                    { debloomParts,1<<12,0 });
 
         TIME_INFO (this->getTimeInfo(), "fill_debloom_file");
 
@@ -366,18 +362,13 @@ void DebloomMinimizerAlgorithm<span>::execute_aux (
             size_t k=0;  for (itKmers->first(); !itKmers->isDone(); itKmers->next()) { solids[k++] = itKmers->item().value; }
 
             /** We create functor that computes the neighbors extension of the solid kmers. */
-            FunctorKmersExtensionMinimizer<Model,ModelMini,Count,Type> functorKmers (model, modelMini, bloom, debloomParts, solids, repart, partCacheVec);
+            FunctorKmersExtensionMinimizer<Model,ModelMini,Count,Type> functorKmers (model, modelMini, bloom, debloomParts,
+                                                                                     solids, repart, std::move(partCacheVec));
 
             /** We iterate the solid kmers. */
             this->getDispatcher()->iterate (itKmers, functorKmers);
 
         }  /* for (itParts->first (); ...) */
-
-        /** We get rid of the PartitionCache objets. */
-        for (size_t i=0; i<this->getDispatcher()->getExecutionUnitsNumber(); i++)
-        {
-        	delete partCacheVec[i];
-        }
 
         /** We flush the built partition. */
         debloomParts->flush();

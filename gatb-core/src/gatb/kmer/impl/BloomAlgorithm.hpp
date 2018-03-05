@@ -56,12 +56,12 @@ public:
     /** */
     BloomAlgorithm (
         tools::storage::impl::Storage&       storage,
-        tools::collections::Iterable<Count>* solidIterable,
+        tools::collections::Iterable<Count>& solidIterable,
         size_t                               kmerSize,
         float                                nbitsPerKmer,
         size_t                               nb_cores = 0,
         tools::misc::BloomKind               bloomKind = tools::misc::BLOOM_DEFAULT,
-        tools::misc::IProperties*            options    = 0
+        tools::misc::Properties              options = {}
     );
 
     /** */
@@ -88,8 +88,7 @@ private:
     tools::storage::impl::Storage& _storage;
 
     /** */
-    tools::collections::Iterable<Count>* _solidIterable;
-    void setSolidIterable (tools::collections::Iterable<Count>* solidIterable)  {  SP_SETATTR(solidIterable); }
+    tools::collections::Iterable<Count>& _solidIterable;
 };
 
 /********************************************************************************/

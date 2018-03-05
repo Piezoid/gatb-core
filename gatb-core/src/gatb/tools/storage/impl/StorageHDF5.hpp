@@ -56,9 +56,9 @@ public:
      * \param[in] autoRemove : auto delete the storage from file system during Storage destructor.
      * \return the created Storage instance
      */
-    static Storage* createStorage (const std::string& name, bool deleteIfExist, bool autoRemove, bool dont_add_extension = false, bool append = false)
+    static std::unique_ptr<Storage> createStorage (const std::string& name, bool deleteIfExist, bool autoRemove, bool dont_add_extension = false, bool append = false)
     {
-        return new StorageHDF5 (STORAGE_HDF5, name, deleteIfExist, autoRemove, dont_add_extension, append);
+        return std::make_unique<StorageHDF5> (STORAGE_HDF5, name, deleteIfExist, autoRemove, dont_add_extension, append);
     }
 
     /** Tells whether or not a Storage exists in file system given a name
@@ -86,12 +86,12 @@ public:
      * \param[in] name : name of the group to be created
      * \return the created Group instance.
      */
-    static Group* createGroup (ICell* parent, const std::string& name)
+    static std::unique_ptr<Group> createGroup (ICell* parent, const std::string& name)
     {
         StorageHDF5* storage = dynamic_cast<StorageHDF5*> (ICell::getRoot (parent));
         assert (storage != 0);
 
-        return new GroupHDF5 (storage, parent, name);
+        return std::make_unique<GroupHDF5> (storage, parent, name);
     }
 
     /** Create a Partition instance and attach it to a cell in a storage.
@@ -101,7 +101,7 @@ public:
      * \return the created Partition instance.
      */
     template<typename Type>
-    static Partition<Type>* createPartition (ICell* parent, const std::string& name, size_t nb)
+    static std::unique_ptr<Partition<Type>> createPartition (ICell* parent, const std::string& name, size_t nb)
     {
         StorageHDF5* storage = dynamic_cast<StorageHDF5*> (ICell::getRoot (parent));
         assert (storage != 0);
@@ -128,7 +128,7 @@ public:
             group.addProperty (StorageHDF5Factory::getNbPartitionsName(), ss.str());
         }
 
-        return new Partition<Type> (storage->getFactory(), parent, name, nb);
+        return std::make_unique<Partition<Type>> (storage->getFactory(), parent, name, nb);
     }
 
     /** Create a Collection instance and attach it to a cell in a storage.
@@ -138,7 +138,7 @@ public:
      * \return the created Collection instance.
      */
     template<typename Type>
-    static CollectionNode<Type>* createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
+    static std::unique_ptr<CollectionNode<Type>> createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
     {
 #if 1
         synchro = GlobalSynchro::singleton();
@@ -151,7 +151,7 @@ public:
 
         /** NOTE: we use here CollectionHDF5Patch and not CollectionHDF5 in order to reduce resources leaks due to HDF5.
          * (see also comments in CollectionHDF5Patch). */
-        return new CollectionNode<Type> (storage->getFactory(), parent, name, new CollectionHDF5Patch<Type>(storage->getFileId(), actualName, synchro, parent->getCompressLevel()));
+        return std::make_unique<CollectionNode<Type>> (storage->getFactory(), parent, name, new CollectionHDF5Patch<Type>(storage->getFileId(), actualName, synchro, parent->getCompressLevel()));
         //return new CollectionNode<Type> (storage->getFactory(), parent, name, new CollectionHDF5<Type>(storage->getFileId(), actualName, synchro /*, parent->getCompressLevel()*/)); // tried the old way
     }
 

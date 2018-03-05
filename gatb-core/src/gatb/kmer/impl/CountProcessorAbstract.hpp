@@ -90,7 +90,7 @@ public:
     virtual void setName (const std::string& name) { _name = name; }
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    virtual tools::misc::impl::Properties getProperties() const { return tools::misc::impl::Properties(); }
+    virtual tools::misc::Properties getProperties() const { return tools::misc::Properties(); }
 
     /** \copydoc ICountProcessor<span>::getInstances */
     virtual std::vector<ICountProcessor<span>*> getInstances () const

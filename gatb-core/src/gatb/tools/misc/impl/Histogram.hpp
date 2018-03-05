@@ -215,7 +215,7 @@ public:
 
 private:
 
-    IHistogram* _ref;
+    std::shared_ptr<IHistogram> _ref;
     void setRef (IHistogram* ref)  { SP_SETATTR(ref); }
 
     system::ISynchronizer* _synchro;

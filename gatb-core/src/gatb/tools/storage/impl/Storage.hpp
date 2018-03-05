@@ -36,11 +36,11 @@
 
 #include <gatb/tools/storage/impl/Cell.hpp>
 
+
 #include <gatb/tools/collections/api/Collection.hpp>
-#include <gatb/tools/collections/impl/CollectionAbstract.hpp>
 #include <gatb/tools/collections/impl/CollectionCache.hpp>
 
-#include <gatb/tools/misc/api/IProperty.hpp>
+#include <gatb/tools/misc/impl/Property.hpp>
 
 #include <gatb/tools/math/NativeInt8.hpp>
 
@@ -78,6 +78,7 @@ enum StorageMode_e
 /********************************************************************************/
 
 /** Forward declarations. */
+class Storage;
 class Group;
 template <typename Type>  class Partition;
 template <typename Type>  class CollectionNode;
@@ -103,7 +104,7 @@ class StorageFactory;
  * => we introduce the CollectionNode for this.
  */
 template <class Item>
-class CollectionNode : public Cell, public collections::impl::CollectionAbstract<Item>
+class CollectionNode : public Cell, public collections::Collection<Item>
 {
 public:
 
@@ -117,7 +118,7 @@ public:
      * \param[in] id  : identifier of the collection to be created
      * \param[in] ref : referred collection.
      */
-    CollectionNode (StorageFactory* factory, ICell* parent, const std::string& id, collections::Collection<Item>* ref);
+    CollectionNode (const StorageFactory& factory, ICell* parent, const std::string& id, collections::Collection<Item>* ref);
 
     /** Destructor. */
     virtual ~CollectionNode();
@@ -125,22 +126,21 @@ public:
     /** \copydoc tools::storage::ICell::remove */
     void remove ();
 
-    /** \copydoc collections::impl::CollectionAbstract::addProperty */
+    /** \copydoc collections::impl::Collection::addProperty */
     void addProperty (const std::string& key, const std::string value);
 
-    /** \copydoc collections::impl::CollectionAbstract::getProperty */
+    /** \copydoc collections::impl::Collection::getProperty */
     std::string getProperty (const std::string& key);
 
     /** Get a pointer to the delegate Collection instance
      * \return the delegate instance.
      */
-    collections::Collection<Item>* getRef ();
+    collections::Collection<Item>& getRef () { return *_ref; }
 
 private:
+    const StorageFactory& _factory;
 
-    StorageFactory* _factory;
-
-    collections::Collection<Item>* _ref;
+    std::shared_ptr<collections::Collection<Item>> _ref;
     void setRef (collections::Collection<Item>* ref)  { SP_SETATTR(ref); }
 };
 
@@ -168,7 +168,7 @@ class Group : public Cell
 public:
 
     /** Constructor. */
-    Group (StorageFactory* factory, ICell* parent, const std::string& name);
+    Group (const StorageFactory& factory, ICell* parent, const std::string& name);
 
     /** Destructor. */
     ~Group();
@@ -214,10 +214,63 @@ public:
 
 protected:
 
-    StorageFactory* _factory;
-    std::vector<ICell*> _collections;
-    std::vector<ICell*> _partitions;
-    std::vector<Group*> _groups;
+    const StorageFactory& _factory;
+    std::vector<std::unique_ptr<ICell>> _collections;
+    std::vector<std::unique_ptr<ICell>> _partitions;
+    std::vector<std::unique_ptr<Group>> _groups;
+};
+
+/** This class is a shared_ptr on Storage elements.
+ * Given a SharedStorage<Storage> storage_ptr it provides :
+ * - stantard pointer member access :
+ *      storage_ptr->getGroup("name") // returns a Group&
+ *   User must ensure that the storage_ptr pointer object outlives the
+ *   group reference when using it.
+ *
+ * - methods to extend Storage lifetime:
+ *      storage_ptr.getGroup("name") // return a SharedGroup
+ *   The returned SharedStorage<Group> extends the life time of the
+ *   storage_ptr pointed object.
+ */
+template<typename StorageElement>          class SharedStorageTmpl;
+                        using SharedStorage    = SharedStorageTmpl<Storage>;
+                        using SharedGroup      = SharedStorageTmpl<Group>;
+template<typename Type> using SharedPartition  = SharedStorageTmpl<Partition<Type>>;
+template<typename Type> using SharedCollection = SharedStorageTmpl<CollectionNode<Type>>;
+
+template<typename StorageElement=Storage> class SharedStorageTmpl
+        : public std::shared_ptr<StorageElement> {
+public:
+    SharedStorageTmpl() = default; // Null pointer
+
+    SharedStorageTmpl(std::unique_ptr<StorageElement> ref)
+        : std::shared_ptr<StorageElement>(std::move(ref))
+    {}
+
+    SharedGroup getGroup (const std::string& name="")
+    { return { this, (*this)->getGroup(name) }; }
+
+    /** Get a child partition from its name. Created if not already exists.
+     * \param[in] name : name of the child partition to be retrieved.
+     * \param[in] nb : in case of creation, tells how many collection belong to the partition.
+     * \return the child partition.
+     */
+    template<typename Type> SharedPartition<Type>
+    getPartition (const std::string& name, size_t nb=0)
+    { return { this, (*this)->template getPartition<Type>(name) }; }
+
+    /** Get a child collection from its name. Created if not already exists.
+     * \param[in] name : name of the child collection to be retrieved.
+     * \return the child collection .
+     */
+    template <class Type> SharedCollection<Type>
+    getCollection (const std::string& name)
+    { return { this, (*this)->template getCollection<Type>(name) }; }
+
+protected:
+    template<typename Owner>
+    SharedStorageTmpl(const std::shared_ptr<Owner>* owner, StorageElement& ref)
+       : std::shared_ptr<StorageElement>(*owner, &ref) {}
 };
 
 	
@@ -282,7 +335,7 @@ private:
 	std::vector<int> _nbKmerperFile;
 	std::vector<u_int64_t> _FileSize;
 
-	std::vector<system::IFile* > _files;
+	std::vector<std::unique_ptr<system::IFile> > _files;
 	std::vector <system::ISynchronizer*> _synchros;
 	int _nb_files;
 };
@@ -344,7 +397,7 @@ public:
      * \param[in] id : the identifier of the instance to be created
      * \param[in] nbCollections : number of collections for this partition
      */
-    Partition (StorageFactory* factory, ICell* parent, const std::string& id, size_t nbCollections);
+    Partition (const StorageFactory& factory, ICell* parent, const std::string& id, size_t nbCollections);
 
     /** Destructor. */
     ~Partition ();
@@ -380,8 +433,8 @@ public:
 
 protected:
 
-    StorageFactory* _factory;
-    std::vector <CollectionNode<Type>* > _typedCollections;
+    const StorageFactory& _factory;
+    std::vector <std::unique_ptr<CollectionNode<Type>>> _typedCollections;
     system::ISynchronizer* _synchro;
 };
 
@@ -520,10 +573,13 @@ public:
      * \param[in] mode : storage mode
      * \param[in] name : name of the storage.
      * \param[in] autoRemove : tells whether the storage has to be physically deleted when this object is deleted. */
-    Storage (StorageMode_e mode, const std::string& name, bool autoRemove=false);
+    Storage (StorageMode_e mode, const std::string& name, bool autoRemove=false)
+        : Cell(0, ""), _name(name), _factory(std::make_unique<StorageFactory>(mode)),
+          _autoRemove(autoRemove)
+    {}
 
     /** Destructor */
-    ~Storage ();
+    virtual ~Storage ();
 
     /** Get the name of the storage. */
     std::string getName() const { return _name; }
@@ -532,17 +588,14 @@ public:
 
     /** Facility for retrieving the root group.
      * \return the root group. */
-    Group& getGroup (const std::string name) { return this->operator() (name); }
-
-    /** Facility for retrieving the root group.
-     * \return the root group. */
-    Group& operator() (const std::string name="");
+    Group& getGroup (const std::string name="");
 
     /** Remove physically the storage. */
     virtual void remove ();
 
     /** */
-    StorageFactory* getFactory() const { return _factory; }
+    const StorageFactory& getFactory() { return *_factory; }
+    StorageFactory& getFactory() const { return *_factory; }
 
     /** WRAPPER C++ OUTPUT STREAM */
     class ostream : public std::ostream
@@ -564,13 +617,11 @@ protected:
 
     std::string _name;
 
-    StorageFactory* _factory;
-    void setFactory (StorageFactory* factory);
+    std::unique_ptr<StorageFactory> _factory; // Pointer avoinding incomplete type loop
 
     /** Root group. */
-    Group* _root;
+    std::unique_ptr<Group> _root;
     Group* getRoot ();
-    void setRoot (Group* root)  { SP_SETATTR(root); }
 
     bool _autoRemove;
 };
@@ -613,26 +664,28 @@ public:
      * \param[in] autoRemove : auto delete the storage from file system during Storage destructor.
      * \return the created Storage instance
      */
-    Storage* create (const std::string& name, bool deleteIfExist, bool autoRemove, bool dont_add_extension = false, bool append = false);
+    std::unique_ptr<Storage> create (const std::string& name, bool deleteIfExist,
+                                     bool autoRemove, bool dont_add_extension = false, bool append = false) const;
 
     /** Tells whether or not a Storage exists in file system given a name
      * \param[in] name : name of the storage to be checked
      * \return true if the storage exists in file system, false otherwise.
      */
-    bool exists (const std::string& name);
+    bool exists (const std::string& name) const;
 
     /** Create a Storage instance from an existing storage in file system.
      * \param[in] name : name of the file in file system
      * \return the created Storage instance
      */
-    Storage* load (const std::string& name) { return create (name, false, false); }
+    std::unique_ptr<Storage> load (const std::string& name) const
+    { return create (name, false, false); }
 
     /** Create a Group instance and attach it to a cell in a storage.
      * \param[in] parent : parent of the group to be created
      * \param[in] name : name of the group to be created
      * \return the created Group instance.
      */
-    Group* createGroup (ICell* parent, const std::string& name);
+    std::unique_ptr<Group> createGroup (ICell* parent, const std::string& name) const;
 
     /** Create a Partition instance and attach it to a cell in a storage.
      * \param[in] parent : parent of the partition to be created
@@ -641,7 +694,7 @@ public:
      * \return the created Partition instance.
      */
     template<typename Type>
-    Partition<Type>* createPartition (ICell* parent, const std::string& name, size_t nb);
+    std::unique_ptr<Partition<Type>> createPartition (ICell* parent, const std::string& name, size_t nb) const;
 
     /** Create a Collection instance and attach it to a cell in a storage.
      * \param[in] parent : parent of the collection to be created
@@ -650,7 +703,8 @@ public:
      * \return the created Collection instance.
      */
     template<typename Type>
-    CollectionNode<Type>* createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro);
+    std::unique_ptr<CollectionNode<Type>> createCollection (ICell* parent, const std::string& name,
+                                                            system::ISynchronizer* synchro) const;
 
 private:
 

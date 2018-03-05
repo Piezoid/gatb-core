@@ -93,20 +93,17 @@ static const char* progressFormat1 = "Bloom: read solid kmers                ";
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-BloomAlgorithm<span>::BloomAlgorithm (
-    Storage& storage,
-    Iterable<Count>*    solidIterable,
+BloomAlgorithm<span>::BloomAlgorithm (Storage& storage,
+    Iterable<Count>&    solidIterable,
     size_t              kmerSize,
     float               nbitsPerKmer,
     size_t              nb_cores,
     BloomKind  bloomKind,
-    IProperties*        options
+    Properties options
 )
-    :  Algorithm("bloom", nb_cores, options),
-       _kmerSize(kmerSize), _nbitsPerKmer(nbitsPerKmer), _bloomKind(bloomKind), _storage(storage), _solidIterable(0)
-{
-    setSolidIterable (solidIterable);
-}
+    :  Algorithm("bloom", nb_cores, std::move(options)),
+       _kmerSize(kmerSize), _nbitsPerKmer(nbitsPerKmer), _bloomKind(bloomKind), _storage(storage), _solidIterable(solidIterable)
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -118,7 +115,7 @@ BloomAlgorithm<span>::BloomAlgorithm (
 *********************************************************************/
 template<size_t span>
 BloomAlgorithm<span>::BloomAlgorithm (tools::storage::impl::Storage& storage)
-    :  Algorithm("bloom", 0, 0),
+    :  Algorithm("bloom"),
        _kmerSize(0), _nbitsPerKmer(0), _storage(storage), _solidIterable(0)
 {
     /** We get the kind in the storage. */
@@ -128,7 +125,7 @@ BloomAlgorithm<span>::BloomAlgorithm (tools::storage::impl::Storage& storage)
     parse (kind, _bloomKind);
 
     string xmlString = _storage(this->getName()).getProperty ("xml");
-    stringstream ss; ss << xmlString;   getInfo()->readXML (ss);
+    stringstream ss; ss << xmlString;   getInfo().readXML (ss);
 }
 
 /*********************************************************************
@@ -141,9 +138,7 @@ BloomAlgorithm<span>::BloomAlgorithm (tools::storage::impl::Storage& storage)
 *********************************************************************/
 template<size_t span>
 BloomAlgorithm<span>::~BloomAlgorithm ()
-{
-    setSolidIterable (0);
-}
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -158,7 +153,7 @@ void BloomAlgorithm<span>::execute ()
 {
 
     /** We get the number of solid kmers. */
-    u_int64_t solidKmersNb = _solidIterable->getNbItems();
+    u_int64_t solidKmersNb = _solidIterable.getNbItems();
 
     float     NBITS_PER_KMER     = _nbitsPerKmer;
     u_int64_t estimatedBloomSize = (u_int64_t) (solidKmersNb * NBITS_PER_KMER);
@@ -168,7 +163,7 @@ void BloomAlgorithm<span>::execute ()
 
     /** We create the kmers iterator from the solid file. */
     Iterator <Count>* itKmers = createIterator<Count> (
-        _solidIterable->iterator(),
+        _solidIterable.iterator(),
         solidKmersNb,
         progressFormat1
     );
@@ -189,12 +184,12 @@ void BloomAlgorithm<span>::execute ()
     StorageTools::singleton().saveBloom<Type> (_storage.getGroup(this->getName()), "bloom", bloom, _kmerSize);
 
     /** We gather some statistics. */
-    getInfo()->add (1, "stats");
-    getInfo()->add (2, "kind",           "%s",  toString(_bloomKind));
-    getInfo()->add (2, "bitsize",        "%ld", bloom->getBitSize());
-    getInfo()->add (2, "nb_hash",        "%d",  bloom->getNbHash());
-    getInfo()->add (2, "nbits_per_kmer", "%f",  _nbitsPerKmer);
-    getInfo()->add (1, getTimeInfo().getProperties("time"));
+    getInfo().add (1, "stats");
+    getInfo().add (2, "kind",           "%s",  toString(_bloomKind));
+    getInfo().add (2, "bitsize",        "%ld", bloom->getBitSize());
+    getInfo().add (2, "nb_hash",        "%d",  bloom->getNbHash());
+    getInfo().add (2, "nbits_per_kmer", "%f",  _nbitsPerKmer);
+    getInfo().add (1, getTimeInfo().getProperties("time"));
 
     /** We save the kind in the storage. */
     _storage.getGroup(this->getName()).addProperty ("kind", toString(_bloomKind));

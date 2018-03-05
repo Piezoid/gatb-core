@@ -422,19 +422,13 @@ class GraphIterator : public tools::dp::ISmartIterator<Item>
     public:
 
         /** */
-        GraphIterator (tools::dp::ISmartIterator<Item>* ref) : _ref(0) { setRef(ref); }
+        GraphIterator (std::unique_ptr<tools::dp::ISmartIterator<Item>> ref) : _ref(std::move(ref)) {}
 
         /* empty iterator, just for debug purposes, shouldn't be used */
-        GraphIterator () : _ref(0) {  std::cout << "empty GraphIterator used (shouldn't happen)" << std::endl; }
+        GraphIterator () {  std::cout << "empty GraphIterator used (shouldn't happen)" << std::endl; }
 
         /** */
-        virtual ~GraphIterator() { setRef(0); }
-
-        /** */
-        GraphIterator (const GraphIterator<Item>& i) : _ref(0) { setRef(i._ref); }
-
-        /** */
-        GraphIterator& operator= (const GraphIterator<Item>& i)  {  if (this != &i)   {  setRef (i._ref);  }   return *this;  }
+        virtual ~GraphIterator() {}
 
         /** Method that the number of iterated items so far. */
         virtual u_int64_t rank() const  { return _ref->rank(); }
@@ -464,11 +458,11 @@ class GraphIterator : public tools::dp::ISmartIterator<Item>
         u_int64_t size () const  { return _ref->size(); }
 
         /** */
-        tools::dp::ISmartIterator<Item>* get()  const { return _ref; }
+        tools::dp::ISmartIterator<Item>* get()  const { return _ref.get(); }
 
     private:
 
-        tools::dp::ISmartIterator<Item>* _ref;
+        std::unique_ptr<tools::dp::ISmartIterator<Item>> _ref;
         void setRef (tools::dp::ISmartIterator<Item>* ref)  { SP_SETATTR(ref); }
 };
 
@@ -556,7 +550,7 @@ public:
      * \param[in] fmt : printf-like format for the command line string
      * \return the created graph.
      */
-    static GraphTemplate  create (bank::IBank* bank, const char* fmt, ...);
+    static GraphTemplate  create (std::unique_ptr<bank::IBank> bank, const char* fmt, ...);
 
     /** Build a graph from user options.
      * \param[in] fmt: printf-like format
@@ -568,7 +562,7 @@ public:
      * \param[in] options : user parameters for building the graph.
      * \return the created graph.
      */
-    static GraphTemplate  create (tools::misc::IProperties* options)  {  return  GraphTemplate (options);  }
+    static GraphTemplate  create (tools::misc::Properties& options)  {  return  GraphTemplate (options);  }
 
     /** Load a graph from some URI.
      * \param[in] uri : the uri to get the graph from
@@ -960,7 +954,8 @@ public:
 
     /** Get information about the graph (gathered during its creation).
      * \return a property object holding graph information. */
-    tools::misc::IProperties& getInfo () const { return (tools::misc::IProperties&)_info; }
+    tools::misc::Properties& getInfo () { return _info; }
+    const tools::misc::Properties& getInfo () const { return _info; }
 
     /** Remove physically a graph. */
     void remove ();
@@ -1017,10 +1012,10 @@ public:
     GraphTemplate (size_t kmerSize);
 
     /** Constructor. Use for GraphTemplate creation (ie. DSK + debloom) and filesystem save. */
-    GraphTemplate (bank::IBank* bank, tools::misc::IProperties* params);
+    GraphTemplate (std::unique_ptr<bank::IBank> bank, const tools::misc::Properties &params);
 
     /** Constructor. Use for GraphTemplate creation (ie. DSK + debloom) and filesystem save. */
-    GraphTemplate (tools::misc::IProperties* params);
+    GraphTemplate (const tools::misc::Properties& params);
 
     /** Constructor. Use for reading from filesystem. */
     GraphTemplate (const std::string& uri);
@@ -1034,19 +1029,16 @@ public: // was private: before, but had many compilation errors during the chang
     static const tools::storage::impl::StorageMode_e PRODUCT_MODE_DEFAULT = tools::storage::impl::STORAGE_HDF5;
 
     /** Storage. */
-    tools::storage::impl::Storage* _storage;
-    void setStorage (tools::storage::impl::Storage* storage)  { SP_SETATTR(storage); }
-    tools::storage::impl::Storage& getStorage()                           { return (*_storage); }
-    tools::storage::impl::Group&   getGroup  (const std::string name="")  { return getStorage() (name); }
+    tools::storage::impl::SharedStorage _storage;
 
     /** Defined as a void* for hiding implementation in cpp file. */
-    void* _variant;
+    void* _variant; // My pants are wet and I'm not laughing...
 
     /** kmer size of the graph */
     size_t _kmerSize;
 
     /** Creation information. */
-    tools::misc::impl::Properties _info;
+    tools::misc::Properties _info;
 
     /** */
     std::string _name;
@@ -1116,7 +1108,8 @@ public: // was private: before, but had many compilation errors during the chang
     template<typename, typename, typename> friend struct configure_visitor;
 
     // a late addition, because GraphUnitig wants to call it too
-    static void executeAlgorithm (gatb::core::tools::misc::impl::Algorithm& algorithm, gatb::core::tools::storage::impl::Storage* storage, gatb::core::tools::misc::IProperties* props, gatb::core::tools::misc::IProperties& info);
+    static void executeAlgorithm (tools::misc::impl::Algorithm& algorithm, tools::storage::impl::Storage* storage,
+                                  const tools::misc::Properties& props, tools::misc::Properties& info);
 };
 
 
@@ -1138,7 +1131,7 @@ public:
         : tools::dp::impl::SubjectIterator<Type> (items.get(), items.size()/divide), _size(items.size()) 
         { 
             if (verbose)
-                this->addObserver( new Listener(items.size(), msg) );
+                this->addObserver( std::make_shared<Listener>(items.size(), msg) );
         }
     
 
@@ -1182,68 +1175,17 @@ struct GraphData
     /** Constructor. */
     GraphData () : _model(0), _solid(0), _container(0), _branching(0), _abundance(0), _nodestate(0), _adjacency(0), _nodecache(0) {}
 
-    /** Destructor. */
-    ~GraphData ()
-    {
-        setModel     (0);
-        setSolid     (0);
-        setContainer (0);
-        setBranching (0);
-        setAbundance (0);
-        setNodeState (0);
-        setAdjacency (0);
-        setNodeCache (0);
-    }
 
-    /** Constructor (copy). */
-    GraphData (const GraphData& d) : _model(0), _solid(0), _container(0), _branching(0), _abundance(0), _nodestate(0), _adjacency(0), _nodecache(0)
-    {
-        setModel     (d._model);
-        setSolid     (d._solid);
-        setContainer (d._container);
-        setBranching (d._branching);
-        setAbundance (d._abundance);
-        setNodeState (d._nodestate);
-        setAdjacency (d._adjacency);
-        setNodeCache (d._nodecache);
-    }
-
-    /** Assignment operator. */
-    GraphData& operator= (const GraphData& d)
-    {
-        if (this != &d)
-        {
-            setModel     (d._model);
-            setSolid     (d._solid);
-            setContainer (d._container);
-            setBranching (d._branching);
-            setAbundance (d._abundance);
-            setNodeState (d._nodestate);
-            setAdjacency (d._adjacency);
-            setNodeCache (d._nodecache);
-        }
-        return *this;
-    }
 
     /** Required attributes. */
-    Model*                _model;
+    std::unique_ptr<Model>                _model;
     tools::storage::impl::Partition<Count>*   _solid;
-    IContainerNode<Type>*                     _container;
+    std::shared_ptr<IContainerNode<Type>>      _container;
     tools::collections::Collection<Count>*    _branching;
-    AbundanceMap*         _abundance;
-    NodeStateMap*         _nodestate;
-    AdjacencyMap*         _adjacency;
-    NodeCacheMap*         _nodecache; // so, nodecache also records branching node, but also more stuff. i'm keeping _branching for historical reasons.
-
-    /** Setters. */
-    void setModel       (Model*                                       model)      { SP_SETATTR (model);     }
-    void setSolid       (tools::storage::impl::Partition<Count>*      solid)      { SP_SETATTR (solid);     }
-    void setContainer   (IContainerNode<Type>*                    container)  { SP_SETATTR (container); }
-    void setBranching   (tools::collections::Collection<Count>*   branching)  { SP_SETATTR (branching); }
-    void setAbundance   (AbundanceMap*          abundance)  { SP_SETATTR (abundance); }
-    void setNodeState   (NodeStateMap*          nodestate)  { SP_SETATTR (nodestate); }
-    void setAdjacency   (AdjacencyMap*          adjacency)  { SP_SETATTR (adjacency); }
-    void setNodeCache   (NodeCacheMap*          nodecache)  { _nodecache = nodecache; /* would like to do "SP_SETATTR (nodecache)" but nodecache is an unordered_map, not some type that derives from a smartpointer. so one day, address this. I'm not sure if it's important though. Anyway I'm phasing out NodeCache in favor of GraphUnitigs. */; }
+    std::shared_ptr<AbundanceMap>         _abundance;
+    std::shared_ptr<NodeStateMap>         _nodestate;
+    std::shared_ptr<AdjacencyMap>         _adjacency;
+    std::shared_ptr<NodeCacheMap>         _nodecache;
 
     /** Shortcut. */
     bool contains (const Type& item)  const  {  
@@ -1315,10 +1257,9 @@ class ProgressGraphIterator : public ProgressGraphIteratorTemplate<Type, Listene
 template<typename Node, typename Edge, typename GraphDataVariant>
 struct configure_visitor : public boost::static_visitor<>    {
 
-    const GraphTemplate<Node, Edge, GraphDataVariant>& graph;
-    tools::storage::impl::Storage&     storage;
+    GraphTemplate<Node, Edge, GraphDataVariant>& graph;
 
-    configure_visitor (const GraphTemplate<Node, Edge, GraphDataVariant>& graph, tools::storage::impl::Storage& storage)  : graph(graph), storage(storage) {}
+    configure_visitor (GraphTemplate<Node, Edge, GraphDataVariant>& graph)  : graph(graph) {}
 
     template<size_t span>  void operator() (GraphData<span>& data) const;
 };
@@ -1327,10 +1268,11 @@ template<typename Node, typename Edge, typename GraphDataVariant>
 struct build_visitor_solid : public boost::static_visitor<>    {
 
     GraphTemplate<Node, Edge, GraphDataVariant>& graph; 
-    bank::IBank* bank; 
-    tools::misc::IProperties* props;
+    std::unique_ptr<bank::IBank> bank; 
+    const tools::misc::Properties& props;
 
-    build_visitor_solid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, bank::IBank* aBank, tools::misc::IProperties* aProps)  : graph(aGraph), bank(aBank), props(aProps) {}
+    build_visitor_solid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, std::unique_ptr<bank::IBank> aBank, const tools::misc::Properties& aProps)
+        : graph(aGraph), bank(std::move(aBank)), props(aProps) {}
 
     template<size_t span>  void operator() (GraphData<span>& data) const;
 };
@@ -1339,9 +1281,10 @@ struct build_visitor_solid : public boost::static_visitor<>    {
 template<typename Node, typename Edge, typename GraphDataVariant>
 struct build_visitor_postsolid : public boost::static_visitor<>    {
 
-    GraphTemplate<Node, Edge, GraphDataVariant>& graph; tools::misc::IProperties* props; 
+    GraphTemplate<Node, Edge, GraphDataVariant>& graph;
+    const tools::misc::Properties& props;
 
-    build_visitor_postsolid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, tools::misc::IProperties* aProps)  : graph(aGraph), props(aProps) {}
+    build_visitor_postsolid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, const tools::misc::Properties& aProps)  : graph(aGraph), props(aProps) {}
 
     template<size_t span>  void operator() (GraphData<span>& data) const;
 };

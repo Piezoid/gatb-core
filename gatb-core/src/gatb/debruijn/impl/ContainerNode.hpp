@@ -75,10 +75,10 @@ public:
 
 protected:
 
-    tools::collections::Container<Item>* _bloom;
+    std::shared_ptr<tools::collections::Container<Item>> _bloom;
 	void setBloom (tools::collections::Container<Item>* bloom)  { SP_SETATTR(bloom); }
 
-	tools::collections::Container<Item>* _falsePositives;
+	std::shared_ptr<tools::collections::Container<Item>> _falsePositives;
 	void setFalsePositives (tools::collections::Container<Item>* falsePositives)  { SP_SETATTR(falsePositives); }
 };
 
@@ -152,19 +152,19 @@ public:
 
 private:
 
-    tools::collections::Container<Item>* _bloom;
+    std::shared_ptr<tools::collections::Container<Item>> _bloom;
     void setBloom (tools::collections::Container<Item>* bloom)  { SP_SETATTR(bloom); }
 
-    tools::collections::Container<Item>* _bloom2;
+    std::shared_ptr<tools::collections::Container<Item>> _bloom2;
 	void setBloom2 (tools::collections::Container<Item>* bloom2)  { SP_SETATTR(bloom2); }
 
-	tools::collections::Container<Item>* _bloom3;
+	std::shared_ptr<tools::collections::Container<Item>> _bloom3;
 	void setBloom3 (tools::collections::Container<Item>* bloom3)  { SP_SETATTR(bloom3); }
 
-	tools::collections::Container<Item>* _bloom4;
+	std::shared_ptr<tools::collections::Container<Item>> _bloom4;
 	void setBloom4 (tools::collections::Container<Item>* bloom4)  { SP_SETATTR(bloom4); }
 
-	tools::collections::Container<Item>* _falsePositives;
+	std::shared_ptr<tools::collections::Container<Item>> _falsePositives;
 	void setFalsePositives (tools::collections::Container<Item>* falsePositives)  { SP_SETATTR(falsePositives); }
 
     std::vector<tools::collections::Container<Item>*> _cfpArray;

@@ -59,11 +59,9 @@ static const char* progressFormat1 = "Bank: fasta to binary                  ";
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-BankConverterAlgorithm::BankConverterAlgorithm (IBank* bank,  size_t kmerSize, const std::string& outputUri)
-: Algorithm ("bankconverter"), _kind(BANK_CONVERT_TMP), _bankInput(0), _bankOutput(0), _outputUri(outputUri), _kmerSize(kmerSize)
-{
-    setBankInput  (bank);
-}
+BankConverterAlgorithm::BankConverterAlgorithm (std::unique_ptr<IBank> bank,  size_t kmerSize, const std::string& outputUri)
+ : Algorithm ("bankconverter"), _kind(BANK_CONVERT_TMP), _bankInput(std::move(bank)), _bankOutput(), _outputUri(outputUri), _kmerSize(kmerSize)
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -74,25 +72,12 @@ BankConverterAlgorithm::BankConverterAlgorithm (IBank* bank,  size_t kmerSize, c
 ** REMARKS :
 *********************************************************************/
 BankConverterAlgorithm::BankConverterAlgorithm (tools::storage::impl::Storage& storage)
-: Algorithm ("bankconverter"), _kind(BANK_CONVERT_NONE), _bankInput(0), _bankOutput(0), _kmerSize(0)
+: Algorithm ("bankconverter"), _kind(BANK_CONVERT_NONE), _bankInput(), _bankOutput(), _kmerSize(0)
 {
-    string xmlString = storage(this->getName()).getProperty ("xml");
-    stringstream ss; ss << xmlString;   getInfo()->readXML (ss);
+    string xmlString = storage.getGroup(this->getName()).getProperty ("xml");
+    stringstream ss; ss << xmlString;   getInfo().readXML (ss);
 }
 
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-BankConverterAlgorithm::~BankConverterAlgorithm ()
-{
-    setBankInput  (0);
-    setBankOutput (0);
-}
 
 /*********************************************************************
 ** METHOD  :
@@ -107,7 +92,7 @@ void BankConverterAlgorithm::execute ()
     /** We may have no conversion at all to do. */
     if (_kind == BANK_CONVERT_NONE)
     {
-        setBankOutput (_bankInput);
+        _bankOutput = std::move(_bankInput);
         return;
     }
 
@@ -119,8 +104,7 @@ void BankConverterAlgorithm::execute ()
     _bankInput->estimate (number, totalSize, maxSize);
 
     /** We create the sequence iterator. */
-    Iterator<Sequence>* itSeq = _bankInput->iterator();
-    LOCAL (itSeq);
+    auto itSeq = std::unique_ptr<Iterator<Sequence>>(_bankInput->iterator());
 
     u_int64_t   nbSeq = 0;
     u_int64_t sizeSeq = 0;
@@ -139,12 +123,12 @@ void BankConverterAlgorithm::execute ()
         if (iters.size() == 1)
         {
             /** We set the output bank. */
-            setBankOutput (createBank (itSeq, number, _outputUri, nbSeq, sizeSeq));
+            _bankOutput = createBank (itSeq.get(), number, _outputUri, nbSeq, sizeSeq);
         }
 
         else if (iters.size() > 1)
         {
-            vector<IBank*> ouputBanks;
+            vector<std::unique_ptr<IBank>> ouputBanks;
 
             for (size_t i=0; i<iters.size(); i++)
             {
@@ -156,7 +140,7 @@ void BankConverterAlgorithm::execute ()
             }
 
             /** We set the result output bank. */
-            setBankOutput (new BankAlbum (_outputUri, ouputBanks));
+            _bankOutput = std::make_unique<BankAlbum> (_outputUri, std::move(ouputBanks));
         }
         else
         {
@@ -168,14 +152,14 @@ void BankConverterAlgorithm::execute ()
     _bankOutput->flush ();
 
     /** We gather some statistics. */
-    getInfo()->add (1, "info");
-    getInfo()->add (2, "input",            "%s",   _bankInput->getId().c_str());
-    getInfo()->add (2, "composite_number", "%d",   iters.size());
-    getInfo()->add (2, "sequences_number", "%ld",  nbSeq);
-    getInfo()->add (2, "sequences_size",   "%ld",  sizeSeq);
-    getInfo()->add (2, "output_size",      "%ld",  _bankOutput->getSize());
-    getInfo()->add (2, "ratio",            "%.3f",  (double)sizeSeq / (double)_bankOutput->getSize());
-    getInfo()->add (1, getTimeInfo().getProperties("time"));
+    getInfo().add (1, "info");
+    getInfo().add (2, "input",            "%s",   _bankInput->getId().c_str());
+    getInfo().add (2, "composite_number", "%d",   iters.size());
+    getInfo().add (2, "sequences_number", "%ld",  nbSeq);
+    getInfo().add (2, "sequences_size",   "%ld",  sizeSeq);
+    getInfo().add (2, "output_size",      "%ld",  _bankOutput->getSize());
+    getInfo().add (2, "ratio",            "%.3f",  (double)sizeSeq / (double)_bankOutput->getSize());
+    getInfo().add (1, getTimeInfo().getProperties("time"));
 }
 
 /*********************************************************************
@@ -186,7 +170,7 @@ void BankConverterAlgorithm::execute ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankConverterAlgorithm::createBank (
+std::unique_ptr<IBank> BankConverterAlgorithm::createBank (
     Iterator<Sequence>* inputSequences,
     size_t              nbInputSequences,
     const string& outputName,
@@ -199,15 +183,14 @@ IBank* BankConverterAlgorithm::createBank (
     ));
 
     /** We create a new binary bank. */
-    IBank* result = new BankBinary (outputName, _kmerSize);
+    auto result = std::make_unique<BankBinary> (outputName, _kmerSize);
 
     /** We need an iterator on the input bank. */
-    Iterator<Sequence>* itBank = createIterator<Sequence> (
+    auto itBank =  std::unique_ptr<Iterator<Sequence>>(createIterator<Sequence> (
         inputSequences,
         nbInputSequences,
         progressFormat1
-    );
-    LOCAL (itBank);
+    ));
 
     /** We iterate the sequences of the input bank. */
     for (itBank->first(); !itBank->isDone(); itBank->next())

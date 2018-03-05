@@ -58,7 +58,7 @@ public:
         tools::misc::BloomKind      bloomKind     = tools::misc::BLOOM_DEFAULT,
         tools::misc::DebloomKind    cascadingKind = tools::misc::DEBLOOM_DEFAULT,
         const std::string&          debloomUri = "debloom",
-        tools::misc::IProperties*   options    = 0,
+        tools::misc::Properties     options    = {},
         tools::storage::impl::Group*    minimizersGroup = 0
     )
     {

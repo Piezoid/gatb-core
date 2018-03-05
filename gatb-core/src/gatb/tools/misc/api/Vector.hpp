@@ -102,9 +102,9 @@ public:
      * \param[in] ref : data referred by the current instance.
      * \param[in] offset : the current data will begin 'offset' bytes from the beginning of the referred data.
      * \param[in] length : size of the data */
-    void setRef (Vector* ref, size_t offset, size_t length)
+    void setRef (std::shared_ptr<Vector> ref, size_t offset, size_t length)
     {
-        setRef (ref);
+        _ref = std::move(ref);
         _buffer      = _ref->_buffer + offset;
         _size        = length;
         _isAllocated = false;
@@ -139,7 +139,7 @@ private:
     int    _size;
     bool   _isAllocated;
 
-    Vector* _ref;
+    std::shared_ptr<Vector> _ref;
     void setRef (Vector* ref)  {  SP_SETATTR(ref);  }
 };
 

@@ -84,11 +84,11 @@ public:
      * a memory leak will happen).
      * \param[in] uri : uri of the bank.
      * \return the IBank instance. */
-    static IBank* open (const std::string& uri)  { return singleton()._open_ (uri); }
+    static std::unique_ptr<IBank> open (const std::string& uri)  { return singleton()._open_ (uri); }
 
     /** In case of a composite bank, return the number of sub banks.
      * \return number of sub banks. */
-    static size_t getCompositionNb (const std::string& uri)  {  IBank* bank = open (uri);  LOCAL (bank);  return bank->getCompositionNb();  }
+    static size_t getCompositionNb (const std::string& uri)  {  return open (uri)->getCompositionNb();  }
 
     /** Get the type of the bank as a string
      * \param[in] uri : uri of the bank.
@@ -102,7 +102,8 @@ public:
      * \param[in] name : name of the factory
      * \param[in] instance : IBank factory
      * \param[in] beginning : if true add the factory in the first position of the factories list, if false in the last position. */
-    static void registerFactory (const std::string& name, IBankFactory* instance, bool beginning)  { singleton()._registerFactory_ (name, instance, beginning); }
+    static void registerFactory (const std::string& name, std::unique_ptr<IBankFactory> instance, bool beginning)
+    { singleton()._registerFactory_ (name, std::move(instance), beginning); }
 
     /** Unregister a factory given its name.
      * \param[in] name : name of the factory to be unregistered.
@@ -110,7 +111,7 @@ public:
     static bool unregisterFactory (const std::string& name)  { return singleton()._unregisterFactory_ (name); }
 
     /** Get a factory for a given name. */
-    static IBankFactory* getFactory (const std::string& name)  { return singleton()._getFactory_(name); }
+    static const IBankFactory* getFactory (const std::string& name)  { return singleton()._getFactory_(name); }
 
 private:
 
@@ -122,12 +123,7 @@ private:
 
     /** The order of registration is important, so we can't rely on a map and have to use
      * a list of Entry (equivalent to <key,value> of a map). */
-    struct Entry
-    {
-        Entry (const std::string& name, IBankFactory* factory) : name(name), factory(factory) {}
-        std::string   name;
-        IBankFactory* factory;
-    };
+    using Entry = std::pair<const std::string, std::unique_ptr<IBankFactory>>;
 
     std::list<Entry> _factories;
 
@@ -135,19 +131,19 @@ private:
     static Bank& singleton()  { static Bank instance; return instance; }
 
     /** Wrapper for 'open' method. */
-    IBank* _open_ (const std::string& uri);
+    std::unique_ptr<IBank> _open_(const std::string& uri);
 
     /** Wrapper for 'getType' method. */
     std::string _getType_ (const std::string& uri);
 
     /** Wrapper for 'registerFactory' method. */
-    void _registerFactory_ (const std::string& name, IBankFactory* instance, bool beginning);
+    void _registerFactory_ (const std::string& name, std::unique_ptr<IBankFactory>&& instance, bool beginning);
 
     /** Wrapper for 'unregisterFactory' method. */
     bool _unregisterFactory_ (const std::string& name);
 
     /** Wrapper for 'getFactory' method. */
-    IBankFactory* _getFactory_ (const std::string& name);
+    const IBankFactory* _getFactory_ (const std::string& name);
 };
 
 /********************************************************************************/

@@ -30,10 +30,10 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/collections/api/Collection.hpp>
+
 #include <gatb/tools/collections/impl/BagFile.hpp>
 #include <gatb/tools/collections/impl/IteratorFile.hpp>
-#include <gatb/tools/collections/impl/CollectionAbstract.hpp>
+#include <gatb/tools/collections/api/Collection.hpp>
 #include <gatb/system/impl/System.hpp>
 #include <json/json.hpp>
 
@@ -53,15 +53,15 @@ namespace impl      {
  *
  * This implementation reads/writes Item objects in a file.
  */
-template <class Item> class CollectionFile : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionFile : public collections::Collection<Item>, public system::SmartPointer
 {
 public:
 
     /** Constructor. */
     CollectionFile (const std::string& filename, size_t cacheItemsNb=10000)
-        : collections::impl::CollectionAbstract<Item> (
-             new collections::impl::BagFile<Item>(filename),
-             new collections::impl::IterableFile<Item>(filename, cacheItemsNb)
+        : collections::Collection<Item> (
+             std::make_shared<collections::impl::BagFile<Item>>(filename),
+             std::make_shared<collections::impl::IterableFile<Item>>(filename, cacheItemsNb)
              /* Note (Rayan): this isn't very clean. Two files objectss are opened, one by BagFile (in write mode) and one in IterableFile (in read mode).
               * With Clang/OSX, turns out the IterableFile was created before BagFile, causing some troubles.
               * Also this is opening the file twice, not nice. Anyway until I think of a better system, it's kept as it is, and IterableFile does a small hack*/
@@ -139,20 +139,25 @@ private:
 
 /********************************************************************************/
 /* Experimental (not documented). */
-template <class Item> class CollectionGzFile : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionGzFile : public collections::Collection<Item>, public system::SmartPointer
 {
 public:
     
     /** Constructor. */
     CollectionGzFile (const std::string& filename, size_t cacheItemsNb=10000)
-    : collections::impl::CollectionAbstract<Item> (
-                                                   new collections::impl::BagGzFile<Item>(filename),
-                                                   new collections::impl::IterableGzFile<Item>(filename, cacheItemsNb)
-                                                   ),  _name(filename)
+    : collections::Collection<Item> (
+        std::make_shared<collections::impl::BagGzFile<Item>>(filename),
+        std::make_shared<collections::impl::IterableGzFile<Item>>(filename, cacheItemsNb)),
+      _name(filename)
     {}
     
     /** Destructor. */
     virtual ~CollectionGzFile() {}
+
+    /** Not implemented */
+    virtual void addProperty (const std::string& key, const std::string value) { std::terminate(); }
+    /** Not implemented */
+    virtual std::string getProperty (const std::string& key) { std::terminate(); }
     
     /** \copydoc tools::collections::Collection::remove */
     void remove ()  {  gatb::core::system::impl::System::file().remove (_name);  }
@@ -164,15 +169,16 @@ private:
   
 /********************************************************************************/
 /* Experimental (not documented). */
-template <class Item> class CollectionCountFile : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionCountFile : public collections::Collection<Item>, public system::SmartPointer
 {
 public:
     
     /** Constructor. */
     CollectionCountFile (const std::string& filename, size_t cacheItemsNb=10000)
-    : collections::impl::CollectionAbstract<Item> (
-                                                   new collections::impl::BagCountCompressedFile<Item>(filename),
-                                                   new collections::impl::IterableCountCompressedFile<Item>(filename, cacheItemsNb)                                                    ),  _name(filename)
+    : collections::Collection<Item> (
+          std::make_unique<collections::impl::BagCountCompressedFile<Item>>(filename),
+          std::make_unique<collections::impl::IterableCountCompressedFile<Item>>(filename, cacheItemsNb)),
+      _name(filename)
     {}
     
     /** Destructor. */
@@ -180,6 +186,11 @@ public:
     
     /** \copydoc tools::collections::Collection::remove */
     void remove ()  {  gatb::core::system::impl::System::file().remove (_name);  }
+
+    /** Not implemented */
+    virtual void addProperty (const std::string& key, const std::string value) { std::terminate(); }
+    /** Not implemented */
+    virtual std::string getProperty (const std::string& key) { std::terminate(); }
     
 private:
     

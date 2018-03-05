@@ -113,10 +113,10 @@ public:
 
 protected:
 
-    Bag<Item>*             _ref;
+    std::shared_ptr<Bag<Item>>             _ref;
     void setRef (Bag<Item>* ref)  { SP_SETATTR(ref); }
 
-    system::ISynchronizer* _synchro;
+    std::shared_ptr<system::ISynchronizer> _synchro;
     void setSynchro (system::ISynchronizer* synchro)  { SP_SETATTR(synchro); }
 
     Item*                  _items;
@@ -191,7 +191,7 @@ public:
     
 private:
     Item * _sharedBuffer; // shared buffer for sorting, allocated from outside
-    system::ISynchronizer* _outsynchro;
+    std::shared_ptr<system::ISynchronizer> _outsynchro;
     void setOutSynchro (system::ISynchronizer* outsynchro)  { SP_SETATTR(outsynchro); }
     size_t _sharedCacheSize;
     size_t * _idxShared;

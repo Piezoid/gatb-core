@@ -80,7 +80,7 @@ void readDataset(tools::storage::impl::Group *  group, std::string datasetname, 
 //Leon::Leon ( bool compress, bool decompress) :
 Leon::Leon () :
 Tool("leon"),
-_progress_decode(0),_generalModel(256),_inputBank(0),_anchorDictModel(5)
+_progress_decode(0),_generalModel(256),_inputBank(),_anchorDictModel(5)
 {
 	_MCnoAternative = _MCuniqSolid = _MCuniqNoSolid = _totalDnaSize =  _compressedSize = _readCount = _MCtotal = _nb_thread_living = 0;
 	_compressed_qualSize = _anchorDictSize = _MCmultipleSolid = _anchorAdressSize = _readWithoutAnchorCount = _anchorPosSize = 0;
@@ -98,20 +98,28 @@ _progress_decode(0),_generalModel(256),_inputBank(0),_anchorDictModel(5)
 	//_compress = compress;
 	//_decompress = decompress;
 
-	/** We don't want default options of Tool (or we want to put them at a specific location). */
-	setParser (new OptionsParser ("leon"));
 
-    getParser()->push_back (new OptionOneParam (STR_URI_FILE, "input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)",   true));
-    getParser()->push_back (new OptionNoParam  ("-c", "compression",   false));
-    getParser()->push_back (new OptionNoParam  ("-d", "decompression", false));
-    getParser()->push_back (new OptionOneParam (STR_NB_CORES, "number of cores (default is the available number of cores)", false, "0"));
-    getParser()->push_back (new OptionOneParam (STR_VERBOSE,  "verbosity level",                                            false, "1", false),0,false);
 
-    getParser()->push_back (new OptionOneParam ("-reads",     "number of reads per block (default is 50000)",               false, "50000", false),0,false);
-	
-	getParser()->push_back (new OptionNoParam  ("-lossless", "switch to lossless compression for qualities (default is lossy. lossy has much higher compression rate, and the loss is in fact a gain. lossy is better!)",   false));
+	pthread_mutex_init(&findAndInsert_mutex, NULL);
+	pthread_mutex_init(&writeblock_mutex, NULL);
+	pthread_mutex_init(&minmax_mutex, NULL);
+}
 
-	
+void Leon::configureParser(IOptionsParser& parser) {
+    /** We don't want default options of Tool (or we want to put them at a specific location). */
+
+
+    parser.push_back (new OptionOneParam (STR_URI_FILE, "input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)",   true));
+    parser.push_back (new OptionNoParam  ("-c", "compression",   false));
+    parser.push_back (new OptionNoParam  ("-d", "decompression", false));
+    parser.push_back (new OptionOneParam (STR_NB_CORES, "number of cores (default is the available number of cores)", false, "0"));
+    parser.push_back (new OptionOneParam (STR_VERBOSE,  "verbosity level",                                            false, "1", false),0,false);
+
+    parser.push_back (new OptionOneParam ("-reads",     "number of reads per block (default is 50000)",               false, "50000", false),0,false);
+
+    parser.push_back (new OptionNoParam  ("-lossless", "switch to lossless compression for qualities (default is lossy. lossy has much higher compression rate, and the loss is in fact a gain. lossy is better!)",   false));
+
+
     IOptionsParser* compressionParser = new OptionsParser ("compression");
 
     /** We add the sorting count options and hide all of them by default and display one some of them. */
@@ -121,35 +129,27 @@ _progress_decode(0),_generalModel(256),_inputBank(0),_anchorDictModel(5)
     if (IOptionsParser* input = compressionParser->getParser (STR_KMER_SIZE))  {  input->setVisible (true);  }
 
     compressionParser->push_back (new OptionOneParam(STR_KMER_ABUNDANCE, "abundance threshold for solid kmers (default inferred)", false));
-	compressionParser->push_back (new OptionNoParam  (STR_INIT_ITER, "init iterator for ibank mode", false));
+    compressionParser->push_back (new OptionNoParam  (STR_INIT_ITER, "init iterator for ibank mode", false));
 
-	compressionParser->push_back (new OptionNoParam (Leon::STR_DNA_ONLY, "store dna seq only, header and quals are discarded, will decompress to fasta (same as -noheader -noqual)", false));
+    compressionParser->push_back (new OptionNoParam (Leon::STR_DNA_ONLY, "store dna seq only, header and quals are discarded, will decompress to fasta (same as -noheader -noqual)", false));
 
-	compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
-	compressionParser->push_back (new OptionNoParam (Leon::STR_NOQUAL, "discard quality scores", false));
+    compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
+    compressionParser->push_back (new OptionNoParam (Leon::STR_NOQUAL, "discard quality scores", false));
 
     IOptionsParser* decompressionParser = new OptionsParser ("decompression");
     decompressionParser->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
-	
 
-	_subgroupInfoCollection = NULL;
-	 _groupLeon = _subgroupQual = _subgroupInfo = _subgroupDict = _subgroupDNA =  _subgroupHeader = NULL;
 
-	
-    getParser()->push_back (compressionParser);
-    getParser()->push_back (decompressionParser, 0, false);
+    _subgroupInfoCollection = NULL;
+     _groupLeon = _subgroupQual = _subgroupInfo = _subgroupDict = _subgroupDNA =  _subgroupHeader = NULL;
 
-	pthread_mutex_init(&findAndInsert_mutex, NULL);
-	pthread_mutex_init(&writeblock_mutex, NULL);
-	pthread_mutex_init(&minmax_mutex, NULL);
 
-	
+    parser.push_back (compressionParser);
+    parser.push_back (decompressionParser, 0, false);
 }
 
 Leon::~Leon ()
-{
-	setInputBank (0);
-	
+{	
 	if(_storageH5file !=0)
 		delete _storageH5file;
 	
@@ -164,28 +164,28 @@ void Leon::execute()
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
 	_iterator_mode=false;
-	if(getParser()->saw (STR_INIT_ITER))
+    if(getParser().saw (STR_INIT_ITER))
 		_iterator_mode = true;
 	
-	if(getParser()->saw ("-lossless"))
+    if(getParser().saw ("-lossless"))
 		_lossless = true;
 		
     _compress = false;
     _decompress = false;
-    if(getParser()->saw (Leon::STR_COMPRESS)) _compress = true;
-    if(getParser()->saw (Leon::STR_DECOMPRESS)) _decompress = true;
+    if(getParser().saw (Leon::STR_COMPRESS)) _compress = true;
+    if(getParser().saw (Leon::STR_DECOMPRESS)) _decompress = true;
 	if((_compress && _decompress) || (!_compress && !_decompress)){
 		cout << "Choose one option among -c (compress) or -d (decompress)" << endl << endl;
 		return;
 	}
 
-	//getParser()->displayWarnings(); //pb si ici, affiche warnings apres exec dsk ,et prob option -c -d qui sont pas dans le parser car 'globales'
+    //getParser().displayWarnings(); //pb si ici, affiche warnings apres exec dsk ,et prob option -c -d qui sont pas dans le parser car 'globales'
 	
    // u_int64_t total_nb_solid_kmers_in_reads = 0;
    // int nb_threads_living;
-    _nb_cores = getInput()->getInt(STR_NB_CORES);
+    _nb_cores = getInput().getInt(STR_NB_CORES).value();
     
-    setReadPerBlock(getInput()->getInt("-reads"));
+    setReadPerBlock(getInput().getInt("-reads").value());
     
 	//setup global
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
@@ -208,14 +208,14 @@ void Leon::execute()
     /*************************************************/
     // We gather some statistics.
     /*************************************************/
-    //getInfo()->add (1, "result");
-    //getInfo()->add (2, "nb solid kmers in reads", "%ld", total_nb_solid_kmers_in_reads);
+    //getInfo().add (1, "result");
+    //getInfo().add (2, "nb solid kmers in reads", "%ld", total_nb_solid_kmers_in_reads);
     
     if(_decompress){
 	//	delete _inputFile;
 		if(! _iterator_mode)
 		{
-			delete _outputFile;
+            _outputFile = nullptr;
 		}
 		//if(! _isFasta) delete _inputFileQual;
 		delete _bloom;
@@ -233,8 +233,7 @@ void Leon::createBloom (){
 	u_int64_t nb_kmers_infile;
 	
 	//cout << _dskOutputFilename << endl;
-	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
-	LOCAL (storage);
+    auto storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	
 	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
 	
@@ -244,7 +243,7 @@ void Leon::createBloom (){
 	nb_kmers_infile = solidCollection.getNbItems();
 	//(System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
 
-	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
+    if( ! getParser().saw(STR_KMER_ABUNDANCE)){
 		
 		//retrieve cutoff
 		
@@ -315,23 +314,23 @@ void Leon::createBloom (){
 
 	
     /** We instantiate the bloom object. */
-    //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
+    //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput().getInt(STR_NB_CORES));
     //cout << "ESTIMATED:" << estimatedBloomSize << endl;
     //_bloomSize = estimatedBloomSize;
 	
     if(_auto_cutoff){
-		    getInfo()->add (0, "Abundance threshold");
-        getInfo()->add (1, "cut-off (auto)", "%d", _auto_cutoff);
-        getInfo()->add (1, "nb solid kmers", "%d", nbs);
+		    getInfo().add (0, "Abundance threshold");
+        getInfo().add (1, "cut-off (auto)", "%d", _auto_cutoff);
+        getInfo().add (1, "nb solid kmers", "%d", nbs);
     }
     else{
-        getInfo()->add (0, "Abundance threshold");
-        getInfo()->add (1, "cut-off", "%d", _nks);
-        getInfo()->add (1, "nb solid kmers", "%d", nbs);
+        getInfo().add (0, "Abundance threshold");
+        getInfo().add (1, "cut-off", "%d", _nks);
+        getInfo().add (1, "nb solid kmers", "%d", nbs);
     }
     	
 	//modif ici pour virer les kmers < auto cutoff
-    BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
+    BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput().getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
 
 
@@ -348,10 +347,10 @@ void Leon::executeCompression(){
 		cout << "Start compression" << endl;
 	#endif
 
-    _kmerSize      = getInput()->getInt (STR_KMER_SIZE);
-    _nks      = getInput()->get(STR_KMER_ABUNDANCE) ? getInput()->getInt(STR_KMER_ABUNDANCE) : 3;
-	//_nks           = getInput()->getInt (STR_KMER_ABUNDANCE);
-    _inputFilename = getInput()->getStr (STR_URI_FILE);
+    _kmerSize      = getInput().getInt (STR_KMER_SIZE);
+    _nks      = getInput().get(STR_KMER_ABUNDANCE) ? getInput().getInt(STR_KMER_ABUNDANCE) : 3;
+	//_nks           = getInput().getInt (STR_KMER_ABUNDANCE);
+    _inputFilename = getInput().getStr (STR_URI_FILE);
     
 	#ifdef PRINT_DEBUG
 		cout << "\tInput filename: " << _inputFilename << endl;
@@ -369,20 +368,20 @@ void Leon::executeCompression(){
 	_noHeader =false;
 
 	
-	if(getParser()->saw (Leon::STR_NOHEADER))
+    if(getParser().saw (Leon::STR_NOHEADER))
 	{
 		_noHeader = true;
 		infoByte |= 0x02; //no header
 	}
 	
-	if(getParser()->saw (Leon::STR_NOQUAL))
+    if(getParser().saw (Leon::STR_NOQUAL))
 	{
 		_isFasta = true;
 		infoByte |= 0x01; //fasta mode == no quals
 	}
 	
 	
-	if(getParser()->saw (Leon::STR_DNA_ONLY))
+    if(getParser().saw (Leon::STR_DNA_ONLY))
 	{
 		_noHeader = true;
 		_isFasta = true;
@@ -394,22 +393,22 @@ void Leon::executeCompression(){
 
 
     //_inputBank = Bank::singleton().createBank(_inputFilename);
-	setInputBank (Bank::open(_inputFilename));
+    _inputBank = Bank::open(_inputFilename);
 	
 	//cout << Bank::getType(_inputFilename) << endl;
 	
 	
       if(_inputFilename.find(".fq") !=  string::npos || _inputFilename.find(".fastq") !=  string::npos)
 	{
-		getInfo()->add (0, "Input format: FastQ");
+		getInfo().add (0, "Input format: FastQ");
 		
-		if(! getParser()->saw (Leon::STR_DNA_ONLY) && ! getParser()->saw (Leon::STR_NOQUAL))
+        if(! getParser().saw (Leon::STR_DNA_ONLY) && ! getParser().saw (Leon::STR_NOQUAL))
 		{
 			
 			if (_lossless)
-          getInfo()->add (0, "Quality compression: LOSSLESS mode");
+          getInfo().add (0, "Quality compression: LOSSLESS mode");
        else
-          getInfo()->add (0, "Quality compression: lossy mode (use '-lossless' for lossless compression)");
+          getInfo().add (0, "Quality compression: lossy mode (use '-lossless' for lossless compression)");
 			
 			_isFasta = false;
 			
@@ -419,14 +418,14 @@ void Leon::executeCompression(){
 	}
 	//attentio a l ordre, ".fa" est aussi present dans .fastq
 	else if (_inputFilename.find(".fa") !=  string::npos || _inputFilename.find(".fasta") !=  string::npos) {
-		getInfo()->add (0, "Input format: FastA");
+		getInfo().add (0, "Input format: FastA");
 		infoByte |= 0x01;
 		_isFasta = true;
 		
 	}
 	else
 	{
-		getInfo()->add (0, "Input format: unknown. Input extension must be one among fasta (.fa, .fasta) or fastq (.fq, .fastq)");
+		getInfo().add (0, "Input format: unknown. Input extension must be one among fasta (.fa, .fasta) or fastq (.fq, .fastq)");
 		return;
 	}
 	
@@ -436,8 +435,8 @@ void Leon::executeCompression(){
 	
 	
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
-        getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
+    _dskOutputFilename = getInput().get(STR_URI_OUTPUT) ?
+        getInput().getStr(STR_URI_OUTPUT) + ".h5"  :
         System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
 
 #if 1
@@ -450,10 +449,10 @@ void Leon::executeCompression(){
         /** We create a DSK instance and execute it. */
         SortingCountAlgorithm<> sortingCount (_inputBank, getInput());
 
-        sortingCount.getInput()->add (0, STR_VERBOSE, getInput()->getStr(STR_VERBOSE));
+        sortingCount.getInput().add (0, STR_VERBOSE, getInput().getStr(STR_VERBOSE));
 
         // best compression ratio if min-abundance never below 4 (ie. each kmer of the graph is used by at least 4 reads)
-        getInput()->setInt (STR_KMER_ABUNDANCE_MIN_THRESHOLD, 4);
+        getInput().setInt (STR_KMER_ABUNDANCE_MIN_THRESHOLD, 4);
 
         sortingCount.execute();
     }
@@ -724,43 +723,43 @@ void Leon::endCompression(){
 //	_outputFile->flush();
 	
 	u_int64_t inputFileSize = System::file().getSize(_inputFilename.c_str());
-    getInfo()->add(0, "End compression");
-    getInfo()->add(1, "Input file");
-    getInfo()->add(2, "name", "%s", _inputFilename.c_str());
-    getInfo()->add(2, "size", "%d bytes (%ld Mb)", inputFileSize, inputFileSize/1024LL/1024LL);
+    getInfo().add(0, "End compression");
+    getInfo().add(1, "Input file");
+    getInfo().add(2, "name", "%s", _inputFilename.c_str());
+    getInfo().add(2, "size", "%d bytes (%ld Mb)", inputFileSize, inputFileSize/1024LL/1024LL);
 	
 	u_int64_t outputFileSize = System::file().getSize(_outputFilename.c_str());
 	
-    getInfo()->add(1, "Output file");
-	getInfo()->add(2, "name", "%s", _outputFilename.c_str());
-    getInfo()->add(2, "size", "%d bytes (%ld Mb)", outputFileSize, outputFileSize/1024LL/1024LL);
+    getInfo().add(1, "Output file");
+	getInfo().add(2, "name", "%s", _outputFilename.c_str());
+    getInfo().add(2, "size", "%d bytes (%ld Mb)", outputFileSize, outputFileSize/1024LL/1024LL);
 	
-    getInfo()->add(1, "Compression");
+    getInfo().add(1, "Compression");
     gettimeofday(&_tim, NULL);
     _wfin_leon  = _tim.tv_sec +(_tim.tv_usec/1000000.0);
     
-    getInfo()->add(2, "Time:",  "%.2f seconds", (  _wfin_leon - _wdebut_leon) );
-    getInfo()->add(2, "Speed:",  "%.2f Mb/seconds", (System::file().getSize(_inputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
-    getInfo()->add(2, "Rates");
-    getInfo()->add(3, "overall", "%.4f (%.4f)",
+    getInfo().add(2, "Time:",  "%.2f seconds", (  _wfin_leon - _wdebut_leon) );
+    getInfo().add(2, "Speed:",  "%.2f Mb/seconds", (System::file().getSize(_inputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
+    getInfo().add(2, "Rates");
+    getInfo().add(3, "overall", "%.4f (%.4f)",
                    (float)((double)outputFileSize / (double)inputFileSize),
                    (float)((double)inputFileSize / (double)outputFileSize ));
 	if(! _noHeader)
 	{
-        getInfo()->add(3, "header only", "%.4f (%.4f)",
+        getInfo().add(3, "header only", "%.4f (%.4f)",
                        (float)_headerCompRate,
                        (float) ((double)1/_headerCompRate));
 	}
 	else
 	{
-		getInfo()->add(3, "header completely discarded in '-seq-only' mode");
+		getInfo().add(3, "header completely discarded in '-seq-only' mode");
 	}
-    getInfo()->add(3, "Sequence only", "%.4f (%.4f)",
+    getInfo().add(3, "Sequence only", "%.4f (%.4f)",
                    (float)_dnaCompRate,
                    (float)((double)1/_dnaCompRate));
 	if( ! _isFasta)
 	{
-        getInfo()->add(3, "Quality only", "%.4f (%.4f) [%s mode]",
+        getInfo().add(3, "Quality only", "%.4f (%.4f) [%s mode]",
                        (float)_qualCompRate,
                        (float)((double)1/_qualCompRate),
                        _lossless?"lossless":"lossy");
@@ -810,7 +809,7 @@ void Leon::startHeaderCompression(){
     #endif
     
     //write first header to file and store it in _firstHeader variable
-	//ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE).c_str(), ios::in);
+	//ifstream inputFileTemp(getInput().getStr(STR_URI_FILE).c_str(), ios::in);
 	//getline(inputFileTemp, _firstHeader);   //should be get comment from itseq
 	//inputFileTemp.close();
 	itSeq->first();
@@ -880,8 +879,8 @@ void Leon::endHeaderCompression(){
 
 	createDataset(_subgroupHeader,"nb_blocks",_blockSizes.size());
 
-	getInfo()->add(0, "End Header compression");
-  getInfo()->add(1, "# blocks", "%i", _blockSizes.size());
+	getInfo().add(0, "End Header compression");
+  getInfo().add(1, "# blocks", "%i", _blockSizes.size());
 	tools::storage::impl::Storage::ostream os (*_subgroupHeader, "blocksizes");
 	os.write (reinterpret_cast<char const*>(_blockSizes.data()), _blockSizes.size()*sizeof(u_int64_t));
 	os.flush();
@@ -892,9 +891,9 @@ void Leon::endHeaderCompression(){
 	
 	//cout << "\t\tData blocks count: " << _blockSizes.size() << endl;
 	//cout << "\tBlock data size: " << _rangeEncoder.getBufferSize() << endl;
-  getInfo()->add(1, "headers size", "%u", _totalHeaderSize);
-  getInfo()->add(1, "headers compressed size", "%u", _compressedSize);
-  getInfo()->add(1, "compression rate", "%.4f", (float)(_headerCompRate));
+  getInfo().add(1, "headers size", "%u", _totalHeaderSize);
+  getInfo().add(1, "headers compressed size", "%u", _compressedSize);
+  getInfo().add(1, "compression rate", "%.4f", (float)(_headerCompRate));
 	//_rangeEncoder.clear();
 	_blockSizes.clear();
 }
@@ -967,8 +966,8 @@ void Leon::endDnaCompression(){
 	
 	createDataset(_subgroupDNA,"nb_blocks",_blockSizes.size());
 	
-  getInfo()->add(0, "End Sequence compression");
-  getInfo()->add(1, "# blocks", "%u", _blockSizes.size());
+  getInfo().add(0, "End Sequence compression");
+  getInfo().add(1, "# blocks", "%u", _blockSizes.size());
 	tools::storage::impl::Storage::ostream os (*_subgroupDNA, "blocksizes");
 	os.write (reinterpret_cast<char const*>(_blockSizes.data()), _blockSizes.size()*sizeof(u_int64_t));
 	os.flush();
@@ -980,39 +979,39 @@ void Leon::endDnaCompression(){
 	
 	_dnaCompRate = ((double)_compressedSize / _totalDnaSize);
 	
-  getInfo()->add(1, "# sequences", "%u", _readCount);
-  getInfo()->add(1, "# nucleotides", "%u", _totalDnaSize);
+  getInfo().add(1, "# sequences", "%u", _readCount);
+  getInfo().add(1, "# nucleotides", "%u", _totalDnaSize);
 
 	createDataset(_subgroupInfo,"readcount",_readCount);
 	createDataset(_subgroupInfo,"totalDnaSize",_totalDnaSize);
 	createDataset(_subgroupInfo,"minSequenceSize",_minSequenceSize);
 	createDataset(_subgroupInfo,"maxSequenceSize",_maxSequenceSize);
 	
-  getInfo()->add(1, "Compression rates");
-  getInfo()->add(2, "overall", "%.4f (%u)", (float)_dnaCompRate, _compressedSize);
+  getInfo().add(1, "Compression rates");
+  getInfo().add(2, "overall", "%.4f (%u)", (float)_dnaCompRate, _compressedSize);
 
-  getInfo()->add(2, "Bloom", "%.2f (%u)", ((_bloom->getSize()*100) / (double)_compressedSize), _bloom->getSize());
-  getInfo()->add(2, "Anchors dict", "%.2f (%u) (%u entries)", ((_anchorDictSize*100) / (double)_compressedSize), _anchorDictSize, _anchorAdress);
+  getInfo().add(2, "Bloom", "%.2f (%u)", ((_bloom->getSize()*100) / (double)_compressedSize), _bloom->getSize());
+  getInfo().add(2, "Anchors dict", "%.2f (%u) (%u entries)", ((_anchorDictSize*100) / (double)_compressedSize), _anchorDictSize, _anchorAdress);
 
   u_int64_t readsSize = _anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize+_otherSize;
-  getInfo()->add(2, "Reads", "%.2f (%u)", ((readsSize*100) / (double)_compressedSize), readsSize);
-  getInfo()->add(3, "Anchor adress", "%.2f (%u)", ((_anchorAdressSize*100) / (double)_compressedSize), _anchorAdressSize);
-  getInfo()->add(3, "Anchor pos", "%.2f (%u)", ((_anchorPosSize*100) / (double)_compressedSize), _anchorPosSize);
-  getInfo()->add(3, "Read size", "%.2f (%u)", ((_readSizeSize*100) / (double)_compressedSize), _readSizeSize);
-  getInfo()->add(3, "Bifurcation", "%.2f (%u)", ((_bifurcationSize*100) / (double)_compressedSize), _bifurcationSize);
-  getInfo()->add(3, "Other (N, error, infoBits)", "%.2f (%u)", ((_otherSize*100) / (double)_compressedSize), _otherSize);
-  getInfo()->add(2, "Read without anchor", "%.2f (%u)", ((_noAnchorSize*100) / (double)_compressedSize), _noAnchorSize);
+  getInfo().add(2, "Reads", "%.2f (%u)", ((readsSize*100) / (double)_compressedSize), readsSize);
+  getInfo().add(3, "Anchor adress", "%.2f (%u)", ((_anchorAdressSize*100) / (double)_compressedSize), _anchorAdressSize);
+  getInfo().add(3, "Anchor pos", "%.2f (%u)", ((_anchorPosSize*100) / (double)_compressedSize), _anchorPosSize);
+  getInfo().add(3, "Read size", "%.2f (%u)", ((_readSizeSize*100) / (double)_compressedSize), _readSizeSize);
+  getInfo().add(3, "Bifurcation", "%.2f (%u)", ((_bifurcationSize*100) / (double)_compressedSize), _bifurcationSize);
+  getInfo().add(3, "Other (N, error, infoBits)", "%.2f (%u)", ((_otherSize*100) / (double)_compressedSize), _otherSize);
+  getInfo().add(2, "Read without anchor", "%.2f (%u)", ((_noAnchorSize*100) / (double)_compressedSize), _noAnchorSize);
   
   if(_anchorAdress!=0){
-  getInfo()->add(1, "Reads per anchor", "%u",  _readCount / _anchorAdress);
+  getInfo().add(1, "Reads per anchor", "%u",  _readCount / _anchorAdress);
   }
-  getInfo()->add(1, "Read without anchor", "%.2f", ((double)_readWithoutAnchorCount*100) / _readCount);
-  getInfo()->add(1, "De Bruijn graph");
+  getInfo().add(1, "Read without anchor", "%.2f", ((double)_readWithoutAnchorCount*100) / _readCount);
+  getInfo().add(1, "De Bruijn graph");
 	
-	getInfo()->add(2, "Simple path", "%.2f", ((_MCuniqSolid*100)/ (double)_MCtotal));
-	getInfo()->add(2, "Bifurcation", "%.2f", ((_MCmultipleSolid*100)/(double)_MCtotal));
-	getInfo()->add(2, "Break", "%.2f", ((_MCnoAternative*100)/(double)_MCtotal));
-	getInfo()->add(2, "Error", "%.2f", ((_MCuniqNoSolid*100)/(double)_MCtotal));
+	getInfo().add(2, "Simple path", "%.2f", ((_MCuniqSolid*100)/ (double)_MCtotal));
+	getInfo().add(2, "Bifurcation", "%.2f", ((_MCmultipleSolid*100)/(double)_MCtotal));
+	getInfo().add(2, "Break", "%.2f", ((_MCnoAternative*100)/(double)_MCtotal));
+	getInfo().add(2, "Error", "%.2f", ((_MCuniqNoSolid*100)/(double)_MCtotal));
 	
 
 	delete _anchorKmers;
@@ -1315,7 +1314,7 @@ void Leon::executeDecompression(){
     }
     #endif
     
-    _inputFilename = getInput()->getStr(STR_URI_FILE);
+    _inputFilename = getInput().getStr(STR_URI_FILE);
 	//string inputFilename = prefix + ".txt"; //".leon"
 	//_outputFile = System::file().newFile(outputFilename, "wb");
     
@@ -1426,24 +1425,24 @@ void Leon::executeDecompression(){
 	}
 	
   if(!_iterator_mode){
-    getInfo()->add(0, "Decompression");
-    getInfo()->add(1, "Input filename", "%s", _inputFilename.c_str());
+    getInfo().add(0, "Decompression");
+    getInfo().add(1, "Input filename", "%s", _inputFilename.c_str());
   }
 
 	if(_noHeader)
 	{
 		if(!_iterator_mode)
-        getInfo()->add(1, "Headers were not stored, will number reads.");
+        getInfo().add(1, "Headers were not stored, will number reads.");
 	}
 	
 	if(_isFasta){
 		if(!_iterator_mode)
-        getInfo()->add(1, "Output format", "FastA");
+        getInfo().add(1, "Output format", "FastA");
 		_outputFilename += ".fasta.d";
 	}
 	else{
 		if(!_iterator_mode)
-        getInfo()->add(1, "Output format", "FastQ");
+        getInfo().add(1, "Output format", "FastQ");
 		_outputFilename += ".fastq.d";
 	}
 	
@@ -1459,13 +1458,13 @@ void Leon::executeDecompression(){
 	
 	if(!_iterator_mode)
 	{
-  	getInfo()->add(1, "Kmer size", "%i", _kmerSize);
+  	getInfo().add(1, "Kmer size", "%i", _kmerSize);
 	}
 
 	std::string  leonversion =  _subgroupInfoCollection->getProperty ("version");
 
 	if(!_iterator_mode)
-	  getInfo()->add(1, "Input File compressed with Leon", "%s", leonversion.c_str());
+	  getInfo().add(1, "Input File compressed with Leon", "%s", leonversion.c_str());
 
 	//cout << "\tInput File was compressed with leon version " << version_major << "."  << version_minor << "."  << version_patch  << endl;
 	
@@ -1699,7 +1698,7 @@ void Leon::startDecompressionAllStreams(){
 
 	startDecompression_setup();
 	
-	switch (getInput()->getInt(STR_VERBOSE))
+	switch (getInput().getInt(STR_VERBOSE))
 	{
 		case 0: default:    _progress_decode =  new IteratorListener ();break;
 		case 1:             _progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );break;
@@ -1708,7 +1707,7 @@ void Leon::startDecompressionAllStreams(){
 	}
 	
 	
-	getInfo()->add(1, "Block count", "%u", _blockCount/2);
+	getInfo().add(1, "Block count", "%u", _blockCount/2);
 
 
 //	delete _progress_decode;
@@ -2022,19 +2021,19 @@ kmer_type Leon::getAnchor(ifstream* anchorDictFile, u_int32_t adress){
 
 void Leon::endDecompression(){
 	
-	getInfo()->add(1, "Output filename", "%s", _outputFile->getPath().c_str());
+	getInfo().add(1, "Output filename", "%s", _outputFile->getPath().c_str());
 
 	gettimeofday(&_tim, NULL);
 	_wfin_leon  = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
-	getInfo()->add(1, "Time", "%.2f seconds", (  _wfin_leon - _wdebut_leon) );
-	getInfo()->add(1, "Speed", "%.2f Mo/seconds", (System::file().getSize(_outputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
+	getInfo().add(1, "Time", "%.2f seconds", (  _wfin_leon - _wdebut_leon) );
+	getInfo().add(1, "Speed", "%.2f Mo/seconds", (System::file().getSize(_outputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
 	
 	
 	//Test decompressed file against original reads file (decompressed and original read file must be in the same dir)
-	if(getParser()->saw (Leon::STR_TEST_DECOMPRESSED_FILE)){
+    if(getParser().saw (Leon::STR_TEST_DECOMPRESSED_FILE)){
 		
-		getInfo()->add(1, "Checking decompressed file");
+		getInfo().add(1, "Checking decompressed file");
 		
 		string dir = System::file().getDirectory(_inputFilename);
 
@@ -2046,8 +2045,8 @@ void Leon::endDecompression(){
 		//string prefix = System::file().getBaseName(_inputFilename);
 		
 		string originalFilename;
-		IBank* originalBank;
-		IBank* newBank;
+        std::unique_ptr<IBank> originalBank;
+        std::unique_ptr<IBank> newBank;
 		Iterator<Sequence>* originalBankIt;
 		Iterator<Sequence>* newBankIt;
 		
@@ -2057,8 +2056,8 @@ void Leon::endDecompression(){
 			originalFilename = dir + "/" + prefix + ".fastq";
 		
 		
-		getInfo()->add(2, "Original file", "%s", originalFilename.c_str());
-		getInfo()->add(2, "New file", "%s",  _outputFile->getPath().c_str());
+		getInfo().add(2, "Original file", "%s", originalFilename.c_str());
+		getInfo().add(2, "New file", "%s",  _outputFile->getPath().c_str());
 		
 		originalBank = Bank::open(originalFilename);
 		originalBankIt = originalBank->iterator();
@@ -2072,16 +2071,16 @@ void Leon::endDecompression(){
 		while(true){
 			if(newBankIt->isDone()){
 				if(originalBankIt->isDone())
-					getInfo()->add(1, "OK");
+					getInfo().add(1, "OK");
 				else
-					getInfo()->add(1, "Decompressed file end but not the original file");
+					getInfo().add(1, "Decompressed file end but not the original file");
 				break;
 			}
 			if(originalBankIt->isDone()){
 				if(newBankIt->isDone())
-					getInfo()->add(1, "OK");
+					getInfo().add(1, "OK");
 				else
-					getInfo()->add(1, "Original file end but not the decomrpessed file");
+					getInfo().add(1, "Original file end but not the decomrpessed file");
 				break;
 			}
 			
@@ -2093,16 +2092,16 @@ void Leon::endDecompression(){
 			string newDna = (string((*newBankIt)->getDataBuffer())).substr(0, (*newBankIt)->getDataSize());
 			
 			if(originalHeader != newHeader){
-				getInfo()->add(1, "Sequence with a different header", "%i", (*newBankIt)->getIndex());
-                getInfo()->add(2, "original", "%s", originalHeader.c_str());
-                getInfo()->add(2, "new", "%s", newHeader.c_str());
+				getInfo().add(1, "Sequence with a different header", "%i", (*newBankIt)->getIndex());
+                getInfo().add(2, "original", "%s", originalHeader.c_str());
+                getInfo().add(2, "new", "%s", newHeader.c_str());
 				break;
 			}
 			
 			if(originalDna != newDna){
-                getInfo()->add(1, "Sequence with a different DNA", "%i", (*newBankIt)->getIndex());
-                getInfo()->add(2, "original", "%s", originalDna.c_str());
-                getInfo()->add(2, "new", "%s", newDna.c_str());
+                getInfo().add(1, "Sequence with a different DNA", "%i", (*newBankIt)->getIndex());
+                getInfo().add(2, "original", "%s", originalDna.c_str());
+                getInfo().add(2, "new", "%s", newDna.c_str());
 				break;
 			}
 			
@@ -2403,7 +2402,7 @@ void BankLeon::estimate (u_int64_t& number, u_int64_t& totalSize, u_int64_t& max
 
 /// BankLeonFactory : test hdf5  storage opening, if leon version can be found, this is a leon file
 
-IBank* BankLeonFactory::createBank (const std::string& uri)
+std::unique_ptr<IBank> BankLeonFactory::createBank (const std::string& uri)
 {
 	//printf("create bank factory  Leon  %s \n",uri.c_str());
 	bool isLEON = false;

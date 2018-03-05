@@ -325,7 +325,7 @@ std::vector<std::string> FileSystemCommon::listdir (const Path& path)
 ** REMARKS :
 *********************************************************************/
 #if 0
-IFile* FileSystemCommon::newFile (const Path& dirpath, const Path& filename, const char* mode)
+std::unique_ptr<IFile> FileSystemCommon::newFile (const Path& dirpath, const Path& filename, const char* mode)
 {
     /** We build the full file path. */
     stringstream ss;

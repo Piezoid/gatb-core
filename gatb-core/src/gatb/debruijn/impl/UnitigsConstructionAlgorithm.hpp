@@ -51,8 +51,8 @@ public:
     UnitigsConstructionAlgorithm (
         tools::storage::impl::Storage& storage,
         std::string                 unitigs_filename,
-        size_t                      nb_cores = 0,
-        tools::misc::IProperties*   options  = 0,
+        size_t                      nb_cores,
+        tools::misc::Properties     options,
         bool do_bcalm = true,
         bool do_bglue = true,
         bool do_links = true

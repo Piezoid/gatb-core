@@ -87,7 +87,7 @@ public:
      * of sequences, sequences in same order, etc.
      *
      * */
-    void bank_compare_banks_equality(IBank* bank1, IBank* bank2){
+    void bank_compare_banks_equality(std::unique_ptr<IBank> bank1, std::unique_ptr<IBank> bank2){
 		// We create iterators over this bank.
 		Iterator<Sequence>* itFas = bank1->iterator();
 		Iterator<Sequence>* itLeon = bank2->iterator();
@@ -157,8 +157,8 @@ public:
 
 		// we open the files in read mode
 		
-        IBank* fasBank = Bank::open (fastqFile); //BankFasta
-		IBank* leonBank = Bank::open (leonFile); //BankLeon
+        std::unique_ptr<IBank> fasBank = Bank::open (fastqFile); //BankFasta
+		std::unique_ptr<IBank> leonBank = Bank::open (leonFile); //BankLeon
 
 		bank_compare_banks_equality(fasBank, leonBank);
 		 
@@ -217,7 +217,7 @@ public:
      */
     void check_leon_content(std::string& leonFile, int mode){
     	// we open the leon file in read mode
-		IBank* leonBank = Bank::open (leonFile); //BankLeon
+		std::unique_ptr<IBank> leonBank = Bank::open (leonFile); //BankLeon
 
 		// We create iterators over this bank.
 		Iterator<Sequence>* itLeon = leonBank->iterator();
@@ -262,7 +262,7 @@ public:
 				btype.compare("fasta")==0 ||
 				btype.compare("fastq")==0
 		);
-		IBank* fasBank = Bank::open (fasPath);
+		std::unique_ptr<IBank> fasBank = Bank::open (fasPath);
 
     	// We open and test the leon file
 		// Caution: this must be a LOSSLESS-compressed file
@@ -270,7 +270,7 @@ public:
     	string leonPath=DBPATH("leon1.fastq.leon-ref");
 		btype = Bank::getType(leonPath);
 		CPPUNIT_ASSERT(btype.compare("leon")==0);
-		IBank* leonBank = Bank::open (leonPath);
+		std::unique_ptr<IBank> leonBank = Bank::open (leonPath);
 
 		bank_compare_banks_equality(fasBank, leonBank);
     }
@@ -325,8 +325,8 @@ public:
 		// STEP 2: compare reference and compressed version
 
 		// we open the files in read mode
-        IBank* leonBank = Bank::open (leonFile); //BankLeon freshly created
-		IBank* leonBankRef = Bank::open (leonFileRef); //BankLeon reference
+        std::unique_ptr<IBank> leonBank = Bank::open (leonFile); //BankLeon freshly created
+		std::unique_ptr<IBank> leonBankRef = Bank::open (leonFileRef); //BankLeon reference
 
 		bank_compare_banks_equality(leonBank, leonBankRef);
     }
@@ -421,8 +421,8 @@ public:
 		run_leon_compressor(fastqFile, 3);
 
 		// STEP 2: compare reference and compressed version
-        IBank* leonRefBank = Bank::open (leonRefFile);
-		IBank* leonBank = Bank::open (leonFile);
+        std::unique_ptr<IBank> leonRefBank = Bank::open (leonRefFile);
+		std::unique_ptr<IBank> leonBank = Bank::open (leonFile);
 		bank_compare_banks_equality(leonRefBank, leonBank);
 	}
 };

@@ -157,7 +157,7 @@ public:
         bool _isDone;
 
         /** Block buffer read from file. */
-        tools::misc::Data* _bufferData;
+        std::shared_ptr<tools::misc::Data> _bufferData;
         void setBufferData (tools::misc::Data* bufferData)  { SP_SETATTR(bufferData); }
 
         int   cpt_buffer;
@@ -193,9 +193,9 @@ class BankBinaryFactory : public IBankFactory
 public:
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri)
+    std::unique_ptr<IBank> createBank (const std::string& uri)
     {
-        return BankBinary::check(uri) ? new BankBinary (uri) : 0;
+        return BankBinary::check(uri) ? std::make_unique<BankBinary>(uri) : nullptr;
     }
 };
 

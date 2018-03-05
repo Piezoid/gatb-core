@@ -186,22 +186,20 @@ private:
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-ConfigurationAlgorithm<span>::ConfigurationAlgorithm (bank::IBank* bank, IProperties* input)
-    : Algorithm("configuration", -1, input), _bank(0), _input (0)
+ConfigurationAlgorithm<span>::ConfigurationAlgorithm (bank::IBank& bank, Properties input)
+    : Algorithm("configuration", -1, std::move(input)), _bank(bank), _input (0)
 {
-    setBank  (bank);
-    setInput (input);
 
-    _config._kmerSize           = input->getInt (STR_KMER_SIZE);
-    _config._minim_size         = input->getInt (STR_MINIMIZER_SIZE);
-    _config._repartitionType    = input->getInt (STR_REPARTITION_TYPE);
-    _config._minimizerType      = input->getInt (STR_MINIMIZER_TYPE);
+    _config._kmerSize           = input.getInt (STR_KMER_SIZE).value();
+    _config._minim_size         = input.getInt (STR_MINIMIZER_SIZE).value();
+    _config._repartitionType    = input.getInt (STR_REPARTITION_TYPE).value();
+    _config._minimizerType      = input.getInt (STR_MINIMIZER_TYPE).value();
 
-    parse (input->getStr (STR_SOLIDITY_KIND), _config._solidityKind);
+    parse (input.getStr (STR_SOLIDITY_KIND).value(), _config._solidityKind);
 
-    _config._max_disk_space     = input->getInt (STR_MAX_DISK);
-    _config._max_memory         = input->getInt (STR_MAX_MEMORY);
-    _config._nbCores            = input->get(STR_NB_CORES) ? input->getInt(STR_NB_CORES) : 0;
+    _config._max_disk_space     = input.getInt (STR_MAX_DISK).value();
+    _config._max_memory         = input.getInt (STR_MAX_MEMORY).value();
+    _config._nbCores            = input.getInt(STR_NB_CORES).value_or(0);
 
     _config._abundance = getSolidityThresholds(input);
 	
@@ -214,23 +212,8 @@ ConfigurationAlgorithm<span>::ConfigurationAlgorithm (bank::IBank* bank, IProper
 
     _config._nb_bits_per_kmer = Type::getSize();
     
-    std::string storage_type = input->getStr(STR_STORAGE_TYPE);
+    std::string storage_type = input.getStr(STR_STORAGE_TYPE).value();
     _config._storage_type = (storage_type == "hdf5") ? tools::storage::impl::STORAGE_HDF5 : tools::storage::impl::STORAGE_FILE;
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span>
-ConfigurationAlgorithm<span>::~ConfigurationAlgorithm ()
-{
-    setBank  (0);
-    setInput (0);
 }
 
 /*********************************************************************
@@ -251,10 +234,10 @@ void ConfigurationAlgorithm<span>::execute ()
     _config._minim_size = std::min ((int)_config._kmerSize-1, (int)_config._minim_size);
 
     /** We get some information about the bank. */
-    _bank->estimate (_config._estimateSeqNb, _config._estimateSeqTotalSize, _config._estimateSeqMaxSize);
+    _bank.estimate (_config._estimateSeqNb, _config._estimateSeqTotalSize, _config._estimateSeqMaxSize);
 
     /** We get the number of sub banks. */
-    _config._nb_banks = _bank->getCompositionNb();
+    _config._nb_banks = _bank.getCompositionNb();
 
     /** We memorize the number of abundance min values set by the user.
      * Note that it can be lower than the number of banks. */
@@ -361,7 +344,7 @@ void ConfigurationAlgorithm<span>::execute ()
          * to compute it, we need a linear counter, let's call it now */
 
         TIME_INFO (getTimeInfo(), "estimate_distinct_kmers");
-        Iterator<Sequence>* itSeq = _bank->iterator();
+        Iterator<Sequence>* itSeq = _bank.iterator();
         LOCAL (itSeq);
 
         //_progress->setMessage (progressFormat0); // not touching progress here anymore
@@ -453,7 +436,7 @@ void ConfigurationAlgorithm<span>::execute ()
     _config._isComputed = true;
 
     /** We collect some statistics. */
-    getInfo()->add (1, _config.getProperties());
+    getInfo().add (1, _config.getProperties());
 }
 
 /*********************************************************************
@@ -465,15 +448,15 @@ void ConfigurationAlgorithm<span>::execute ()
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-vector<CountRange> ConfigurationAlgorithm<span>::getSolidityThresholds (IProperties* params)
+vector<CountRange> ConfigurationAlgorithm<span>::getSolidityThresholds (Properties& params)
 {
     vector<CountRange> thresholds;
 
     /** We get the abundance max value. */
-    u_int64_t abundanceMax = params->getInt(STR_KMER_ABUNDANCE_MAX);
+    u_int64_t abundanceMax = params.getInt(STR_KMER_ABUNDANCE_MAX).value();
 
     /** We split the abundance min string. */
-    TokenizerIterator it (params->getStr(STR_KMER_ABUNDANCE_MIN).c_str(), ",");
+    TokenizerIterator it (params.getStr(STR_KMER_ABUNDANCE_MIN).value().c_str(), ",");
     for (it.first(); !it.isDone(); it.next())
     {
         CountNumber val = 0;
@@ -498,11 +481,11 @@ vector<CountRange> ConfigurationAlgorithm<span>::getSolidityThresholds (IPropert
 	 *********************************************************************/
 	
 template<size_t span>
-	std::vector<bool> ConfigurationAlgorithm<span>::getSolidityCustomVector (IProperties* params)
+	std::vector<bool> ConfigurationAlgorithm<span>::getSolidityCustomVector (Properties& params)
 	{
 		std::vector<bool> solidVec;
 
-		std::string solidList = params->getStr (STR_SOLIDITY_CUSTOM);
+        std::string solidList = params.getStr (STR_SOLIDITY_CUSTOM).value();
 		for ( std::string::iterator it=solidList.begin(); it!=solidList.end(); ++it)
 		{
 			solidVec.push_back(*it =='1');

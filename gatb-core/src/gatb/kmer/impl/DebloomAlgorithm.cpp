@@ -104,9 +104,9 @@ DebloomAlgorithm<span>::DebloomAlgorithm (
     BloomKind           bloomKind,
     DebloomKind         cascadingKind,
     const std::string&  debloomUri,
-    IProperties*        options
+    Properties          options
 )
-    :  Algorithm("debloom", nb_cores, options), /*_storage(storage), _storageSolids(storageSolids),*/
+    :  Algorithm("debloom", nb_cores, std::move(options)), /*_storage(storage), _storageSolids(storageSolids),*/
        _groupBloom  (bloomGroup),
        _groupDebloom(debloomGroup),
        _kmerSize(kmerSize), _miniSize(miniSize),
@@ -136,9 +136,9 @@ DebloomAlgorithm<span>::DebloomAlgorithm (
 *********************************************************************/
 template<size_t span>
 DebloomAlgorithm<span>::DebloomAlgorithm (tools::storage::impl::Storage& storage)
-:  Algorithm("debloom", 0, 0),
-   _groupBloom(storage().getGroup   ("bloom")),
-   _groupDebloom(storage().getGroup ("debloom")),
+:  Algorithm("debloom"),
+   _groupBloom(storage.getGroup   ("bloom")),
+   _groupDebloom(storage.getGroup ("debloom")),
    _kmerSize(0),
    _debloomUri("debloom"),
    _max_memory(0),
@@ -150,22 +150,7 @@ DebloomAlgorithm<span>::DebloomAlgorithm (tools::storage::impl::Storage& storage
     loadDebloomStructures();
 
     string xmlString = _groupDebloom.getProperty ("xml");
-    stringstream ss; ss << xmlString;   getInfo()->readXML (ss);
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span>
-DebloomAlgorithm<span>::~DebloomAlgorithm ()
-{
-    setSolidIterable      (0);
-    setDebloomStructures  (0);
+    stringstream ss; ss << xmlString;   getInfo().readXML (ss);
 }
 
 /*********************************************************************
@@ -201,10 +186,10 @@ void DebloomAlgorithm<span>::execute ()
 {
     DEBUG (("DebloomAlgorithm<span>::execute  bloomKind=%ld  debloomKind=%d\n", _bloomKind, _debloomKind));
 
-    IProperties* bloomProps = new Properties();  LOCAL (bloomProps);
+    Properties bloomProps;
     u_int64_t totalSizeBloom = 0;
 
-    IProperties* cfpProps = new Properties();  LOCAL (cfpProps);
+    Properties cfpProps;
     u_int64_t totalSizeCFP = 0;
 
     /** We execute the debloom if needed. */
@@ -217,14 +202,14 @@ void DebloomAlgorithm<span>::execute ()
     loadDebloomStructures ();
 
     /** We gather some statistics. */
-    getInfo()->add (1, "stats");
-    getInfo()->add (2, "kind",           "%s",  toString(_debloomKind).c_str());
-    getInfo()->add (2, "impl",           "%s",  getClassName());
-    getInfo()->add (2, "bitsize",        "%ld", totalSizeBloom + totalSizeCFP);
-    getInfo()->add (2, "nbits_per_kmer", "%f",  (float)(totalSizeBloom + totalSizeCFP) / (float)_solidIterable->getNbItems());
-    getInfo()->add (2, cfpProps);
+    getInfo().add (1, "stats");
+    getInfo().add (2, "kind",           "%s",  toString(_debloomKind).c_str());
+    getInfo().add (2, "impl",           "%s",  getClassName());
+    getInfo().add (2, "bitsize",        "%ld", totalSizeBloom + totalSizeCFP);
+    getInfo().add (2, "nbits_per_kmer", "%f",  (float)(totalSizeBloom + totalSizeCFP) / (float)_solidIterable->getNbItems());
+    getInfo().add (2, cfpProps);
 
-    getInfo()->add (1, getTimeInfo().getProperties("time"));
+    getInfo().add (1, getTimeInfo().getProperties("time"));
 
     /** We save the cfp kind in the "cfp" storage collection. */
     _groupDebloom.addProperty ("kind", toString(_debloomKind));
@@ -240,8 +225,8 @@ void DebloomAlgorithm<span>::execute ()
 *********************************************************************/
 template<size_t span>
 void DebloomAlgorithm<span>::execute_aux (
-    IProperties* bloomProps,
-    IProperties* cfpProps,
+    Properties& bloomProps,
+    Properties& cfpProps,
     u_int64_t&   totalSizeBloom,
     u_int64_t&   totalSizeCFP
 )
@@ -424,7 +409,7 @@ void DebloomAlgorithm<span>::end_debloom_partition (
 template<size_t span>
 IBloom <typename Kmer<span>::Type>* DebloomAlgorithm<span>::createBloom (
     tools::collections::Iterable<Count>* solidIterable,
-    tools::misc::IProperties* bloomProps,
+    tools::misc::Properties& bloomProps,
     u_int64_t& totalSizeBloom
 )
 {
@@ -452,7 +437,7 @@ IBloom <typename Kmer<span>::Type>* DebloomAlgorithm<span>::createBloom (
 
     /** We instantiate the bloom object. */
     IBloom<Type>* bloom = builder.build (itKmers, bloomProps);
-    bloomProps->add (0, "nbits_per_kmer", "%f", NBITS_PER_KMER);
+    bloomProps.add (0, "nbits_per_kmer", "%f", NBITS_PER_KMER);
 
     totalSizeBloom = bloom->getBitSize();
 
@@ -465,7 +450,7 @@ IBloom <typename Kmer<span>::Type>* DebloomAlgorithm<span>::createBloom (
 template<size_t span>
 void DebloomAlgorithm<span>::createCFP (
     Collection<Type>*  criticalCollection,
-    IProperties* props,
+    Properties& props,
     u_int64_t& totalSize_bits
 )
 {
@@ -577,11 +562,11 @@ void DebloomAlgorithm<span>::createCFP (
             totalSize_bits = bloom2->getBitSize() + bloom3->getBitSize() + bloom4->getBitSize() + 8*cfpItems.size()*sizeof(Type);
 
             /** Some statistics. */
-            props->add (0, "cfp",   "%ld", totalSize_bits);
-            props->add (1, "bloom2", "%ld", bloom2->getBitSize());
-            props->add (1, "bloom3", "%ld", bloom3->getBitSize());
-            props->add (1, "bloom4", "%ld", bloom4->getBitSize());
-            props->add (1, "set",    "%ld", 8*cfpItems.size()*sizeof(Type));
+            props.add (0, "cfp",   "%ld", totalSize_bits);
+            props.add (1, "bloom2", "%ld", bloom2->getBitSize());
+            props.add (1, "bloom3", "%ld", bloom3->getBitSize());
+            props.add (1, "bloom4", "%ld", bloom4->getBitSize());
+            props.add (1, "set",    "%ld", 8*cfpItems.size()*sizeof(Type));
 
             /** We remove the two temporary files. */
             System::file().remove (T2name);
@@ -606,17 +591,17 @@ void DebloomAlgorithm<span>::createCFP (
 
             totalSize_bits = 8*criticalCollection->getNbItems()*sizeof(Type);
 
-            props->add (1, "size", "%ld", totalSize_bits);
+            props.add (1, "size", "%ld", totalSize_bits);
 
             break;
         }
     }
 
-    props->add (1, "nb", "%ld", _criticalNb);
+    props.add (1, "nb", "%ld", _criticalNb);
     if (_criticalChecksum != 0)
     {
         stringstream ss;  ss << _criticalChecksum;
-        props->add (1, "checksum",   "%s", ss.str().c_str());
+        props.add (1, "checksum",   "%s", ss.str().c_str());
     }
 }
 

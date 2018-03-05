@@ -29,7 +29,6 @@ using namespace gatb::core::tools::dp::impl;
 using namespace gatb::core::system;
 using namespace gatb::core::system::impl;
 using namespace gatb::core::tools::misc;
-using namespace gatb::core::tools::misc::impl;
 
 #define DEBUG(a)  //printf a
 
@@ -45,7 +44,7 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* BankHelper::convert (IBank& in, IBank& out, tools::dp::IteratorListener* progress)
+Properties BankHelper::convert (IBank& in, IBank& out, std::shared_ptr<tools::dp::IteratorListener> progress)
 {
     // We need an iterator on the input bank.
     Iterator<Sequence>* itBank = in.iterator();
@@ -77,14 +76,13 @@ IProperties* BankHelper::convert (IBank& in, IBank& out, tools::dp::IteratorList
     ITime::Value t1 = ts.getTimeStamp();
 
     /** We create the properties result. */
-    Properties* props = new Properties ();
+    Properties props;
 
-    props->add (0, "conversion", "");
-
-    props->add (1, "time_sec",         "%.2f", (double)(t1-t0)/1000.0);
-    props->add (1, "sequences_number", "%ld",  nbSeq);
-    props->add (1, "sequences_size",   "%ld",  sizeSeq);
-    props->add (1, "output_size",      "%ld",  out.getSize());
+    props.add (0, "conversion", "");
+    props.add (1, "time_sec",         "%.2f", (double)(t1-t0)/1000.0);
+    props.add (1, "sequences_number", "%ld",  nbSeq);
+    props.add (1, "sequences_size",   "%ld",  sizeSeq);
+    props.add (1, "output_size",      "%ld",  out.getSize());
 
     /** We return the result.*/
     return props;

@@ -153,7 +153,7 @@ protected:
     tools::misc::impl::TimeInfo& _globalTimeInfo;
     tools::misc::impl::TimeInfo  _timeInfo;
 
-    CountProcessor* _processor;
+    std::shared_ptr<CountProcessor> _processor;
     void setProcessor (CountProcessor* processor)  { SP_SETATTR(processor); }
 	
 	tools::storage::impl::SuperKmerBinFiles* 				_superKstorage;
@@ -324,7 +324,7 @@ protected:
 	tools::misc::impl::TimeInfo& _globalTimeInfo;
 	tools::misc::impl::TimeInfo  _timeInfo;
 	
-	CountProcessor* _processor;
+	std::shared_ptr<CountProcessor> _processor;
 	void setProcessor (CountProcessor* processor)  { SP_SETATTR(processor); }
 };
 

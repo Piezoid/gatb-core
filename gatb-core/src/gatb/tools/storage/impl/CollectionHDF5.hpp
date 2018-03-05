@@ -30,10 +30,10 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/collections/api/Collection.hpp>
+
 #include <gatb/tools/collections/impl/BagFile.hpp>
 #include <gatb/tools/collections/impl/IteratorFile.hpp>
-#include <gatb/tools/collections/impl/CollectionAbstract.hpp>
+#include <gatb/tools/collections/api/Collection.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
 #include <gatb/system/impl/System.hpp>
 
@@ -338,13 +338,13 @@ private:
 
 /** \brief Collection interface
  */
-template <class Item> class CollectionHDF5 : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionHDF5 : public collections::Collection<Item>, public system::SmartPointer
 {
 public:
 
     /** Constructor. */
     CollectionHDF5 (hid_t fileId, const std::string& filename, system::ISynchronizer* synchro)
-        : collections::impl::CollectionAbstract<Item> (0,0), _datasetId(0), _typeId(0), _nbItems(0)
+        : collections::Collection<Item> (), _datasetId(0), _typeId(0), _nbItems(0)
     {
         herr_t status;
 

@@ -777,7 +777,7 @@ void BankFasta::Iterator::estimate (u_int64_t& number, u_int64_t& totalSize, u_i
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankFastaFactory::createBank (const std::string& uri)
+std::unique_ptr<IBank> BankFastaFactory::createBank (const std::string& uri)
 {
     bool isFASTA = false;
 
@@ -813,7 +813,7 @@ IBank* BankFastaFactory::createBank (const std::string& uri)
         gzclose (file);
     }
 
-    return (isFASTA ? new BankFasta (uri) : NULL);
+    return (isFASTA ? std::make_unique<BankFasta> (uri) : NULL);
 }
 
 /********************************************************************************/

@@ -30,7 +30,7 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/collections/api/Collection.hpp>
+
 #include <gatb/tools/collections/impl/BagCache.hpp>
 #include <gatb/system/impl/System.hpp>
 
@@ -52,13 +52,13 @@ namespace impl          {
  * accesses by several threads. This allows to encapsulate a single Collection into several
  * CollectionCache instances, each one used in a thread.
  */
-template <class Item> class CollectionCache : public CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionCache : public Collection<Item>, public system::SmartPointer
 {
 public:
 
     /** Constructor. */
     CollectionCache (Collection<Item>& ref,  size_t cacheSize, system::ISynchronizer* synchro)
-        : CollectionAbstract<Item> (
+        : Collection<Item> (
             new BagCache<Item> (ref.bag(), cacheSize, synchro),
             ref.iterable()
         ), _ref(ref)  {}
@@ -87,13 +87,13 @@ private:
  *
  * Remark : maybe could be inherited from CollectionCache ?
  */
-template <class Item> class CollectionCacheSorted : public CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionCacheSorted : public Collection<Item>, public system::SmartPointer
 {
 public:
     
     /** Constructor. */
     CollectionCacheSorted (Collection<Item>& ref,  size_t cacheSize, size_t sharedCacheSize,  system::ISynchronizer* synchro, system::ISynchronizer* outsynchro, Item* sharedBuffer, size_t * idxShared) //
-    : CollectionAbstract<Item> (
+    : Collection<Item> (
             new BagCacheSortedBuffered<Item> (
                 ref.bag(),
                 cacheSize,

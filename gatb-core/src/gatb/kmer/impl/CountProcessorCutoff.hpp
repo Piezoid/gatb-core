@@ -128,9 +128,9 @@ public:
     /*****************************************************************/
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    tools::misc::impl::Properties getProperties() const
+    tools::misc::Properties getProperties() const
     {
-        tools::misc::impl::Properties result;
+        tools::misc::Properties result;
 
         std::stringstream ss;  for (size_t i=0; i<_cutoffs.size(); i++)  { ss << _cutoffs[i] << " "; }
         result.add (0, "values", "%s", ss.str().c_str());

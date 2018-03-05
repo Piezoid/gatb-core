@@ -128,9 +128,9 @@ public:
     /*****************************************************************/
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    tools::misc::impl::Properties getProperties() const
+    tools::misc::Properties getProperties() const
     {
-        tools::misc::impl::Properties result;
+        tools::misc::Properties result;
 
         result.add (0, "histogram");
         result.add (1, "cutoff",            "%ld",  _histogram->get_solid_cutoff());
@@ -142,7 +142,7 @@ public:
         result.add (1, "first_peak",         "%ld",  _histogram->get_first_peak());
 
         // double N = ((double)_histogram->get_first_peak() * _bankStats.getSeqMean()) / (_bankStats.getSeqMean() - _kmerSize + 1);
-        // if (N > 0)  {  getInfo()->add (3, "genome_size_estimate", "%.0f",  (double)_bankStats.sequencesTotalLength / N);  }
+        // if (N > 0)  {  getInfo().add (3, "genome_size_estimate", "%.0f",  (double)_bankStats.sequencesTotalLength / N);  }
 
         return result;
     }
@@ -155,7 +155,7 @@ private:
 
     tools::storage::impl::Group* _group;
 
-    gatb::core::tools::misc::IHistogram* _histogram;
+    std::shared_ptr<gatb::core::tools::misc::IHistogram> _histogram;
     void setHistogram (gatb::core::tools::misc::IHistogram* histogram)  { SP_SETATTR(histogram); }
 
     size_t _min_auto_threshold;

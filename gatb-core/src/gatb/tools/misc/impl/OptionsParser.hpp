@@ -87,13 +87,13 @@ public:
     /*************************************************************/
 
     /** \copydoc IOptionsParser::parse */
-    misc::IProperties* parse (int argc, char** argv);
+    misc::Properties& parse (int argc, char** argv);
 
     /** \copydoc IOptionsParser::parseString */
-    misc::IProperties* parseString (const std::string& s);
+    misc::Properties& parseString (const std::string& s);
 
     /** \copydoc IOptionsParser::getProperties */
-    misc::IProperties* getProperties ()  { return _properties; }
+    misc::Properties& getProperties ()  { return _properties; }
 
     /** \copydoc IOptionsParser::saw */
     bool saw (const std::string& name) const;
@@ -112,14 +112,14 @@ public:
     IOptionsParser* getParser (const std::string& name);
 
     /** \copydoc IOptionsParser::getParsers */
-    std::list<IOptionsParser*>& getParsers ()  { return _parsers; }
+    std::list<std::unique_ptr<IOptionsParser>>& getParsers ()  { return _parsers; }
 
     /*************************************************************/
     /*********************   Miscellaneous   *********************/
     /*************************************************************/
 
     /** \copydoc IOptionsParser::getDefaultProperties */
-    misc::IProperties* getDefaultProperties ();
+    misc::Properties& getDefaultProperties ();
 
     /** \copydoc IOptionsParser::accept */
     void accept (IOptionsParserVisitor& visitor, size_t depth=0)  { visitor.visitOptionsParser(*this, depth); }
@@ -130,10 +130,9 @@ protected:
     bool        _visible;
     std::string _help;
 
-    std::list<IOptionsParser*> _parsers;
+    std::list<std::unique_ptr<IOptionsParser>> _parsers;
 
-    misc::IProperties* _properties;
-    void setProperties (misc::IProperties* properties)  { SP_SETATTR(properties); }
+    misc::Properties _properties;
 
     std::ostream& indent (std::ostream& os, size_t level)  const { for (size_t i=0; i<level; i++)  { os << "   "; }  return os; }
 };
@@ -203,7 +202,7 @@ protected:
      * that mainly will affect the given args to the variable given to the instantiation of the
      * (derived class) Option.
      */
-    virtual void proceed (const std::list<std::string>& args, IProperties& props) = 0;
+    virtual void proceed (const std::list<std::string>& args, Properties& props) = 0;
 
     size_t          _nbArgs;
     bool            _mandatory;
@@ -241,7 +240,7 @@ public:
     }
 
     /** \copydoc Option::proceed */
-    void proceed (const std::list<std::string>& args, IProperties& props)
+    void proceed (const std::list<std::string>& args, Properties& props)
     {
         props.add (0, getName(), "");
     }
@@ -276,7 +275,7 @@ public:
     }
 
     /** \copydoc Option::proceed */
-    void proceed (const std::list<std::string>& args, IProperties& props)
+    void proceed (const std::list<std::string>& args, Properties& props)
     {
         props.add (0, getName(), args.front());
     }

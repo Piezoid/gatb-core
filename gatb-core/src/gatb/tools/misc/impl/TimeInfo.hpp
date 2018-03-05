@@ -28,7 +28,7 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/misc/api/IProperty.hpp>
+#include <gatb/tools/misc/impl/Property.hpp>
 #include <gatb/system/api/ITime.hpp>
 #include <gatb/system/impl/System.hpp>
 
@@ -118,11 +118,11 @@ public:
      */
     double get (const std::string& key) { return (double)getEntryByKey(key) / 1000.0; }
 
-    /** Creates and return as a IProperties instance the whole timing information.
+    /** Creates and return as a Properties instance the whole timing information.
      * \param[in] root : root name of the properties to be returned.
-     * \return the created IProperties instance.
+     * \return the created Properties instance.
      */
-    virtual tools::misc::IProperties* getProperties (const std::string& root);
+    virtual tools::misc::Properties& getProperties (const std::string& root);
 
 private:
 

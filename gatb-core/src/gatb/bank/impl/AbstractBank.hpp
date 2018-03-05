@@ -60,11 +60,7 @@ public:
 	int64_t estimateNbItemsBanki (int i)  { return this->estimateNbItems(); }
 
 	/** \copydoc IBank::getBanks */
-	const std::vector<IBank*> getBanks() const  {
-		std::vector<IBank*> _banks;
-		_banks.push_back((IBank *)this);
-		return _banks;
-	};
+    std::vector<std::reference_wrapper<IBank>> getBanks() { return { *this }; }
 
 	
     /** \copydoc IBank::estimateNbItems */

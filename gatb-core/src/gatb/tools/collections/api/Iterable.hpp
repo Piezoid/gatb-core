@@ -52,6 +52,8 @@ namespace collections   {
 template <class Item> class Iterable : public virtual system::ISmartPointer
 {
 public:
+    using element_type = Item;
+    using iterator_type = dp::polymorphic_iterator<Item>;
 
     virtual ~Iterable() {}
 
@@ -59,13 +61,13 @@ public:
      * \return the new iterator. */
     virtual dp::Iterator<Item>* iterator () = 0;
 
+    iterator_type begin() { return { iterator() }; }
+    iterator_type end  () { return {}; }
+
     /** Direct iteration through a functor.
      * \param[in] f : the functor to be applied on each sequence of the bank. */
     template<typename Functor> void iterate (Functor f)
-    {
-        tools::dp::Iterator<Item>* it = this->iterator();  LOCAL (it);
-        for (it->first(); !it->isDone(); it->next())  { f((*it).item()); }
-    }
+    { for(auto& x : *this) f(x); }
 
     /** Return the number of items. If a specific implementation doesn't know the value,
      * it should return -1 by convention.

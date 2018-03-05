@@ -30,10 +30,10 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/collections/api/Collection.hpp>
+
 #include <gatb/tools/collections/impl/BagFile.hpp>
 #include <gatb/tools/collections/impl/IteratorFile.hpp>
-#include <gatb/tools/collections/impl/CollectionAbstract.hpp>
+#include <gatb/tools/collections/api/Collection.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
 #include <gatb/system/impl/System.hpp>
 
@@ -246,10 +246,10 @@ template <class Item> class BagHDF5Patch : public collections::Bag<Item>, public
 public:
 
     /** Constructor */
-    BagHDF5Patch (CollectionDataHDF5Patch<Item>* common)  : _common (0), _nbInserted(0)  { setCommon(common); }
+    BagHDF5Patch (CollectionDataHDF5Patch<Item>& common)  : _common (common), _nbInserted(0)  {}
 
     /** Destructor. */
-    ~BagHDF5Patch ()  { setCommon(0); }
+    virtual ~BagHDF5Patch ()  {}
 
     /** Insert an item into the bag.
      * \param[in] item : the item to be inserted. */
@@ -266,10 +266,10 @@ public:
         herr_t status = 0;
 
         {
-            system::LocalSynchronizer localsynchro (_common->_synchro);
+            system::LocalSynchronizer localsynchro (_common._synchro);
 
             /** We get the dataset id. */
-            hid_t datasetId = _common->getDatasetId();
+            hid_t datasetId = _common.getDatasetId();
 
             /** Resize the memory dataspace to indicate the new size of our buffer. */
             hsize_t memDim = length;
@@ -288,13 +288,13 @@ public:
             if (status < 0)  { throw gatb::core::system::Exception ("HDF5 error (H5Sselect_hyperslab), status %d", status);  }
 
             /** Append buffer to dataset */
-            status = H5Dwrite (datasetId, _common->_typeId, memspaceId, filespaceId, H5P_DEFAULT, items);
+            status = H5Dwrite (datasetId, _common._typeId, memspaceId, filespaceId, H5P_DEFAULT, items);
             if (status < 0)  { throw gatb::core::system::Exception ("HDF5 error (H5Dwrite), status %d", status);  }
 
             /** We increase the number of inserted items. */
             _nbInserted += length;
 
-            __sync_fetch_and_add (&_common->_nbItems, length);
+            __sync_fetch_and_add (&(_common._nbItems), length);
 
             /** Close resources. */
             status = H5Sclose (filespaceId);
@@ -303,15 +303,13 @@ public:
         }
 
         /** We periodically clean up some HDF5 resources. */
-        _common->checkCleanup ();
+        _common.checkCleanup ();
     }
 
     /** */
     void flush ()  {  }
 
-    CollectionDataHDF5Patch<Item>* _common;
-    void setCommon (CollectionDataHDF5Patch<Item>* common)  { SP_SETATTR(common); }
-
+    CollectionDataHDF5Patch<Item>& _common;
 private:
 
     u_int64_t _nbInserted;
@@ -326,17 +324,17 @@ template <class Item> class IterableHDF5Patch : public collections::Iterable<Ite
 public:
 
     /** */
-    IterableHDF5Patch (CollectionDataHDF5Patch<Item>* common)  : _common (0) { setCommon(common); }
+    IterableHDF5Patch (CollectionDataHDF5Patch<Item>& common)  : _common (common) {}
 
     /** */
-    ~IterableHDF5Patch ()  { setCommon(0);}
+    virtual ~IterableHDF5Patch() {}
 
     /** */
     dp::Iterator<Item>* iterator ()  {  return new HDF5IteratorPatch<Item> (this);  }
 
     /** */
     int64_t getNbItems ()  {  
-        return _common->_nbItems;  }
+        return _common._nbItems;  }
 
     /** */
     int64_t estimateNbItems ()  {  return getNbItems();  }
@@ -357,33 +355,31 @@ public:
     }
 
 private:
-
-    CollectionDataHDF5Patch<Item>* _common;
-    void setCommon (CollectionDataHDF5Patch<Item>* common)  { SP_SETATTR(common); }
+    CollectionDataHDF5Patch<Item>& _common;
 
     /** */
     u_int64_t retrieveCache (Item* data, hsize_t start, hsize_t count)
     {
         herr_t status = 0;
 
-        if (start       > _common->_nbItems)  { return 0;                          }
-        if (start+count > _common->_nbItems)  { count = _common->_nbItems - start; }
+        if (start       > _common._nbItems)  { return 0;                          }
+        if (start+count > _common._nbItems)  { count = _common._nbItems - start; }
 
         /** We use a synchronizer instruction block.
          * NOTE !!!  the 'clean' method called after this block is also synchronized,
          * and therefore must not be in the same instruction block. */
         {
-            system::LocalSynchronizer localsynchro (_common->_synchro);
+            system::LocalSynchronizer localsynchro (_common._synchro);
 
             hid_t memspaceId = H5Screate_simple (1, &count, NULL);
 
             /** Select hyperslab on file dataset. */
-            hid_t filespaceId = H5Dget_space(_common->getDatasetId());
+            hid_t filespaceId = H5Dget_space(_common.getDatasetId());
             status = H5Sselect_hyperslab (filespaceId, H5S_SELECT_SET, &start, NULL, &count, NULL);
             if (status < 0)  { throw gatb::core::system::Exception ("HDF5 error (H5Sselect_hyperslab), status %d", status);  }
 
             /** Read buffer from dataset */
-            status = H5Dread (_common->getDatasetId(), _common->_typeId, memspaceId, filespaceId, H5P_DEFAULT, data);
+            status = H5Dread (_common.getDatasetId(), _common._typeId, memspaceId, filespaceId, H5P_DEFAULT, data);
             if (status < 0)  { throw gatb::core::system::Exception ("HDF5 error (H5Dread), status %d", status);  }
 
             /** Close resources. */
@@ -393,7 +389,7 @@ private:
         }
 
         /** We periodically clean up some HDF5 resources. */
-        _common->checkCleanup ();
+        _common.checkCleanup ();
 
         return count;
     }
@@ -435,7 +431,7 @@ public:
         _data = (Item*) MALLOC (_blockSize*sizeof(Item));
         memset (_data, 0, _blockSize*sizeof(Item));
 
-        _total = _ref->_common->_nbItems;
+        _total = _ref->_common._nbItems;
     }
 
     HDF5IteratorPatch& operator= (const HDF5IteratorPatch& it)
@@ -464,7 +460,7 @@ public:
         if (_data)  { FREE (_data); }
 
         /** We clean the reference instance. */
-        _ref->_common->clean();
+        _ref->_common.clean();
     }
 
     void first()
@@ -526,31 +522,29 @@ private:
 
 /********************************************************************************/
 
-template <class Item> class CollectionHDF5Patch : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionHDF5Patch : public collections::Collection<Item>, public system::SmartPointer
 {
 public:
 
     /** Constructor. */
     CollectionHDF5Patch (hid_t fileId, const std::string& name, system::ISynchronizer* synchro, int compressLevel)
-        : collections::impl::CollectionAbstract<Item> (0,0), _common(0)
+        : collections::Collection<Item> (0,0),
+          _common(fileId, name, synchro, compressLevel)
     {
         system::LocalSynchronizer localsynchro (synchro);
 
-        CollectionDataHDF5Patch<Item>* common = new CollectionDataHDF5Patch<Item> (fileId, name, synchro, compressLevel);
-
         /** We create the bag and the iterable instances. */
-        this->setBag      (new BagHDF5Patch<Item>      (common));
-        this->setIterable (new IterableHDF5Patch<Item> (common));
+        this->setBag      (std::make_unique< BagHDF5Patch<Item>      >(_common));
+        this->setIterable (std::make_unique< IterableHDF5Patch<Item> >(_common));
     }
 
-    /** \copydoc tools::collections::Collection::remove */
-    void remove ()  {}
+    virtual ~CollectionHDF5Patch() {}
 
     /** \copydoc tools::collections::Collection::addProperty */
     void addProperty (const std::string& key, const std::string value)
     {
-        BagHDF5Patch<Item>* theBag = dynamic_cast<BagHDF5Patch<Item>*> (this->bag());
-        if (theBag != 0)  {  theBag->_common->addProperty (key, value);  }
+        BagHDF5Patch<Item>* theBag = dynamic_cast<BagHDF5Patch<Item>*> (this->bag().get());
+        if (theBag != 0)  {  theBag->_common.addProperty (key, value);  }
     }
 
     /** \copydoc tools::collections::Collection::getProperty */
@@ -558,14 +552,14 @@ public:
     {
         std::string result;
 
-        BagHDF5Patch<Item>* theBag = dynamic_cast<BagHDF5Patch<Item>*> (this->bag());
-        if (theBag != 0)  {  result = theBag->_common->getProperty (key);  }
+        BagHDF5Patch<Item>* theBag = dynamic_cast<BagHDF5Patch<Item>*> (this->bag().get());
+        if (theBag != 0)  {  result = theBag->_common.getProperty (key);  }
 
         return result;
     }
 
 private:
-    CollectionDataHDF5Patch<Item>* _common;
+    CollectionDataHDF5Patch<Item> _common;
 };
 
 /********************************************************************************/

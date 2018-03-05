@@ -88,7 +88,7 @@ public:
     /** */
     void save (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "wb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "wb+");
         if (file != 0)
         {
             /** We write the nb of hash functions. */
@@ -110,15 +110,13 @@ for (size_t i=0; i<10; i++)
     printf ("\n");
 }
 #endif
-
-            delete file;
         }
     }
 
     /** */
     void load (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "rb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "rb+");
         if (file != 0)
         {
             /** We read the nb of hash functions. */
@@ -133,8 +131,6 @@ for (size_t i=0; i<10; i++)
 
             /** We read the blooms info. */
             file->fread (_blooma, _size*sizeof(Result), 1);
-
-            delete file;
         }
     }
 
@@ -240,7 +236,7 @@ public:
     /** */
     void save (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "wb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "wb+");
         if (file != 0)
         {
             /** We write the nb of hash functions. */
@@ -251,15 +247,13 @@ public:
 
             /** We write the blooms info. */
             file->fwrite (_blooma, _size*sizeof(Result), 1);
-
-            delete file;
         }
     }
 
     /** */
     void load (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "rb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "rb+");
         if (file != 0)
         {
             /** We read the nb of hash functions. */
@@ -274,8 +268,6 @@ public:
 
             /** We read the blooms info. */
             file->fread (_blooma, _size*sizeof(Result), 1);
-
-            delete file;
         }
     }
 
@@ -383,7 +375,7 @@ public:
     /** */
     void save (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "wb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "wb+");
         if (file != 0)
         {
             /** We write the nb of hash functions. */
@@ -397,15 +389,13 @@ public:
 
             /** We write the blooms info. */
             file->fwrite (_blooma, _size*sizeof(Result), 1);
-
-            delete file;
         }
     }
 
     /** */
     void load (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "rb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "rb+");
         if (file != 0)
         {
             /** We read the nb of hash functions. */
@@ -423,8 +413,6 @@ public:
 
             /** We read the blooms info. */
             file->fread (_blooma, _size*sizeof(Result), 1);
-
-            delete file;
         }
     }
 

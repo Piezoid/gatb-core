@@ -114,10 +114,11 @@ namespace dp    {
  *
  *   it has the same benefits as the listed benefits of the Iterator class, IMHO
  */
-template <class _Item> class Iterator : public system::SmartPointer
+template <class Item> class Iterator : public system::SmartPointer
 {
 public:
-    using Item = _Item;
+    using value_type = Item;
+
     /** */
     Iterator () : _item(&_default), _isRunning(IDDLE) {}
 
@@ -204,6 +205,33 @@ private:
 
     enum Status { IDDLE, STARTED, FINISHED };
     Status  _isRunning;
+};
+
+template<typename Item>
+struct polymorphic_iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = Item;
+    using difference_type = std::nullptr_t;
+    using pointer = Item*;
+    using reference = Item&;
+
+    polymorphic_iterator(Iterator<Item>* it) : _ref(it) {}
+    polymorphic_iterator() = default;
+
+    Item& operator*()  const { return   _ref->item() ; }
+    Item* operator->() const { return &(_ref->item()); }
+    polymorphic_iterator& operator++() { _ref->next(); }
+
+    Iterator<Item> getWorstIterator() const { return *_ref; }
+
+    friend bool operator==(const polymorphic_iterator& x, const polymorphic_iterator& y) {
+        assert(!y._ref);
+        return x._ref->isDone();
+    }
+    friend bool operator!=(const polymorphic_iterator& x, const polymorphic_iterator& y)  { return !(x==y); }
+    friend bool operator< (const polymorphic_iterator& x, const polymorphic_iterator& y)  { return !(x==y); }
+protected:
+    std::unique_ptr<Iterator<Item>> _ref;
 };
 
 /********************************************************************************/

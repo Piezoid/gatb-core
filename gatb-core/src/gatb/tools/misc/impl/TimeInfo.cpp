@@ -176,7 +176,7 @@ u_int32_t TimeInfo::getEntryByKey (const std::string& key)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-tools::misc::IProperties* TimeInfo::getProperties (const std::string& root)
+tools::misc::Properties& TimeInfo::getProperties (const std::string& root)
 {
     u_int32_t total = 0;
 
@@ -184,13 +184,13 @@ tools::misc::IProperties* TimeInfo::getProperties (const std::string& root)
     std::map <std::string, u_int32_t>::const_iterator  it;
     for (it = getEntries().begin(); it != getEntries().end();  it++)   {  total += it->second;  }
 
-    tools::misc::IProperties* props = new tools::misc::impl::Properties();
+    tools::misc::Properties& props = new tools::misc::Properties();
 
-    props->add (0, root, "%.3f", (double)total/1000.0);
+    props.add (0, root, "%.3f", (double)total/1000.0);
 
     for (it = getEntries().begin(); it != getEntries().end();  it++)
     {
-        props->add (1, it->first.c_str(), "%.3f", (double)(it->second) / 1000.0);
+        props.add (1, it->first.c_str(), "%.3f", (double)(it->second) / 1000.0);
     }
 
     return props;

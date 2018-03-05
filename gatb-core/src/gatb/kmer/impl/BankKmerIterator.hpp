@@ -151,7 +151,7 @@ public:
 private:
 
     /** Outer loop iterator on Sequence. */
-    tools::dp::Iterator<bank::Sequence>* _itSeq;
+    std::shared_ptr<tools::dp::Iterator<bank::Sequence>> _itSeq;
     void setItSeq (tools::dp::Iterator<bank::Sequence>* itSeq)  { SP_SETATTR(itSeq); }
 
     /** Inner loop iterator on kmer. */
@@ -262,7 +262,7 @@ private:
     KmerModel& _model;
 
     /** Outer loop iterator on Sequence. */
-    tools::dp::Iterator<bank::Sequence>* _itSeq;
+    std::shared_ptr<tools::dp::Iterator<bank::Sequence>> _itSeq;
     void setItSeq (tools::dp::Iterator<bank::Sequence>* itSeq)  { SP_SETATTR(itSeq); }
 
     /** Shortcut (for performance). */

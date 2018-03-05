@@ -81,9 +81,9 @@ struct PostParserVisitor : public HierarchyParserVisitor
  *********************************************************************/
 struct PropertiesParserVisitor : public HierarchyParserVisitor
 {
-    IProperties* _props;
-    PropertiesParserVisitor (IProperties* props) : _props(props) {}
-    void visitOption (Option& object, size_t depth)  {  _props->add (0, object.getName(), object.getDefaultValue());  }
+    Properties& _props;
+    PropertiesParserVisitor (Properties& props) : _props(props) {}
+    void visitOption (Option& object, size_t depth)  {  _props.add (0, object.getName(), object.getDefaultValue());  }
 };
 
 /*********************************************************************
@@ -169,9 +169,8 @@ struct ParserVisitor : public IOptionsParserVisitor
  ** REMARKS :
  *********************************************************************/
 OptionsParser::OptionsParser (const std::string& name, const std::string& help)
-    : _name(name), _visible(true), _help(help), _properties(0)
+    : _name(name), _visible(true), _help(help), _properties()
 {
-    setProperties (new Properties());
 }
 
 /*********************************************************************
@@ -182,25 +181,7 @@ OptionsParser::OptionsParser (const std::string& name, const std::string& help)
  ** RETURN  :
  ** REMARKS :
  *********************************************************************/
-OptionsParser::~OptionsParser ()
-{
-    for (list<IOptionsParser*>::const_iterator it = _parsers.begin(); it != _parsers.end(); ++it)
-    {
-        (*it)->forget();
-    }
-
-    setProperties (0);
-}
-
-/*********************************************************************
- ** METHOD  :
- ** PURPOSE :
- ** INPUT   :
- ** OUTPUT  :
- ** RETURN  :
- ** REMARKS :
- *********************************************************************/
-misc::IProperties* OptionsParser::parse (int argc, char** argv)
+Properties& OptionsParser::parse(int argc, char** argv)
 {
     /** We parse the arguments through a visitor. Note that we skip the first
      * item which should be the binary name. */
@@ -223,7 +204,7 @@ misc::IProperties* OptionsParser::parse (int argc, char** argv)
     if (!visitor.getResult().errors.empty())  {  throw OptionFailure (this, visitor.getResult());  }
 
     /** We set the properties. */
-    setProperties (new Properties (visitor.getResult().properties));
+    _properties = visitor.getResult().properties;
 
     return _properties;
 }
@@ -253,7 +234,7 @@ struct ArgData
      }
 };
 
-misc::IProperties* OptionsParser::parseString (const std::string& s)
+misc::Properties& OptionsParser::parseString (const std::string& s)
 {
     ArgData args;
 
@@ -280,7 +261,7 @@ misc::IProperties* OptionsParser::parseString (const std::string& s)
     for (int i=0; i<args.argc; i++)  {  DEBUG (("   item='%s' \n", argv[i]));  }
 
     /** We parse the arguments. */
-    misc::IProperties* result = this->parse (args.argc, args.argv);
+    misc::Properties& result = this->parse (args.argc, args.argv);
 
     DEBUG (("OptionsParser::parseString  argc=%d => idx=%ld\n", argc, idx));
 
@@ -298,7 +279,7 @@ misc::IProperties* OptionsParser::parseString (const std::string& s)
  *********************************************************************/
 bool OptionsParser::saw (const std::string& name) const
 {
-    return (_properties != 0  && _properties->get(name) != 0);
+    return _properties->get(name) != 0;
 }
 
 /*********************************************************************
@@ -313,10 +294,10 @@ struct PushParserVisitor : public HierarchyParserVisitor
 {
     bool   front;
     size_t expandDepth;
-    std::list<IOptionsParser*>& parsers;
+    std::list<std::unique_ptr<IOptionsParser>>& parsers;
     bool visibility;
 
-    PushParserVisitor (bool front, size_t depth, std::list<IOptionsParser*>& parsers, bool visibility)
+    PushParserVisitor (bool front, size_t depth, std::list<std::unique_ptr<IOptionsParser>>& parsers, bool visibility)
         : front(front), expandDepth(depth), parsers(parsers), visibility(visibility) {}
 
     void visitOptionsParser (impl::OptionsParser& object, size_t depth)
@@ -383,9 +364,9 @@ IOptionsParser* OptionsParser::getParser (const std::string& name)
     if (name == getName()) { return  this; }
 
     IOptionsParser* result = 0;
-    for (list<IOptionsParser*>::iterator it = _parsers.begin(); result==0 && it != _parsers.end(); ++it)
+    for (auto& it : _parsers.begin())
     {
-        result = (*it)->getParser(name);
+        result = it->getParser(name);
     }
 
     return result;
@@ -399,9 +380,9 @@ IOptionsParser* OptionsParser::getParser (const std::string& name)
  ** RETURN  :
  ** REMARKS :
  *********************************************************************/
-IProperties* OptionsParser::getDefaultProperties ()
+Properties& OptionsParser::getDefaultProperties ()
 {
-    IProperties* result = new Properties();
+    Properties& result = new Properties();
 
     PropertiesParserVisitor v (result);
     this->accept (v);
@@ -418,9 +399,9 @@ IProperties* OptionsParser::getDefaultProperties ()
  *********************************************************************/
 void HierarchyParserVisitor::visitOptionsParser (OptionsParser& object, size_t depth)
 {
-    for (std::list<IOptionsParser*>::const_iterator it = object.getParsers().begin(); it != object.getParsers().end(); ++it)
+    for (auto& it : object.getParsers())
     {
-        (*it)->accept (*this, depth+1);
+        it->accept (*this, depth+1);
     }
 }
 
@@ -438,18 +419,18 @@ void OptionsHelpVisitor::visitOptionsParser (OptionsParser& object, size_t depth
     {
         /** We first look for the longest option name. */
         nameMaxLen=0;
-        for (list<IOptionsParser*>::const_iterator it = object.getParsers().begin(); it != object.getParsers().end(); ++it)
+        for (auto& it : getParsers())
         {
-            if (!(*it)->getName().empty())  {  nameMaxLen = std::max (nameMaxLen, (*it)->getName().size());  }
+            if (!it->getName().empty())  {  nameMaxLen = std::max (nameMaxLen, (*it)->getName().size());  }
         }
 
         os << endl;
         indent(os,depth) <<  "[" << object.getName() << " options]" << endl;
 
         /** We loop over each known parser. */
-        for (list<IOptionsParser*>::const_iterator it = object.getParsers().begin(); it != object.getParsers().end(); ++it)
+        for (auto& it : object.getParsers())
         {
-            if ((*it)->isVisible())  {  (*it)->accept (*this, depth+1); }
+            if (it->isVisible())  {  (*it)->accept (*this, depth+1); }
         }
     }
 }
@@ -540,9 +521,9 @@ void VisibilityOptionsVisitor::visitOptionsParser (OptionsParser& object, size_t
 {
     if (_names.find(object.getName()) != _names.end())  { object.setVisible(_visibility); }
 
-    for (std::list<IOptionsParser*>::const_iterator it = object.getParsers().begin(); it != object.getParsers().end(); ++it)
+    for (auto it : object.getParsers())
     {
-        (*it)->accept (*this, depth+1);
+        it->accept (*this, depth+1);
     }
 }
 

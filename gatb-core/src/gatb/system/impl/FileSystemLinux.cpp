@@ -87,9 +87,9 @@ size_t FileSystemLinux::getMaxFilesNumber ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IFile* FileSystemLinux::newFile (const Path& path, const char* mode)
+std::unique_ptr<IFile> FileSystemLinux::newFile (const Path& path, const char* mode)
 {
-    return new FileLinux (path.c_str(), mode);
+    return std::make_unique<FileLinux> (path.c_str(), mode);
 }
 
 /*********************************************************************
@@ -100,7 +100,7 @@ IFile* FileSystemLinux::newFile (const Path& path, const char* mode)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IFile* FileSystemLinux::newFile (const Path& dirpath, const Path& filename, const char* mode)
+std::unique_ptr<IFile> FileSystemLinux::newFile (const Path& dirpath, const Path& filename, const char* mode)
 {
     /** We build the full file path. */
     stringstream ss;

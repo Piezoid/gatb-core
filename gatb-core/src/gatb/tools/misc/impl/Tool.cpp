@@ -45,23 +45,17 @@ namespace gatb {  namespace core { namespace tools {  namespace misc {  namespac
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-Tool::Tool (const std::string& name) : userDisplayHelp(0), _helpTarget(0),userDisplayVersion(0), _versionTarget(0), _name(name), _input(0), _output(0), _info(0), _parser(0), _dispatcher(0)
-{
-    setOutput (new Properties());
+Tool::Tool (const std::string& name) : userDisplayHelp(0), _helpTarget(0),userDisplayVersion(0), _versionTarget(0), _name(name),
+    _parser(name),
+    _dispatcher(0)
+{ configureParser(_parser); }
 
-    setInfo  (new Properties());
-   // _info->add (0, _name);
+void Tool::configureParser(IOptionsParser & parser) {
+    parser.push_back (new OptionOneParam (STR_NB_CORES,    "number of cores",      false, "0"  ));
+    parser.push_back (new OptionOneParam (STR_VERBOSE,     "verbosity level",      false, "1"  ));
 
-    /** We create an options parser. */
-    setParser (new OptionsParser(name));
-
-    getParser()->push_back (new OptionOneParam (STR_NB_CORES,    "number of cores",      false, "0"  ));
-    getParser()->push_back (new OptionOneParam (STR_VERBOSE,     "verbosity level",      false, "1"  ));
-	
-	getParser()->push_back (new OptionNoParam (STR_VERSION, "version", false));
-	getParser()->push_back (new OptionNoParam (STR_HELP, "help", false));
-
-	
+    parser.push_back (new OptionNoParam (STR_VERSION, "version", false));
+    parser.push_back (new OptionNoParam (STR_HELP, "help", false));
 }
 
 /*********************************************************************
@@ -101,13 +95,13 @@ void Tool::displayVersion(std::ostream& os){
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* Tool::run (int argc, char* argv[])
+Properties& Tool::run (int argc, char* argv[])
 {
     DEBUG (("Tool::run(argc,argv) => tool='%s'  \n", getName().c_str() ));
     try
     {
         /** We parse the user parameters. */
-        IProperties* props = getParser()->parse (argc, argv);
+        Properties& props = _parser.parse (argc, argv);
 
         /** We run the tool. */
         return run (props);
@@ -148,12 +142,12 @@ IProperties* Tool::run (int argc, char* argv[])
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* Tool::run (IProperties* input)
+Properties& Tool::run (Properties& input)
 {
     /** We keep the input parameters. */
     setInput (input);
 
-    if (getInput()->get(STR_VERSION) != 0)
+    if (getInput().get(STR_VERSION) != 0)
     {
     	displayVersion(cout);
         return _output;
@@ -162,11 +156,11 @@ IProperties* Tool::run (IProperties* input)
     /** We define one dispatcher. */
     if (_input->getInt(STR_NB_CORES) == 1)
     {
-        setDispatcher (new SerialDispatcher ());
+        _dispatcher = (std::make_unique<SerialDispatcher>());
     }
     else
     {
-        setDispatcher (new Dispatcher (_input->getInt(STR_NB_CORES)) );
+        _dispatcher = std::make_unique<Dispatcher>(_input->getInt(STR_NB_CORES).value());
     }
 
     /** We may have some pre processing. */
@@ -250,7 +244,7 @@ void Tool::postExecute ()
 *********************************************************************/
 dp::IteratorListener* Tool::createIteratorListener (size_t nbIterations, const char* message)
 {
-    switch (getInput()->getInt(STR_VERBOSE))
+    switch (getInput().getInt(STR_VERBOSE))
     {
         case 0: default:    return new IteratorListener ();
         case 1:             return new ProgressTimer (nbIterations, message);
@@ -258,173 +252,6 @@ dp::IteratorListener* Tool::createIteratorListener (size_t nbIterations, const c
     }
 }
 
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-ToolComposite::ToolComposite (const std::string& name) : Tool(name)
-{
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-ToolComposite::~ToolComposite ()
-{
-    for (list<Tool*>::iterator it = _tools.begin(); it != _tools.end(); it++)
-    {
-        (*it)->forget ();
-    }
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-IProperties* ToolComposite::run (int argc, char* argv[])
-{
-    vector<IProperties*> inputs;
-
-    /** We first parse the options for all tools. */
-    for (list<Tool*>::iterator it = _tools.begin(); it != _tools.end(); it++)
-    {
-#if 0
-        /** We get the parameters from the current parser. */
-        IProperties* input = (*it)->getParser()->parse (argc, argv);
-
-        /** We add the input into the vector that gather the tools inputs. */
-        inputs.push_back (input);
-#else
-
-        try
-        {
-            /** We parse the user parameters. */
-            (*it)->getParser()->parse (argc, argv);
-
-
-			IProperties* input =  (*it)->getParser()->getProperties() ;
-            /** We add the input into the vector that gather the tools inputs. */
-            inputs.push_back (input);
-        }
-        catch (OptionFailure& e)
-        {
-			IProperties* input =  (*it)->getParser()->getProperties() ;
-
-			/** We add the input into the vector that gather the tools inputs. */
-			inputs.push_back (input);
-			
-//            e.getParser().displayErrors (stdout);
-//            e.getParser().displayHelp   (stdout);
-//            return NULL;
-        }
-#endif
-    }
-
-    IProperties* output = 0;
-    size_t idx = 0;
-    for (list<Tool*>::iterator it = _tools.begin(); it != _tools.end(); it++, idx++)
-    {
-        /** We get the parameters from the current inputs entry. */
-        IProperties* input = inputs[idx];
-
-        /** We may have to add the output of the previous tool to the input of the current tool.
-         *  WARNING! The output of the previous tool should have a bigger priority than the
-         *  user parameters of the current tool.
-         */
-        IProperties* actualInput = 0;
-        if (output != 0)
-        {
-            actualInput = new Properties();
-            actualInput->add (1, output);   // output of the previous tool
-            actualInput->add (1, input);    // input  of the previous tool
-        }
-        else
-        {
-            actualInput = input;
-        }
-
-        /** We run the tool and get a reference on its output. */
-        output = (*it)->run (actualInput);
-
-        /** We add the current tool info to the global properties. */
-        _info->add (1, (*it)->getInfo());
-    }
-
-    /** We return the output properties. */
-    return _output;
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-void ToolComposite::add (Tool* tool)
-{
-    if (tool)
-    {
-        tool->use ();
-        _tools.push_back(tool);
-    }
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-void ToolComposite::execute ()
-{
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-void ToolComposite::preExecute ()
-{
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-void ToolComposite::postExecute ()
-{
-    /** We may have to dump execution information into a stats file. */
-//    if (_input->get(Tool::STR_STATS_XML) != 0)
-//    {
-//        XmlDumpPropertiesVisitor visit (_info->getStr (Tool::STR_STATS_XML), false);
-//        _info->accept (&visit);
-//    }
-}
 
 /********************************************************************************/
 } } } } } /* end of namespaces. */

@@ -334,7 +334,7 @@ int main (int argc, char* argv[])
             Progress progress (bank.estimateNbSequences(), "FASTA to binary conversion");
 
             // We convert the FASTA bank in binary format
-            IProperties* props = BankHelper::singleton().convert (bank, bankBin, &progress);
+            Properties& props = BankHelper::singleton().convert (bank, bankBin, &progress);
             LOCAL (props);
         }
 

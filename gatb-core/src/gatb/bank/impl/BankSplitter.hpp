@@ -68,14 +68,15 @@ public:
      * \param[in] coverage : number of occurrences for the reads
      */
     BankSplitter (
-        IBank* reference,
+        std::unique_ptr<IBank> reference,
         size_t readMeanSize,
         size_t   overlap,
         u_int8_t coverage
-    );
+    ) : _reference (std::move(reference)), _readMeanSize(readMeanSize), _coverage(coverage), _overlap(overlap)
+    {}
 
     /** Destructor. */
-    ~BankSplitter ();
+    virtual ~BankSplitter () {}
 
     /** \copydoc IBank::getId. */
     std::string getId ()  { return "dummy"; }
@@ -126,10 +127,10 @@ public:
         Sequence& item ()     { return *_item; }
 
     private:
-        tools::misc::Data* _dataRef;
+        std::shared_ptr<tools::misc::Data> _dataRef;
         void setDataRef (tools::misc::Data* dataRef)  { SP_SETATTR(dataRef); }
 
-        tools::dp::Iterator<Sequence>* _itRef;
+        std::shared_ptr<tools::dp::Iterator<Sequence>> _itRef;
         void setItRef (tools::dp::Iterator<Sequence>* itRef)  { SP_SETATTR(itRef); }
 
         size_t    _readMeanSize;
@@ -145,8 +146,7 @@ public:
 
 protected:
 
-    IBank* _reference;
-    void setReference (IBank* reference) { SP_SETATTR(reference); }
+    std::unique_ptr<IBank> _reference;
 
     size_t      _readMeanSize;
     u_int8_t    _coverage;

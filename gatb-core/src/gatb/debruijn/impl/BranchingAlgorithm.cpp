@@ -57,59 +57,6 @@ static const char* progressFormat2 = "Graph: nb branching found : %-9d  ";
 ** REMARKS :
 *********************************************************************/
 template<size_t span, typename Node, typename Edge, typename Graph>
-BranchingAlgorithm<span, Node, Edge, Graph>::BranchingAlgorithm (
-    const Graph& graph,
-    tools::storage::impl::Storage& storage,
-    tools::misc::BranchingKind  kind,
-    size_t                      nb_cores,
-    tools::misc::IProperties*   options
-)
-    : Algorithm("branching", nb_cores, options), _graph (&graph),  _storage(storage), _kind(kind), _branchingCollection(0)
-{
-    setBranchingCollection (& storage("branching").getCollection<Count> ("nodes"));
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
-BranchingAlgorithm<span, Node, Edge, Graph>::BranchingAlgorithm (tools::storage::impl::Storage& storage)
-    : Algorithm("branching", 0, 0), _graph(0), _storage(storage), _branchingCollection(0)
-{
-    setBranchingCollection (& storage("branching").getCollection<Count> ("nodes"));
-
-    string xmlString = storage(this->getName()).getProperty ("xml");
-    stringstream ss; ss << xmlString;   getInfo()->readXML (ss);
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
-BranchingAlgorithm<span, Node, Edge, Graph>::~BranchingAlgorithm ()
-{
-    setBranchingCollection(0);
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
 IOptionsParser* BranchingAlgorithm<span, Node, Edge, Graph>::getOptionsParser ()
 {
     IOptionsParser* parser = new OptionsParser ("branching");
@@ -195,8 +142,8 @@ class CustomListener : public ProgressProxy
     Collection<Count>* _branchingCollection;
 
 public:
-    CustomListener (IteratorListener* ref, Collection<Count>* branchingCollection)
-        : ProgressProxy(ref), _branchingCollection(branchingCollection) {}
+    CustomListener (std::unique_ptr<IteratorListener> ref, Collection<Count>* branchingCollection)
+        : ProgressProxy(std::move(ref)), _branchingCollection(branchingCollection) {}
 
     void finish ()  {}
 
@@ -219,7 +166,7 @@ void BranchingAlgorithm<span, Node, Edge, Graph>::execute ()
      * => we define our own 'finishPostponed' method that is called when all the information is ok. */
     CustomListener<Count>* listener = new CustomListener<Count> (
         createIteratorListener (itNodes.size(), progressFormat1),
-        _branchingCollection
+        getBranchingCollection()
     );
 
     /** We encapsulate this iterator with a potentially decorated iterated (for progress information). */
@@ -258,7 +205,7 @@ void BranchingAlgorithm<span, Node, Edge, Graph>::execute ()
     typedef pair<BranchingIterator,BranchingIterator> BranchingIteratorPair;
 
     /** We use a cache to improve IO performances. */
-    CollectionCache<Count> branchingCache (*_branchingCollection, 16*1024, 0);
+    CollectionCache<Count> branchingCache (getBranchingCollection(), 16*1024, 0);
 
     Type checksum; checksum.setVal( 0);
 
@@ -306,14 +253,14 @@ void BranchingAlgorithm<span, Node, Edge, Graph>::execute ()
     //cout << "Graph has " << _branchingCollection->getNbItems() << " branching nodes." << endl;
 
     /** We gather some statistics. */
-    getInfo()->add (1, "stats");
-    getInfo()->add (2, "nb_branching", "%ld", _branchingCollection->getNbItems());
-    getInfo()->add (2, "percentage",   "%.1f", (itNodes.size() > 0 ? 100.0*(float)_branchingCollection->getNbItems()/(float)itNodes.size() : 0));
+    getInfo().add (1, "stats");
+    getInfo().add (2, "nb_branching", "%ld", getBranchingCollection().getNbItems());
+    getInfo().add (2, "percentage",   "%.1f", (itNodes.size() > 0 ? 100.0*(float)getBranchingCollection()->getNbItems()/(float)itNodes.size() : 0));
 
     stringstream ss;  ss << checksum;
-    getInfo()->add (2, "checksum_branching", "%s", ss.str().c_str());
+    getInfo().add (2, "checksum_branching", "%s", ss.str().c_str());
 
-    if (getInput()->get(STR_TOPOLOGY_STATS) && getInput()->getInt(STR_TOPOLOGY_STATS) > 0)
+    if (getInput().get(STR_TOPOLOGY_STATS) && getInput().getInt(STR_TOPOLOGY_STATS) > 0)
     {
         /** We get some topological information. */
         for (size_t i=0; i<functorData.size(); i++)
@@ -329,19 +276,19 @@ void BranchingAlgorithm<span, Node, Edge, Graph>::execute ()
         for (map<InOut_t, size_t>::iterator it = functorData->topology.begin();  it != functorData->topology.end(); ++it)  { topologyStats.push_back (*it); }
         sort (topologyStats.begin(), topologyStats.end(), CompareFct);
 
-        getInfo()->add (1, "topology");
+        getInfo().add (1, "topology");
+        const size_t nb_branching = getBranchingCollection().getNbItems();
         for (size_t i=0; i<topologyStats.size(); i++)
         {
-            getInfo()->add (3, "neighborhood", "[in=%ld out=%ld]  nb : %8ld   percent. : %5.2f",
+            getInfo().add (3, "neighborhood", "[in=%ld out=%ld]  nb : %8ld   percent. : %5.2f",
                 topologyStats[i].first.first, topologyStats[i].first.second, topologyStats[i].second,
-                _branchingCollection->getNbItems() > 0 ?
-                100.0*(float)topologyStats[i].second / (float)_branchingCollection->getNbItems() : 0
+                nb_branching ? 100.0*(float)topologyStats[i].second / (float)nb_branching : 0
             );
         }
     }
 
-    getInfo()->add (1, "time");
-    getInfo()->add (2, "build", "%.3f", status.time / 1000.0);
+    getInfo().add (1, "time");
+    getInfo().add (2, "build", "%.3f", status.time / 1000.0);
 }
 
 /********************************************************************************/

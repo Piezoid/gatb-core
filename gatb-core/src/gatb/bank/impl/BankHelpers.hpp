@@ -32,7 +32,7 @@
 #include <gatb/bank/impl/Bank.hpp>
 #include <gatb/bank/impl/AbstractBank.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
-#include <gatb/tools/misc/api/IProperty.hpp>
+#include <gatb/tools/misc/impl/Property.hpp>
 
 /********************************************************************************/
 namespace gatb      {
@@ -56,7 +56,7 @@ public:
      * \param[in] out : the converted bank
      * \param[in] progress : listener getting conversion progression information
      * */
-    tools::misc::IProperties* convert (IBank& in, IBank& out, tools::dp::IteratorListener* progress=0);
+    tools::misc::Properties convert (IBank& in, IBank& out, std::shared_ptr<tools::dp::IteratorListener> progress=0);
 };
 
 /********************************************************************************/
@@ -75,10 +75,10 @@ public:
     /** Constructor.
      * \param[in] ref : referred bank.
      */
-    BankDelegate (IBank* ref) : _ref(0)  { setRef(ref); }
+    BankDelegate (std::unique_ptr<IBank> ref) : _ref(std::move(ref)) {}
 
     /** Destructor. */
-    ~BankDelegate () { setRef(0); }
+    virtual ~BankDelegate () {}
 
     /** \copydoc AbstractBank::getId */
     std::string getId ()  { return _ref->getId(); }
@@ -121,8 +121,7 @@ public:
 
 protected:
 
-    IBank* _ref;
-    void setRef (IBank* ref)  { SP_SETATTR(ref); }
+    std::unique_ptr<IBank> _ref;
 };
 
 /********************************************************************************/
@@ -146,7 +145,7 @@ public:
      * \param[in] ref : referred bank.
      * \param[in] filter : functor that filters sequence.
      */
-    BankFiltered (IBank* ref, const Filter& filter) : BankDelegate (ref), _filter(filter)  {}
+    BankFiltered (std::unique_ptr<IBank> ref, const Filter& filter) : BankDelegate (std::move(ref)), _filter(filter)  {}
 
     /** \copydoc tools::collections::Iterable::iterator */
     tools::dp::Iterator<Sequence>* iterator ()
@@ -190,10 +189,10 @@ public:
     BankFilteredFactory (const std::string& delegateFormat, const Filter& filter) : _format(delegateFormat), _filter(filter)  {}
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri)
+    std::unique_ptr<IBank> createBank (const std::string& uri)
     {
         /** We create the reference bank. */
-        IBank* ref = Bank::getFactory(_format)->createBank (uri);
+        std::unique_ptr<IBank> ref = Bank::getFactory(_format)->createBank (uri);
 
         /** We encapsulate with a filtered bank. */
         return new BankFiltered<Filter> (ref, _filter);

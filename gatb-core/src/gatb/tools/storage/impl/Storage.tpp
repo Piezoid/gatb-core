@@ -35,12 +35,12 @@ namespace gatb  {  namespace core  {  namespace tools  {  namespace storage  {  
 *********************************************************************/
 template <class Item>
 inline CollectionNode<Item>::CollectionNode (
-    StorageFactory* factory, 
+    const StorageFactory& factory,
     ICell* parent, 
     const std::string& id, 
     collections::Collection<Item>* ref
 )
-    : Cell(parent,id), collections::impl::CollectionAbstract<Item> (ref->bag(), ref->iterable()), _factory(factory), _ref(0)
+    : Cell(parent,id), collections::Collection<Item> (ref->bag(), ref->iterable()), _factory(factory), _ref(0)
 {
     /** We get a token on the referred Collection instance. */
     setRef(ref);
@@ -80,14 +80,6 @@ inline std::string  CollectionNode<Item>::getProperty (const std::string& key)
     return _ref->getProperty (key); 
 }
 
-/*********************************************************************
-*********************************************************************/
-template <class Item>
-inline collections::Collection<Item>* CollectionNode<Item>::getRef ()  
-{ 
-    return _ref; 
-}
-
 /**********************************************************************
              #####   ######   #######  #     #  ######
             #     #  #     #  #     #  #     #  #     #
@@ -100,7 +92,7 @@ inline collections::Collection<Item>* CollectionNode<Item>::getRef ()
 
 /*********************************************************************
 *********************************************************************/
-inline Group::Group (StorageFactory* factory, ICell* parent, const std::string& name) 
+inline Group::Group (const StorageFactory& factory, ICell* parent, const std::string& name)
     : Cell(parent, name), _factory(factory) 
 {
 }
@@ -123,15 +115,11 @@ inline Group::~Group()
 *********************************************************************/
 inline Group& Group::getGroup (const std::string& name)
 {
-    Group* group=0;  for (size_t i=0; !group && i<_groups.size(); i++)  {  if (_groups[i]->getId() == name)  { group = _groups[i]; }  }
+    for(auto& group_ptr : _groups)
+        if(group_ptr->getId() == name)
+            return *group_ptr;
 
-    if (group == 0)
-    {
-        group = _factory->createGroup (this, name);
-        _groups.push_back (group);
-        group->use ();
-    }
-    return *group;
+    return *_groups.emplace_back (_factory.createGroup (this, name));
 }
 
 /*********************************************************************
@@ -139,10 +127,9 @@ inline Group& Group::getGroup (const std::string& name)
 template <class Type>  
 inline Partition<Type>&  Group::getPartition (const std::string& name, size_t nb)
 {
-    Partition<Type>* result = _factory->createPartition<Type> (this, name, nb);
-    _partitions.push_back(result);
-    result->use();
-    return *result;
+    auto ptr = _factory.createPartition<Type> (this, name, nb);
+    _partitions.emplace_back(std::move(ptr));
+    return *ptr;
 }
 
 /*********************************************************************
@@ -150,10 +137,9 @@ inline Partition<Type>&  Group::getPartition (const std::string& name, size_t nb
 template <class Type>  
 inline CollectionNode<Type>&  Group::getCollection (const std::string& name)
 {
-    CollectionNode<Type>* result = _factory->createCollection<Type> (this, name, 0);
-    _collections.push_back (result);
-    result->use ();
-    return *result;
+    auto ptr = _factory.createCollection<Type> (this, name, 0);
+    _collections.emplace_back (std::move(ptr));
+    return *ptr;
 }
 
 /*********************************************************************
@@ -161,13 +147,16 @@ inline CollectionNode<Type>&  Group::getCollection (const std::string& name)
 inline void Group::remove ()
 {
     /** We remove the collections. */
-    for (size_t i=0; i<_collections.size(); i++)  {  _collections[i]->remove ();  }
+    for (auto& ptr : _collections) ptr->remove();
+    _collections.clear();
 
     /** We remove the partitions. */
-    for (size_t i=0; i<_partitions.size(); i++)   { _partitions[i]->remove(); }
+    for (auto& ptr : _partitions)  ptr->remove();
+    _partitions.clear();
 
     /** We remove the children groups. */
-    for (size_t i=0; i<_groups.size(); i++)       { _groups[i]->remove(); }
+    for (auto& ptr : _groups)      ptr->remove();
+    _groups.clear();
 }
 
 /**********************************************************************
@@ -183,22 +172,21 @@ inline void Group::remove ()
 /*********************************************************************
 *********************************************************************/
 template<typename Type>
-inline Partition<Type>::Partition (StorageFactory* factory, ICell* parent, const std::string& id, size_t nbCollections)
-    : Group (factory, parent, id), _factory(factory), _typedCollections(nbCollections), _synchro(0)
+inline Partition<Type>::Partition (const StorageFactory& factory, ICell* parent, const std::string& id, size_t nbCollections)
+    : Group (factory, parent, id), _factory(factory), _typedCollections(), _synchro(0)
 {
     /** We create a synchronizer to be shared by the collections. */
     _synchro = system::impl::System::thread().newSynchronizer();
 
     /** We want to instantiate the wanted number of collections. */
-    for (size_t i=0; i<_typedCollections.size(); i++)
+    _typedCollections.reserve(nbCollections);
+    for (size_t i=0 ; i < nbCollections ; i++)
     {
         /** We define the name of the current partition as a mere number. */
         std::stringstream ss;  ss << i;
 
-        CollectionNode<Type>* result = _factory->createCollection<Type> (this, ss.str(), _synchro);
-
-        /** We add the collection node to the dedicated vector and take a token for it. */
-        (_typedCollections [i] = result)->use ();
+        /** We add the collection node to the dedicated vector */
+        _typedCollections.emplace_back(_factory.createCollection<Type> (this, ss.str(), _synchro));
     }
 }
 
@@ -206,12 +194,7 @@ inline Partition<Type>::Partition (StorageFactory* factory, ICell* parent, const
 *********************************************************************/
 template<typename Type>
 inline Partition<Type>::~Partition ()
-{
-    /** We release the token for each collection node. */
-    for (size_t i=0; i<_typedCollections.size(); i++)  { _typedCollections[i]->forget ();  }
-
-    delete _synchro;
-}
+{}
 
 /*********************************************************************
 *********************************************************************/
@@ -226,7 +209,7 @@ inline size_t Partition<Type>::size()  const
 template<typename Type>
 inline collections::Collection<Type>& Partition<Type>::operator[] (size_t idx)  
 {  
-    return  * _typedCollections[idx]->getRef();  
+    return _typedCollections[idx]->getRef();
 }
 
 /*********************************************************************
@@ -234,7 +217,7 @@ inline collections::Collection<Type>& Partition<Type>::operator[] (size_t idx)
 template<typename Type>
 inline dp::Iterator<Type>* Partition<Type>::iterator ()
 {
-    std::vector <dp::Iterator<Type>*> iterators;
+    std::vector<dp::Iterator<Type>*> iterators;
     for (size_t i=0; i<this->size(); i++) { iterators.push_back ((*this)[i].iterator()); }
     return new dp::impl::CompositeIterator<Type> (iterators);
 }
@@ -525,7 +508,9 @@ namespace gatb  {  namespace core  {  namespace tools  {  namespace storage  {  
 
 /*********************************************************************
 *********************************************************************/
-inline Storage* StorageFactory::create (const std::string& name, bool deleteIfExist, bool autoRemove, bool dont_add_extension, bool append)
+inline std::unique_ptr<Storage>
+StorageFactory::create (const std::string& name, bool deleteIfExist, bool autoRemove,
+                        bool dont_add_extension, bool append) const
 {
     switch (_mode)
     {
@@ -539,7 +524,7 @@ inline Storage* StorageFactory::create (const std::string& name, bool deleteIfEx
 
 /*********************************************************************
 *********************************************************************/
-inline bool StorageFactory::exists (const std::string& name)
+inline bool StorageFactory::exists (const std::string& name) const
 {
     switch (_mode)
     {
@@ -553,13 +538,14 @@ inline bool StorageFactory::exists (const std::string& name)
 
 /*********************************************************************
 *********************************************************************/
-inline Group* StorageFactory::createGroup (ICell* parent, const std::string& name)
+inline std::unique_ptr<Group>
+StorageFactory::createGroup (ICell* parent, const std::string& name) const
 {
     switch (_mode)
     {
-        case STORAGE_HDF5:  return StorageHDF5Factory::createGroup (parent, name);
-        case STORAGE_FILE:  return StorageFileFactory::createGroup (parent, name);
-        case STORAGE_GZFILE:  return StorageGzFileFactory::createGroup (parent, name);
+        case STORAGE_HDF5:             return StorageHDF5Factory::createGroup (parent, name);
+        case STORAGE_FILE:             return StorageFileFactory::createGroup (parent, name);
+        case STORAGE_GZFILE:           return StorageGzFileFactory::createGroup (parent, name);
         case STORAGE_COMPRESSED_FILE:  return StorageSortedFactory::createGroup (parent, name);
 
         default:            throw system::Exception ("Unknown mode in StorageFactory::createGroup");
@@ -568,12 +554,12 @@ inline Group* StorageFactory::createGroup (ICell* parent, const std::string& nam
 
 /*********************************************************************
 *********************************************************************/
-template<typename Type>
-inline Partition<Type>* StorageFactory::createPartition (ICell* parent, const std::string& name, size_t nb)
+template<typename Type> inline std::unique_ptr<Partition<Type>>
+StorageFactory::createPartition(ICell* parent, const std::string& name, size_t nb) const
 {
     switch (_mode)
     {
-        case STORAGE_HDF5:  return StorageHDF5Factory::createPartition<Type> (parent, name, nb);
+        case STORAGE_HDF5:             return StorageHDF5Factory::createPartition<Type> (parent, name, nb);
         case STORAGE_FILE:  return StorageFileFactory::createPartition<Type> (parent, name, nb);
         case STORAGE_GZFILE:  return StorageGzFileFactory::createPartition<Type> (parent, name, nb);
         case STORAGE_COMPRESSED_FILE:  return StorageSortedFactory::createPartition<Type> (parent, name, nb);
@@ -584,8 +570,9 @@ inline Partition<Type>* StorageFactory::createPartition (ICell* parent, const st
 
 /*********************************************************************
 *********************************************************************/
-template<typename Type>
-inline CollectionNode<Type>* StorageFactory::createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
+template<typename Type> inline std::unique_ptr<CollectionNode<Type>>
+StorageFactory::createCollection (ICell* parent, const std::string& name,
+                                  system::ISynchronizer* synchro) const
 {
     switch (_mode)
     {

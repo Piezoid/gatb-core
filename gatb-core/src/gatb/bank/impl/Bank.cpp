@@ -46,10 +46,10 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 Bank::Bank ()
 {
     /** We register most known factories. */
-    _registerFactory_ ("album",  new BankAlbumFactory(),  false);
-    _registerFactory_ ("fasta",  new BankFastaFactory(),  false);
-	_registerFactory_ ("leon", new BankLeonFactory(), false);
-    _registerFactory_ ("binary", new BankBinaryFactory(), false);
+    _registerFactory_ ("album",  std::make_unique<BankAlbumFactory >(),  false);
+    _registerFactory_ ("fasta",  std::make_unique<BankFastaFactory >(),  false);
+    _registerFactory_ ("leon",   std::make_unique<BankLeonFactory  >(), false);
+    _registerFactory_ ("binary", std::make_unique<BankBinaryFactory>(), false);
 
     DEBUG (("Bank::Bank,  found %ld factories\n", _factories.size()));
 }
@@ -66,7 +66,7 @@ Bank::~Bank ()
 {
     for (list<Entry>::iterator it = _factories.begin(); it != _factories.end(); it++)
     {
-        (it->factory)->forget ();
+        (it->second)->forget ();
     }
     _factories.clear();
 }
@@ -79,18 +79,17 @@ Bank::~Bank ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void Bank::_registerFactory_ (const std::string& name, IBankFactory* instance, bool beginning)
+void Bank::_registerFactory_ (const std::string& name, std::unique_ptr<IBankFactory>&& instance, bool beginning)
 {
     /** We look whether the factory is already registered. */
-    IBankFactory* factory = _getFactory_ (name);
+    const IBankFactory* factory = _getFactory_ (name);
 
     DEBUG (("Bank::registerFactory : name='%s'  instance=%p  => factory=%p \n", name.c_str(), instance, factory));
 
     if (factory == 0)
     {
-        if (beginning)  { _factories.push_front (Entry (name, instance));  }
-        else            { _factories.push_back  (Entry (name, instance));  }
-        instance->use();
+        if (beginning)  { _factories.emplace_front (name, std::move(instance));  }
+        else            { _factories.emplace_back  (name, std::move(instance));  }
     }
     else
     {
@@ -110,7 +109,10 @@ bool Bank::_unregisterFactory_ (const std::string& name)
 {
     for (list<Entry>::iterator it = _factories.begin(); it != _factories.end(); it++)
     {
-        if (it->name == name)  { if (it->factory)  { it->factory->forget(); }  _factories.erase(it);  return true; }
+        if (it->first == name)  {
+            _factories.erase(it);
+            return true;
+        }
     }
     return false;
 }
@@ -123,12 +125,12 @@ bool Bank::_unregisterFactory_ (const std::string& name)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBankFactory* Bank::_getFactory_ (const std::string& name)
+const IBankFactory* Bank::_getFactory_ (const std::string& name)
 {
-    for (list<Entry>::iterator it = _factories.begin(); it != _factories.end(); it++)
-    {
-        if (it->name == name)  { return it->factory; }
-    }
+    for (const auto& entry : _factories)
+        if (entry.first == name)
+            return entry.second.get();
+
     return 0;
 }
 
@@ -140,15 +142,15 @@ IBankFactory* Bank::_getFactory_ (const std::string& name)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* Bank::_open_ (const std::string& uri)
+std::unique_ptr<IBank> Bank::_open_ (const std::string& uri)
 {
     DEBUG (("Bank::open : %s  nbFactories=%ld \n", uri.c_str(), _factories.size()));
 
-    IBank* result = 0;
-    for (list<Entry>::iterator it = _factories.begin(); result==0 && it != _factories.end(); it++)
+    std::unique_ptr<IBank> result;
+    for (const auto& entry : _factories)
     {
-        result = it->factory->createBank(uri);
-        DEBUG (("   factory '%s' => result=%p \n", it->name.c_str(), result ));
+        result = entry.second->createBank(uri);
+        DEBUG (("   factory '%s' => result=%p \n", entry.first.c_str(), result ));
 
         if (result) // if one of the factories produce a result, we can just stop, no need to try other factories.
             break;
@@ -174,10 +176,10 @@ std::string Bank::_getType_ (const std::string& uri)
     /** We try to create the bank; if a bank is valid, then we have the factory name. */
     for (list<Entry>::iterator it = _factories.begin(); it != _factories.end(); it++)
     {
-        IBank* bank = it->factory->createBank(uri);
+        std::unique_ptr<IBank> bank = it->second->createBank(uri);
         if (bank != 0)
         {
-            result = it->name;
+            result = it->first;
 			if(!result.compare("fasta"))
 			{
 				//distinguish fasta and fastq
@@ -192,8 +194,6 @@ std::string Bank::_getType_ (const std::string& uri)
 					}
 				}
 			}
-			
-            delete bank;
             break;
         }
     }

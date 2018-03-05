@@ -103,11 +103,11 @@ public:
         } ;
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<> sortingCount (new BankStrings (seqs, ARRAY_SIZE(seqs)), params);
@@ -179,13 +179,13 @@ public:
         //////////////////////////////////////////////////
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
-        IBank* bank = new BankStrings (seqs, ARRAY_SIZE(seqs));
+        std::unique_ptr<IBank> bank = new BankStrings (seqs, ARRAY_SIZE(seqs));
         LOCAL (bank);
 
         /** We create a DSK instance. */

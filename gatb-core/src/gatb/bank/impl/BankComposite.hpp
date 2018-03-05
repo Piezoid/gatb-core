@@ -66,16 +66,12 @@ public:
     /** Constructor.
      * \param[in] banks : list of banks to be associated to the album.
      */
-    BankComposite (const std::vector<IBank*>& banks) : _nbItems(0), _size(0)
-    {
-        for (size_t i=0; i<banks.size(); i++)  {  this->addBank (banks[i]); }
-    }
+    BankComposite (std::vector<std::unique_ptr<IBank>>&& banks) : _banks(std::move(banks)), _nbItems(0), _size(0)
+    {}
 
     /** Destructor. */
     virtual ~BankComposite ()
-    {
-        for (size_t i=0; i<_banks.size(); i++)  { _banks[i]->forget(); }
-    }
+    {}
 
     /** \copydoc IBank::getId. */
     std::string getId ()
@@ -106,7 +102,7 @@ public:
 	
     /** Add a bank into the composite
      * \param[in] bank : the bank to be added. */
-    void addBank (IBank* bank)  { bank->use();  _banks.push_back(bank); }
+    IBank& addBank (std::unique_ptr<IBank> bank)  { return *_banks.emplace_back(std::move(bank)).get(); }
 
     /** \copydoc IBank::iterator */
     tools::dp::Iterator<Sequence>* iterator ()
@@ -157,7 +153,11 @@ public:
 
     /** Return the vector of IBank objects.
      * \return the IBank objects. */
-    const std::vector<IBank*> getBanks() const { return _banks; }
+    std::vector<std::reference_wrapper<IBank>> getBanks() {
+        std::vector<std::reference_wrapper<IBank>> vec; vec.reserve(_banks.size());
+        for(auto& ptr : _banks) vec.emplace_back(*ptr.get());
+        return vec;
+    }
 
     /** Get the number of referred banks.
      * \return the number of referred banks */
@@ -167,17 +167,13 @@ public:
      * \param[in] fct : functor that will be called with each referred IBank object. */
     template<typename Functor> void iterateBanks (Functor fct)  {  for (size_t i=0; i<_banks.size(); i++)  { fct (*_banks[i], i); }  }
 
-    /** Returns an iterator on the IBank objects (heap allocation)
-     * \return the IBank iterator. */
-    tools::dp::Iterator<IBank*>* iteratorBanks ()  { return new tools::dp::impl::VectorIterator<IBank*> (_banks); }
-
     /** \copydoc IBank::remove. */
     void remove ()  {  for (size_t i=0; i<_banks.size(); i++)  { _banks[i]->remove(); } }
 
 protected:
 
     /** List of the banks. */
-    std::vector<IBank*> _banks;
+    std::vector<std::unique_ptr<IBank>> _banks;
 
     u_int64_t _nbItems;
     u_int64_t _size;

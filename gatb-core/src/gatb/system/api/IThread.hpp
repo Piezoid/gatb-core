@@ -213,11 +213,12 @@ public:
 class LocalSynchronizer
 {
 public:
-
     /** Constructor.
      * \param[in] ref : the ISynchronizer instance to be controlled.
      */
     LocalSynchronizer (ISynchronizer* ref) : _ref(ref)  {  if (_ref)  { _ref->lock (); }  }
+
+    LocalSynchronizer (const std::shared_ptr<ISynchronizer>& ref): LocalSynchronizer(ref.get()) {}
 
     /** Destructor. */
     ~LocalSynchronizer ()  {  if (_ref)  {  _ref->unlock (); } }

@@ -251,8 +251,8 @@ void Repartitor::load (tools::storage::impl::Group& group)
     if (hasMinimizerFrequencies)
     {
         tools::storage::impl::Storage::istream is2 (group, "minimFrequency");
-        _freq_order = new uint32_t [_nb_minims];
-        is2.read ((char*)_freq_order,     sizeof(uint32_t)*_nb_minims);
+        _freq_order.resize(_nb_minims);
+        is2.read ((char*)_freq_order.data(),     sizeof(uint32_t)*_nb_minims);
 
         is2.read ((char*)&magic,  sizeof(magic));
         if (magic != MAGIC_NUMBER)  { throw system::Exception("Unable to load Repartitor (minimFrequency), possibly due to bad format."); }
@@ -273,7 +273,7 @@ void Repartitor::save (tools::storage::impl::Group& group)
         _nbpart, _mm, _nb_minims, _nbPass
     ));
 
-    bool hasMinimizerFrequencies = _freq_order != NULL;
+    bool hasMinimizerFrequencies = !_freq_order.empty();
 
     tools::storage::impl::Storage::ostream os (group, "minimRepart");
     os.write ((const char*)&_nbpart,                sizeof(_nbpart));
@@ -288,8 +288,8 @@ void Repartitor::save (tools::storage::impl::Group& group)
     if (hasMinimizerFrequencies)
     {
         tools::storage::impl::Storage::ostream os2 (group, "minimFrequency");
-        os2.write ((const char*)_freq_order,    sizeof(uint32_t) * _nb_minims);
-        os2.write ((const char*)&MAGIC_NUMBER,  sizeof(MAGIC_NUMBER));
+        os2.write ((const char*)_freq_order.data(), sizeof(uint32_t) * _nb_minims);
+        os2.write ((const char*)&MAGIC_NUMBER,      sizeof(MAGIC_NUMBER));
         os2.flush();
     }
 }

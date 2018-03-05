@@ -694,15 +694,14 @@ void bglue(Storage *storage,
         return;
     }
 
-    IBank *in = Bank::open (prefix + ".glue");
-    LOCAL(in);
+    auto in = Bank::open (prefix + ".glue");
     
     uint64_t nb_glue_sequences = 0;
     
     if (storage != nullptr)
     {
         Group& bcalmGroup = storage->getGroup("bcalm"); 
-        nb_glue_sequences = atol(bcalmGroup.getProperty ("nb_sequences_in_glue").c_str());
+        nb_glue_sequences = std::stol(bcalmGroup.getProperty ("nb_sequences_in_glue"));
     }
 
     if (nb_glue_sequences == 0)

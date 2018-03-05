@@ -54,7 +54,7 @@ public:
     }
 
 private:
-    ICommand* _ref;
+    std::shared_ptr<ICommand> _ref;
     void setRef (ICommand* ref)  { SP_SETATTR(ref); }
 
     system::ISynchronizer* _synchro;

@@ -92,7 +92,7 @@ static const char* progressFormat4 = "DSK: nb solid kmers found : %-9ld  ";
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-SortingCountAlgorithm<span>::SortingCountAlgorithm (IProperties* params)
+SortingCountAlgorithm<span>::SortingCountAlgorithm (Properties& params)
   : Algorithm("dsk", -1, params),
     _bank(0), _repartitor(0),
     _progress (0), _tmpPartitionsStorage(0), _tmpPartitions(0), _storage(0),_superKstorage(0)
@@ -108,12 +108,11 @@ SortingCountAlgorithm<span>::SortingCountAlgorithm (IProperties* params)
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-SortingCountAlgorithm<span>::SortingCountAlgorithm (IBank* bank, IProperties* params)
+SortingCountAlgorithm<span>::SortingCountAlgorithm (std::unique_ptr<IBank> bank, Properties& params)
   : Algorithm("dsk", -1, params),
-    _bank(0), _repartitor(0),
+    _bank(std::move(bank)), _repartitor(0),
     _progress (0),_tmpPartitionsStorage(0), _tmpPartitions(0), _storage(0),_superKstorage(0)
 {
-    setBank (bank);
 }
 
 /*********************************************************************
@@ -126,18 +125,17 @@ SortingCountAlgorithm<span>::SortingCountAlgorithm (IBank* bank, IProperties* pa
 *********************************************************************/
 template<size_t span>
 SortingCountAlgorithm<span>::SortingCountAlgorithm (
-    IBank*                  bank,
+    std::unique_ptr<IBank>                  bank,
     const Configuration&    config,
     Repartitor*             repartitor,
     vector<CountProcessor*> processors,
-	tools::misc::IProperties* params
+	tools::misc::Properties& params
 
 )
   : Algorithm("dsk", config._nbCores, params),
-    _config(config), _bank(0), _repartitor(0),
+    _config(config), _bank(std::move(bank)), _repartitor(0),
     _progress (0),_tmpPartitionsStorage(0), _tmpPartitions(0), _storage(0),_superKstorage(0)
 {
-    setBank       (bank);
     setRepartitor (repartitor);
 
     for (size_t i=0; i<processors.size(); i++)  {  addProcessor  (processors[i]); }
@@ -154,41 +152,9 @@ SortingCountAlgorithm<span>::SortingCountAlgorithm (
 template<size_t span>
 SortingCountAlgorithm<span>::~SortingCountAlgorithm ()
 {
-    setBank                 (0);
-    setRepartitor           (0);
-    setProgress             (0);
- //   setPartitionsStorage    (0);
- //   setPartitions           (0);
-    setStorage              (0);
-
     for (size_t i=0; i<_processors.size(); i++)  { _processors[i]->forget(); }
 }
 
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span>
-SortingCountAlgorithm<span>& SortingCountAlgorithm<span>::operator= (const SortingCountAlgorithm& s)
-{
-    if (this != &s)
-    {
-        _config = s._config;
-
-        setBank                 (s._bank);
-        setRepartitor           (s._repartitor);
-        setProgress             (s._progress);
-        setPartitionsStorage    (s._tmpPartitionsStorage);
-	    setPartitions           (s._tmpPartitions);
-		_superKstorage = s._superKstorage;
-        setStorage              (s._storage);
-    }
-    return *this;
-}
 
 /*********************************************************************
 ** METHOD  :
@@ -241,7 +207,7 @@ IOptionsParser* SortingCountAlgorithm<span>::getOptionsParser (bool mandatory)
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-IProperties* SortingCountAlgorithm<span>::getDefaultProperties ()
+Properties& SortingCountAlgorithm<span>::getDefaultProperties ()
 {
     IOptionsParser* parser = getOptionsParser (true);
     LOCAL (parser);
@@ -258,16 +224,17 @@ IProperties* SortingCountAlgorithm<span>::getDefaultProperties ()
 *********************************************************************/
 template<size_t span>
 ICountProcessor<span>* SortingCountAlgorithm<span>::getDefaultProcessor (
-    tools::misc::IProperties*       params,
+    const tools::misc::Properties&       params,
     tools::storage::impl::Storage*  dskStorage,
     tools::storage::impl::Storage*  otherStorage
 )
 {
     CountProcessor* result = 0;
 
-    if (otherStorage == 0)  { otherStorage = dskStorage; }
+    if (!otherStorage)  { otherStorage = dskStorage; }
 
-    if (params==0 || dskStorage==0 || otherStorage==0)  { throw Exception ("Bad parameters in SortingCountAlgorithm<span>::getDefaultProcessor"); }
+    if (params.empty() || !dskStorage || !otherStorage)
+        throw Exception ("Bad parameters in SortingCountAlgorithm<span>::getDefaultProcessor");
 
     /** The default count processor is defined as the following chain :
      *      1) histogram
@@ -278,15 +245,15 @@ ICountProcessor<span>* SortingCountAlgorithm<span>::getDefaultProcessor (
 
         new CountProcessorHistogram<span> (
             & otherStorage->getGroup("histogram"),
-            params->getInt(STR_HISTOGRAM_MAX),
-            params->getInt(STR_KMER_ABUNDANCE_MIN_THRESHOLD)
+            params.getInt(STR_HISTOGRAM_MAX).value(),
+            params.getInt(STR_KMER_ABUNDANCE_MIN_THRESHOLD).value()
         ),
 
-        CountProcessorSolidityFactory<span>::create (*params),
+        CountProcessorSolidityFactory<span>::create (params),
 
         new CountProcessorDump     <span> (
             dskStorage->getGroup("dsk"),
-            params->getInt(STR_KMER_SIZE)
+            params.getInt(STR_KMER_SIZE).value()
         ),
         NULL
     );
@@ -346,7 +313,7 @@ class CountProcessorCustomProxy : public CountProcessorProxy<span>
 template<size_t span>
 vector<ICountProcessor<span>*> SortingCountAlgorithm<span>::getDefaultProcessorVector (
     Configuration&  config,
-    IProperties*    params,
+    const Properties&    params,
     Storage*        dskStorage,
     Storage*        otherStorage
 )
@@ -420,25 +387,24 @@ void SortingCountAlgorithm<span>::configure ()
     ));
 
     /** We check that the bank is ok, otherwise we build one. */
-    if (_bank == 0)    {  setBank (Bank::open (getInput()->getStr(STR_URI_INPUT)));  }
+    if (_bank == 0)    {  _bank = Bank::open (getInput().getStr(STR_URI_INPUT));  }
 
     /** We may have to create a default storage. */
-    Storage* storage = 0;
     if (_repartitor==0 || _processors.size() == 0)
     {
-        string output = getInput()->get(STR_URI_OUTPUT) ?
-            getInput()->getStr(STR_URI_OUTPUT)   :
-            (getInput()->getStr(STR_URI_OUTPUT_DIR) + "/" + system::impl::System::file().getBaseName (_bank->getId()));
+        string output = getInput().get(STR_URI_OUTPUT) ?
+            getInput().getStr(STR_URI_OUTPUT)   :
+            (getInput().getStr(STR_URI_OUTPUT_DIR) + "/" + system::impl::System::file().getBaseName (_bank->getId()));
 
         /* create output dir if it doesn't exist */
-        if(!System::file().doesExist(getInput()->getStr(STR_URI_OUTPUT_DIR))){
-            int ok = System::file().mkdir(getInput()->getStr(STR_URI_OUTPUT_DIR), 0755);
+        if(!System::file().doesExist(getInput().getStr(STR_URI_OUTPUT_DIR))){
+            int ok = System::file().mkdir(getInput().getStr(STR_URI_OUTPUT_DIR), 0755);
             if(ok != 0){
                 throw Exception ("Error: can't create output directory");
             }
         }
 
-        string storage_type = getInput()->getStr(STR_STORAGE_TYPE);
+        string storage_type = getInput().getStr(STR_STORAGE_TYPE);
         if (storage_type == "hdf5")
             _storage_type = tools::storage::impl::STORAGE_HDF5;
         else
@@ -449,11 +415,8 @@ void SortingCountAlgorithm<span>::configure ()
             {std::cout << "Error: unknown storage type specified: " << storage_type << std::endl; exit(1); }
         }
 
-        storage = StorageFactory(_storage_type).create (output, true, false); //// this is the storage for the output (kmer counts), formerly fixed to HDF5
+        _storage = StorageFactory(_storage_type).create (output, true, false); //// this is the storage for the output (kmer counts), formerly fixed to HDF5
     }
-
-    /** In case the storage is created in this method, we need to keep an eye on it. */
-    setStorage (storage);
 
     /** We check that the configuration is ok, otherwise we build one. */
     if (_config._isComputed == false)
@@ -463,7 +426,7 @@ void SortingCountAlgorithm<span>::configure ()
         _config = configAlgo.getConfiguration();
  
         /* remember configuration details (e.g. number of passes, partitions). useful for bcalm. */
-        storage->getGroup(configAlgo.getName()).setProperty("xml", string("\n") + configAlgo.getInfo()->getXML());
+        _storage->getGroup(configAlgo.getName()).setProperty("xml", string("\n") + configAlgo.getInfo().getXML());
    }
 
     /** We check that the minimizers hash function is ok, otherwise we build one. */
@@ -471,16 +434,16 @@ void SortingCountAlgorithm<span>::configure ()
     {
         RepartitorAlgorithm<span> repart (
                 _bank, 
-                storage->getGroup("minimizers"), 
+                _storage->getGroup("minimizers"),
                 _config,
-                getInput()->get(STR_NB_CORES) ? getInput()->getInt(STR_NB_CORES) : 0
+                getInput().get(STR_NB_CORES) ? getInput().getInt(STR_NB_CORES) : 0
                 );
         repart.execute ();
-        setRepartitor (new Repartitor(storage->getGroup("minimizers")));
+        _repartitor = std::make_shared<Repartitor>(_storage->getGroup("minimizers"));
     }
 
 	/** We check that the processor is ok, otherwise we build one. */
-    if (_processors.size() == 0)  { _processors = getDefaultProcessorVector(_config, getInput(), storage, storage);  };
+    if (_processors.size() == 0)  { _processors = getDefaultProcessorVector(_config, getInput(), _storage, _storage);  };
 
     DEBUG (("SortingCountAlgorithm<span>::configure  END  _bank=%p  _config.isComputed=%d  _repartitor=%p  storage=%p\n",
         _bank, _config._isComputed, _repartitor, storage
@@ -590,19 +553,19 @@ void SortingCountAlgorithm<span>::execute ()
     /** We gather some statistics. */
     if (_bankStats.sequencesNb > 0)
     {
-        getInfo()->add (1, "bank");
-        getInfo()->add (2, "bank_uri",          "%s",   _bank->getId().c_str());
-        getInfo()->add (2, "bank_size",         "%lld", _bank->getSize());
-        getInfo()->add (2, "bank_total_nt",     "%lld", _bankStats.sequencesTotalLength);
-        getInfo()->add (2, "sequences");
-        getInfo()->add (3, "seq_number",        "%ld",  _bankStats.sequencesNb);
-        getInfo()->add (3, "seq_size_min",      "%ld",  _bankStats.sequencesMinLength);
-        getInfo()->add (3, "seq_size_max",      "%ld",  _bankStats.sequencesMaxLength);
-        getInfo()->add (3, "seq_size_mean",     "%.1f", _bankStats.getSeqMean());
-        getInfo()->add (3, "seq_size_deviation","%.1f", _bankStats.getSeqDeviation());
-        getInfo()->add (2, "kmers");
-        getInfo()->add (3, "kmers_nb_valid",   "%lld", _bankStats.kmersNbValid);
-        getInfo()->add (3, "kmers_nb_invalid", "%lld", _bankStats.kmersNbInvalid);
+        getInfo().add (1, "bank");
+        getInfo().add (2, "bank_uri",          "%s",   _bank->getId().c_str());
+        getInfo().add (2, "bank_size",         "%lld", _bank->getSize());
+        getInfo().add (2, "bank_total_nt",     "%lld", _bankStats.sequencesTotalLength);
+        getInfo().add (2, "sequences");
+        getInfo().add (3, "seq_number",        "%ld",  _bankStats.sequencesNb);
+        getInfo().add (3, "seq_size_min",      "%ld",  _bankStats.sequencesMinLength);
+        getInfo().add (3, "seq_size_max",      "%ld",  _bankStats.sequencesMaxLength);
+        getInfo().add (3, "seq_size_mean",     "%.1f", _bankStats.getSeqMean());
+        getInfo().add (3, "seq_size_deviation","%.1f", _bankStats.getSeqDeviation());
+        getInfo().add (2, "kmers");
+        getInfo().add (3, "kmers_nb_valid",   "%lld", _bankStats.kmersNbValid);
+        getInfo().add (3, "kmers_nb_invalid", "%lld", _bankStats.kmersNbInvalid);
 		
 		
     }
@@ -612,35 +575,35 @@ void SortingCountAlgorithm<span>::execute ()
 	u_int64_t nbtotalsuperk = pInfo.getNbSuperKmerTotal();
 	u_int64_t nbtotalk = pInfo.getNbKmerTotal();
 	
-    getInfo()->add (1, "stats");
+    getInfo().add (1, "stats");
 	
-	getInfo()->add (2, "temp_files");
-	getInfo()->add (3, "nb_superkmers","%lld",nbtotalsuperk);
-	getInfo()->add (3, "avg_superk_length","%.2f",(nbtotalk/(float) nbtotalsuperk));
-	getInfo()->add (3, "minimizer_density","%.2f",(nbtotalsuperk/(float)nbtotalk)*(_config._kmerSize - _config._minim_size +2));
+	getInfo().add (2, "temp_files");
+	getInfo().add (3, "nb_superkmers","%lld",nbtotalsuperk);
+	getInfo().add (3, "avg_superk_length","%.2f",(nbtotalk/(float) nbtotalsuperk));
+	getInfo().add (3, "minimizer_density","%.2f",(nbtotalsuperk/(float)nbtotalk)*(_config._kmerSize - _config._minim_size +2));
 	
 	if(_config._solidityKind == KMER_SOLIDITY_SUM)
 	{
-		getInfo()->add (3, "total_size_(MB)","%lld",totaltmp/1024LL/1024LL);
-		getInfo()->add (3, "tmp_file_biggest_(MB)","%lld",biggesttmp/1024LL/1024LL);
-		getInfo()->add (3, "tmp_file_smallest_(MB)","%lld",smallesttmp/1024LL/1024LL);
-		getInfo()->add (3, "tmp_file_mean_(MB)","%.1f",meantmp/1024LL/1024LL);
+		getInfo().add (3, "total_size_(MB)","%lld",totaltmp/1024LL/1024LL);
+		getInfo().add (3, "tmp_file_biggest_(MB)","%lld",biggesttmp/1024LL/1024LL);
+		getInfo().add (3, "tmp_file_smallest_(MB)","%lld",smallesttmp/1024LL/1024LL);
+		getInfo().add (3, "tmp_file_mean_(MB)","%.1f",meantmp/1024LL/1024LL);
 	}
     /** We dump information about count processors. */
-    if (_processors.size()==1)  {  getInfo()->add (2, _processors[0]->getProperties()); }
+    if (_processors.size()==1)  {  getInfo().add (2, _processors[0]->getProperties()); }
     else
     {
         for (size_t i=0; i<_processors.size(); i++)
         {
-            getInfo()->add (2, _processors[i]->getName());
-            getInfo()->add (3, _processors[i]->getProperties());
+            getInfo().add (2, _processors[i]->getName());
+            getInfo().add (3, _processors[i]->getProperties());
         }
     }
 
     _fillTimeInfo /= getDispatcher()->getExecutionUnitsNumber();
-    getInfo()->add (2, _fillTimeInfo.getProperties("fillsolid_time"));
+    getInfo().add (2, _fillTimeInfo.getProperties("fillsolid_time"));
 
-    getInfo()->add (1, getTimeInfo().getProperties("time"));
+    getInfo().add (1, getTimeInfo().getProperties("time"));
 }
 
 /********************************************************************************/
@@ -1088,18 +1051,18 @@ void SortingCountAlgorithm<span>::fillPartitions (size_t pass, Iterator<Sequence
 			if (_tmpPartitionsStorage)  { _tmpPartitionsStorage->remove (); }
 			
 			/** We build the temporary storage name from the output storage name. */
-			string tmpStorageName = getInput()->getStr(STR_URI_OUTPUT_TMP) + "/" + System::file().getTemporaryFilename("dsk_partitions");
+			string tmpStorageName = getInput().getStr(STR_URI_OUTPUT_TMP) + "/" + System::file().getTemporaryFilename("dsk_partitions");
 			
 			/** We create the partition files for the current pass. */
-			setPartitionsStorage (StorageFactory(STORAGE_TYPE).create (tmpStorageName, true, false));
+            _tmpPartitionsStorage = StorageFactory(STORAGE_TYPE).create (tmpStorageName, true, false);
 			setPartitions        (0); // close the partitions first, otherwise new files are opened before  closing parti from previous pass
-			setPartitions        ( & (*_tmpPartitionsStorage)().getPartition<Type> ("parts", _config._nb_partitions));
+            setPartitions        ( & (*_tmpPartitionsStorage)().template getPartition<Type> ("parts", _config._nb_partitions));
 			
 		}
 		else
 		{
 			/** We build the temporary storage name from the output storage name. */
-			_tmpStorageName_superK = getInput()->getStr(STR_URI_OUTPUT_TMP) + "/" + System::file().getTemporaryFilename("superK_partitions");
+			_tmpStorageName_superK = getInput().getStr(STR_URI_OUTPUT_TMP) + "/" + System::file().getTemporaryFilename("superK_partitions");
 			
 			
 			if(_superKstorage!=0)
@@ -1108,14 +1071,14 @@ void SortingCountAlgorithm<span>::fillPartitions (size_t pass, Iterator<Sequence
 				_superKstorage =0;
 			}
 			
-			_superKstorage = new SuperKmerBinFiles(_tmpStorageName_superK,"superKparts", _config._nb_partitions) ;
+            _superKstorage = std::make_shared<SuperKmerBinFiles>(_tmpStorageName_superK,"superKparts", _config._nb_partitions) ;
 			
 		}
 		/** We update the message of the progress bar. */
 		_progress->setMessage (Stringify::format(progressFormat1, pass+1, _config._nb_passes));
 		
 		/** We create a kmer model; using the frequency order if we're in that mode */
-		uint32_t* freq_order = NULL;
+        std::vector<uint32_t> freq_order;
 		
 		/** We may have to retrieve the minimizers frequencies computed in the RepartitorAlgorithm. */
 		if (_config._minimizerType == 1)  {  freq_order = _repartitor->getMinimizerFrequencies ();  }

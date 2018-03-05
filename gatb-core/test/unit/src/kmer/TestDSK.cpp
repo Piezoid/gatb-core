@@ -123,11 +123,11 @@ public:
     void DSK_check1_aux (const char* sequences[], size_t nbSequences, size_t kmerSize, size_t nks, size_t checkNbSolids)
     {
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();  LOCAL (params);
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();  LOCAL (params);
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<> dsk (new BankStrings (sequences, nbSequences), params);
@@ -135,12 +135,12 @@ public:
         /** We launch DSK. */
         dsk.execute();
 
-        if ((int) checkNbSolids != dsk.getInfo()->getInt("kmers_nb_solid"))
+        if ((int) checkNbSolids != dsk.getInfo().getInt("kmers_nb_solid"))
         {
-            std::cout << "problem with sequences " << sequences << " kmersize " << kmerSize << " nks " << nks << " expected " << checkNbSolids << " solids, had " << dsk.getInfo()->getInt("kmers_nb_solid") <<std::endl;
+            std::cout << "problem with sequences " << sequences << " kmersize " << kmerSize << " nks " << nks << " expected " << checkNbSolids << " solids, had " << dsk.getInfo().getInt("kmers_nb_solid") <<std::endl;
 
         }
-        CPPUNIT_ASSERT ((int) checkNbSolids == dsk.getInfo()->getInt("kmers_nb_solid"));
+        CPPUNIT_ASSERT ((int) checkNbSolids == dsk.getInfo().getInt("kmers_nb_solid"));
     }
 
     /********************************************************************************/
@@ -254,11 +254,11 @@ public:
         const char* s1 = "GATCGATTCTTAGCACGTCCCCCCCTACACCCAAT" ;
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<span> sortingCount (new BankStrings (s1, 0), params);
@@ -343,7 +343,7 @@ public:
     /********************************************************************************/
 
     template<size_t span>
-    void DSK_check3_aux (IBank* bank, size_t kmerSize, size_t nks)
+    void DSK_check3_aux (std::unique_ptr<IBank> bank, size_t kmerSize, size_t nks)
     {
         /** Shortcut. */
         typedef typename Kmer<span>::Count Count;
@@ -353,11 +353,11 @@ public:
         TimeInfo ti;
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();  LOCAL (params);
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();  LOCAL (params);
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<span> sortingCount (bank, params);
@@ -416,7 +416,7 @@ public:
         size_t kmerSize = 15;
         size_t nks      = 1;
 
-        IBank* bank = new BankStrings (
+        std::unique_ptr<IBank> bank = new BankStrings (
             "CGCTACAGCAGCTAGTTCATCATTGTTTATCAATGATAAAATATAATAAGCTAAAAGGAAACTATAAATA"
             "ACCATGTATAATTATAAGTAGGTACCTATTTTTTTATTTTAAACTGAAATTCAATATTATATAGGCAAAG"
             "ACTTAGATGTAAGATTTCGAAGACTTGGATGTAAACAACAAATAAGATAATAACCATAAAAATAGAAATG"
@@ -440,22 +440,22 @@ public:
 
     /********************************************************************************/
     template<size_t span>
-    void DSK_perBank_aux (IBank* bank, size_t kmerSize, size_t nksMin, size_t nksMax, KmerSolidityKind solidityKind, size_t checkNb)
+    void DSK_perBank_aux (std::unique_ptr<IBank> bank, size_t kmerSize, size_t nksMin, size_t nksMax, KmerSolidityKind solidityKind, size_t checkNb)
     {
         size_t maxDiskSpace = 0;
         size_t nbCores      = 1;
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nksMin);
-        params->setInt (STR_KMER_ABUNDANCE_MAX, nksMax);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_MAX_DISK,           maxDiskSpace);
-        params->setStr (STR_SOLIDITY_KIND,      toString(solidityKind));
-        params->setStr (STR_URI_OUTPUT,         "output");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nksMin);
+        params.setInt (STR_KMER_ABUNDANCE_MAX, nksMax);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_MAX_DISK,           maxDiskSpace);
+        params.setStr (STR_SOLIDITY_KIND,      toString(solidityKind));
+        params.setStr (STR_URI_OUTPUT,         "output");
 
-        params->add (0, STR_NB_CORES,  "%d", nbCores);
+        params.add (0, STR_NB_CORES,  "%d", nbCores);
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<span> sortingCount (bank, params);
@@ -612,13 +612,13 @@ public:
     void DSK_perBankKmer_aux (size_t kmerSize, size_t nbBanksMax)
     {
         /** We create a bank holding all 4^k kmers =>  we will have 4^k/2 canonical kmers with abundance==2  */
-        IBank* kmersBank = new BankKmers(kmerSize);  LOCAL (kmersBank);
+        std::unique_ptr<IBank> kmersBank = new BankKmers(kmerSize);  LOCAL (kmersBank);
 
         u_int64_t nbKmers          = (1<<(2*kmerSize));
         u_int64_t nbKmersCanonical = nbKmers / 2;
 
-        vector<IBank*> banks;
-        vector<IBank*> banksComposite;
+        vector<std::unique_ptr<IBank>> banks;
+        vector<std::unique_ptr<IBank>> banksComposite;
 
         for (size_t i=0; i<nbBanksMax; i++)
         {
@@ -641,7 +641,7 @@ public:
         for (size_t i=0; i<banksComposite.size(); i++)
         {
             /** Shortcut. */
-            IBank* current = banksComposite[i];
+            std::unique_ptr<IBank> current = banksComposite[i];
 
             /** We check the number of items. */
             CPPUNIT_ASSERT ((u_int64_t)current->getNbItems() == (i+1)*nbKmers);
@@ -682,13 +682,13 @@ public:
         string filepath = DBPATH("album.txt");
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
-        IBank* bank = Bank::open(filepath);
+        std::unique_ptr<IBank> bank = Bank::open(filepath);
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<U::value> dsk (bank, params);

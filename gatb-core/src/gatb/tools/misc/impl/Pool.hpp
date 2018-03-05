@@ -419,7 +419,7 @@ public:
         setSynchro (0);
     }
 
-    system::ISynchronizer* getSynchro()  { return _synchro; }
+    system::ISynchronizer& getSynchro() const { return *_synchro; }
 
 private :
     char*     mainbuffer;
@@ -428,7 +428,7 @@ private :
 
     size_t _nbCores;
 
-    system::ISynchronizer* _synchro;
+    std::shared_ptr<system::ISynchronizer> _synchro;
     void setSynchro (system::ISynchronizer* synchro) { SP_SETATTR(synchro); }
 };
 

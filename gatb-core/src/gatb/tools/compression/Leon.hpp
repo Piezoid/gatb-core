@@ -91,6 +91,8 @@ class Leon : public misc::impl::Tool
 		//Leon( bool compress, bool decompress);
 		Leon();
 		~Leon();
+
+        virtual void configureParser(IOptionsParser &parser) override;
 	
 		static const char* STR_COMPRESS;
 		static const char* STR_DECOMPRESS;
@@ -235,14 +237,14 @@ class Leon : public misc::impl::Tool
 		 struct timeval _tim;
 		double _wdebut_leon, _wfin_leon;
 		//static const char* STR_GZ;
-		IFile* _outputFile;
+		std::unique_ptr<IFile> _outputFile;
 	
 	
 	
 		ofstream* _dictAnchorFile;
 		int _nks;
 		
-		void execute ();
+        virtual void execute() override;
 		void createBloom ();
 		//void createKmerAbundanceHash();
 		
@@ -253,7 +255,7 @@ class Leon : public misc::impl::Tool
 
 	//quals
 	//string _FileQualname;
-	//IFile* _FileQual;
+	//std::unique_ptr<IFile> _FileQual;
 	//tools::storage::impl::Storage::ostream * _Qual_outstream ;
 
 	string _qualOutputFilename; //temp file
@@ -267,8 +269,7 @@ class Leon : public misc::impl::Tool
 		vector<u_int64_t> _headerBlockSizes;
 		vector<u_int64_t> _dnaBlockSizes;
 
-		IBank* _inputBank;
-		void setInputBank (IBank* inputBank) { SP_SETATTR(inputBank); }
+        std::unique_ptr<IBank> _inputBank;
 
 		//u_int64_t _bloomSize;
 		
@@ -340,7 +341,7 @@ class Leon : public misc::impl::Tool
 		//Global decompression
 		void endDecompression();
 		
-		//IFile* _outputFile;
+		//std::unique_ptr<IFile> _outputFile;
 	
 	void startDecompression_setup();
 	void decoders_setup();
@@ -480,7 +481,7 @@ class BankLeonFactory : public IBankFactory
 public:
 	
 	/** \copydoc IBankFactory::createBank */
-	IBank* createBank (const std::string& uri);
+	std::unique_ptr<IBank> createBank (const std::string& uri);
 };
 
 

@@ -63,7 +63,7 @@ namespace impl      {
  * the de Bruijn graph creation.
  */
 template<size_t span=KMER_DEFAULT_SPAN>
-class SortingCountAlgorithm : public gatb::core::tools::misc::impl::Algorithm
+class SortingCountAlgorithm : public tools::misc::impl::Algorithm
 {
 public:
 
@@ -82,15 +82,16 @@ public:
     /** Constructor. Can be used as default constructor in no parameters are provided
      * \param[in] params : parameters to be used for configuring the algorithm
      */
-    SortingCountAlgorithm (tools::misc::IProperties* params = 0);
+    SortingCountAlgorithm ();
+    SortingCountAlgorithm (tools::misc::Properties& params);
 
     /** Constructor.
      * \param[in] bank : input bank from which solid kmers are counted
      * \param[in] params : parameters to be used for configuring the algorithm
      */
     SortingCountAlgorithm (
-        gatb::core::bank::IBank*  bank,
-        tools::misc::IProperties* params
+        std::unique_ptr<bank::IBank>  bank,
+        tools::misc::Properties& params
     );
 
     /** Constructor.
@@ -100,20 +101,16 @@ public:
      * \param[in] processor : object that processes counts
      */
     SortingCountAlgorithm (
-        gatb::core::bank::IBank*     bank,
+        std::unique_ptr<bank::IBank>     bank,
         const Configuration&         config,
         Repartitor*                  repartitor,
         std::vector<CountProcessor*> processors,
-		tools::misc::IProperties* params
+		tools::misc::Properties& params
 
     );
 
     /** Destructor */
     virtual ~SortingCountAlgorithm ();
-
-    /** operator=
-     * \param[in] s : object to be copied. */
-    SortingCountAlgorithm& operator= (const SortingCountAlgorithm& s);
 
     /** Get an option parser for kmers counting parameters. Dynamic allocation, so must be released when no more used.
      * \param[in] mandatory : tells whether an argument has to be mandatory
@@ -122,7 +119,7 @@ public:
 
     /** Get the default values defined in the default option parser.
      * \return default properties. */
-    static tools::misc::IProperties* getDefaultProperties ();
+    static tools::misc::Properties& getDefaultProperties ();
 
     /** Creates a default CountProcessor instance (ie. the default one used by DSK)
      * \param[in] params : used for configuring the processor
@@ -131,7 +128,7 @@ public:
      * \return a CountProcessor instance
      */
     static CountProcessor* getDefaultProcessor (
-        tools::misc::IProperties*       params,
+        const tools::misc::Properties&       params,
         tools::storage::impl::Storage*  dskStorage,
         tools::storage::impl::Storage*  otherStorage = 0
     );
@@ -144,7 +141,7 @@ public:
      */
     static std::vector<ICountProcessor<span>*> getDefaultProcessorVector (
         Configuration&                  config,
-        tools::misc::IProperties*       params,
+        const tools::misc::Properties&       params,
         tools::storage::impl::Storage*  dskStorage,
         tools::storage::impl::Storage*  otherStorage = 0
     );
@@ -200,7 +197,7 @@ private:
      * \param[in] pass  : current pass whose value is used for choosing the partition file
      * \param[in] itSeq : sequences iterator whose sequence are cut into kmers to be split.
      */
-    void fillPartitions (size_t pass, gatb::core::tools::dp::Iterator<gatb::core::bank::Sequence>* itSeq, PartiInfo<5>& pInfo);
+    void fillPartitions (size_t pass, tools::dp::Iterator<bank::Sequence>* itSeq, PartiInfo<5>& pInfo);
 
     /** Fill the solid kmers bag from the partition files (one partition after another one).
      * \param[in] solidKmers : bag to put the solid kmers into.
@@ -219,11 +216,10 @@ private:
     kmer::impl::Configuration _config;
 
     /** Handle on the input bank. */
-    gatb::core::bank::IBank* _bank;
-    void setBank (gatb::core::bank::IBank* bank)  { SP_SETATTR(bank); }
+    std::shared_ptr<bank::IBank> _bank;
 
     /** Handle on the mininimizers hash function. */
-    Repartitor* _repartitor;
+    std::shared_ptr<Repartitor> _repartitor;
     void setRepartitor (Repartitor* repartitor)  { SP_SETATTR(repartitor); }
 
     /** Handle on the count processor object. */
@@ -231,15 +227,15 @@ private:
 
 	
     /** Handle on the progress information. */
-    gatb::core::tools::dp::IteratorListener* _progress;
-    void setProgress (gatb::core::tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
+    std::shared_ptr<tools::dp::IteratorListener> _progress;
+    void setProgress (tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
 
     /** Temporary partitions management. */
-    tools::storage::impl::Storage* _tmpPartitionsStorage;
+    tools::storage::impl::SharedStorage _tmpPartitionsStorage;
     void setPartitionsStorage (tools::storage::impl::Storage* tmpPartitionsStorage)  {  SP_SETATTR(tmpPartitionsStorage);  }
 
     /** Temporary partitions management. */
-    tools::storage::impl::Partition<Type>* _tmpPartitions;
+    std::shared_ptr<tools::storage::impl::Partition<Type>> _tmpPartitions;
     void setPartitions (tools::storage::impl::Partition<Type>* tmpPartitions)  {  SP_SETATTR(tmpPartitions);  }
 
     /** Get the memory size (in bytes) to be used by each item.
@@ -253,12 +249,12 @@ private:
     std::vector <std::vector<size_t> > _nbKmersPerPartitionPerBank;
 
     tools::storage::impl::StorageMode_e _storage_type;
-    tools::storage::impl::Storage* _storage;
+    tools::storage::impl::SharedStorage _storage;
     void setStorage (tools::storage::impl::Storage* storage)  { SP_SETATTR(storage); }
 	
 	
 	//superkmer efficient storage
-	tools::storage::impl::SuperKmerBinFiles* _superKstorage;
+    std::shared_ptr<tools::storage::impl::SuperKmerBinFiles> _superKstorage;
 	std::string _tmpStorageName_superK;
 };
 

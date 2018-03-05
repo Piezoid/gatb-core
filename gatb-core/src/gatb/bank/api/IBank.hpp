@@ -94,7 +94,7 @@ public:
 	
 	/** Return the vector of  sub IBank objects (in case of bank composite), or a vector containing only the bank itself
 	 * \return the IBank objects. */
-	virtual const std::vector<IBank*> getBanks() const  = 0;
+    virtual std::vector<std::reference_wrapper<IBank>> getBanks() = 0;
 	
     /** \copydoc tools::collections::Iterable::iterator */
     virtual tools::dp::Iterator<Sequence>* iterator () = 0;
@@ -149,7 +149,7 @@ public:
 
 /** \brief Factory for IBank.
  *
- * This interface provides a factory method that builds a IBank* instance given some
+ * This interface provides a factory method that builds a std::unique_ptr<IBank> instance given some
  * identifier.
  *
  * Such an identifier can be an uri (FASTA banks for instance), or any mechanism allowing
@@ -165,7 +165,7 @@ public:
     /** Create an instance of IBank for a given uri.
      * \param[in] uri : the uri used for create the bank
      * \return the IBank instance. */
-    virtual IBank* createBank (const std::string& uri) = 0;
+    virtual std::unique_ptr<IBank> createBank (const std::string& uri) = 0;
 };
 
 /********************************************************************************/

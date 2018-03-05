@@ -290,10 +290,9 @@ void bcalm2(Storage *storage,
      * this is needed because we need to group passes together. else 
      * the algo simply doesn't work. */
     Group& configGroup = storage->getGroup("configuration");
-    stringstream ss; ss << configGroup.getProperty ("xml");
-    Properties props; props.readXML (ss);
-    size_t nb_passes = props.getInt("nb_passes");
-    size_t nb_partitions = props.getInt("nb_partitions");
+    Properties props = Properties::fromXml(configGroup.getProperty ("xml"));
+    size_t nb_passes = props.getInt("nb_passes").value();
+    size_t nb_partitions = props.getInt("nb_partitions").value();
 
     if (verbose)
     {
@@ -378,17 +377,15 @@ void bcalm2(Storage *storage,
 
     // copied from createIterator in Algorithm.hpp
     //  We create some listener to be notified every 1000 iterations and attach it to the iterator.
-    IteratorListener* listener;
+    std::shared_ptr<IteratorListener> listener;
     if (verbose)
-        listener = new ProgressTimer(nb_partitions, "Iterating DSK partitions");
+        listener = std::make_shared<ProgressTimer>(nb_partitions, "Iterating DSK partitions");
     else
-        listener = new IteratorListener ();
+        listener = std::make_shared<IteratorListener>();
 
-    auto it_parts = new tools::dp::impl::SubjectIterator<int> (
+    auto it_parts = std::make_unique<tools::dp::impl::SubjectIterator<int>> (
                 new Range<int>::Iterator (0,nb_partitions-1), 
-                nb_partitions/100);
-    it_parts->addObserver (listener);
-    LOCAL(it_parts);
+                nb_partitions/100, listener);
     
     bcalm_logging = verbose;
     logging("prior to queues allocation");

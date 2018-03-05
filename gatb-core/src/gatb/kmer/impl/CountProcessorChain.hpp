@@ -138,9 +138,9 @@ public:
     /*****************************************************************/
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    tools::misc::impl::Properties getProperties() const
+    tools::misc::Properties getProperties() const
     {
-        tools::misc::impl::Properties result;
+        tools::misc::Properties result;
         for (size_t i=0; i<_items.size(); i++)  {  result.add (0, _items[i]->getProperties());  }
         return result;
     }

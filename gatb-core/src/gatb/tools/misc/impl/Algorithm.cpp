@@ -36,44 +36,6 @@ using namespace gatb::core::tools::dp::impl;
 namespace gatb {  namespace core { namespace tools {  namespace misc {  namespace impl {
 /********************************************************************************/
 
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-Algorithm::Algorithm (const std::string& name, int nbCores, gatb::core::tools::misc::IProperties* input)
-    : _name(name), _input(0), _output(0), _info(0), _systemInfo(0), _dispatcher(0)
-{
-    setInput      (input ? input : new Properties());
-    setOutput     (new Properties());
-    setInfo       (new Properties());
-    setSystemInfo (new Properties());
-
-    if (nbCores < 0)  {  nbCores = _input->get(STR_NB_CORES)  ? _input->getInt(STR_NB_CORES) : 0;  }
-    setDispatcher (new Dispatcher (nbCores) );
-
-    _info->add (0, _name);
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-Algorithm::~Algorithm ()
-{
-    setInput      (0);
-    setOutput     (0);
-    setInfo       (0);
-    setSystemInfo (0);
-    setDispatcher (0);
-}
 
 /*********************************************************************
 ** METHOD  :
@@ -96,8 +58,8 @@ void Algorithm::run ()
     cpuinfo->stop();
 
     /** We gather some system information. */
-    getSystemInfo()->add (1, "system");
-    getSystemInfo()->add (2, "cpu",         "%.1f", cpuinfo->getUsage());
+    getSystemInfo().add (1, "system");
+    getSystemInfo().add (2, "cpu",         "%.1f", cpuinfo->getUsage());
 }
 
 /*********************************************************************
@@ -108,16 +70,16 @@ void Algorithm::run ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-dp::IteratorListener* Algorithm::createIteratorListener (size_t nbIterations, const char* message)
+std::unique_ptr<dp::IteratorListener> Algorithm::createIteratorListener (size_t nbIterations, const char* message)
 {
-    if (getInput()->get(STR_VERBOSE)==0)  { return new IteratorListener(); }
+    if (getInput().get(STR_VERBOSE)==0)  { return new IteratorListener(); }
 
-    switch (getInput()->getInt(STR_VERBOSE))
+    switch (getInput().getInt(STR_VERBOSE))
     {
-        case 0: default:    return new IteratorListener ();
-        case 1:             return new ProgressTimerAndSystem   (nbIterations, message);
-        case 2:             return new ProgressTimer            (nbIterations, message);
-        case 3:             return new Progress                 (nbIterations, message);
+        case 0: default:    return std::make_unique<IteratorListener> ();
+        case 1:             return std::make_unique<ProgressTimerAndSystem> (nbIterations, message);
+        case 2:             return std::make_unique<ProgressTimer>          (nbIterations, message);
+        case 3:             return std::make_unique<Progress>               (nbIterations, message);
     }
 }
 

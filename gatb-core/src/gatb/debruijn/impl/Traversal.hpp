@@ -109,7 +109,7 @@ public:
      * \param[in] max_depth : maximum depth of the traversal
      * \param[in] max_breadth : maximum depth of the traversal
      */
-    static TraversalTemplate<Node,Edge,Graph>* create (
+    static std::unique_ptr<TraversalTemplate<Node,Edge,Graph>> create (
         tools::misc::TraversalKind  type,
         const Graph&                graph,
         TerminatorTemplate<Node,Edge,Graph>&                         terminator,
@@ -126,7 +126,7 @@ public:
      * \param[in] max_depth : maximum depth of the traversal
      * \param[in] max_breadth : maximum depth of the traversal
      */
-    static TraversalTemplate<Node,Edge,Graph>* create (
+    static std::unique_ptr<TraversalTemplate<Node,Edge,Graph>> create (
         const std::string&  type,
         const Graph&        graph,
         TerminatorTemplate<Node,Edge,Graph>&                 terminator,

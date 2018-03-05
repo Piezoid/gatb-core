@@ -108,7 +108,7 @@ struct Kmer
     class ModelDirect;
     class ModelCanonical;
     template<class Model, class Comparator> class ModelMinimizer;
-    class Count;
+    struct Count;
 
     /** Now, we need to define what is a kmer for each kind of model.
      *

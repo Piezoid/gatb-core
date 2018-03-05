@@ -1279,7 +1279,7 @@ public:
     {
         //std::cout << "custom createbloom, name=" << name << " size=" << sizeStr << " nbHash=" << nbHashStr << " k=" << kmerSizeStr << std::endl;
         tools::misc::BloomKind kind;  parse (name, kind);
-        return createBloom<T> (kind, (u_int64_t)atol (sizeStr.c_str()), (size_t)atol (nbHashStr.c_str()), atol (kmerSizeStr.c_str()));
+        return createBloom<T> (kind, (u_int64_t)std::stol(sizeStr), (size_t)std::stol(nbHashStr), std::stol(kmerSizeStr));
     }
 };
 

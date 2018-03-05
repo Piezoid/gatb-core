@@ -180,8 +180,7 @@ public:
         char table[] = { 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
 
         /** We create a reference vector and use it locally. */
-        Vector<char>* ref = new Vector<char> (ARRAY_SIZE(table));
-        ref->use ();
+        auto ref = std::make_shared<Vector<char>>(ARRAY_SIZE(table));
 
         /** We put some values into the vector. */
         for (size_t i=0; i<ARRAY_SIZE(table); i++)  { (*ref)[i] = table[i]; }
@@ -195,7 +194,7 @@ public:
 
         /** We release locally the referred vector. Since it is referred by the other vectors,
          * it won't be deleted by the release here but when the last vector will release it. */
-        ref->forget ();
+        ref.~decltype(ref);
 
         /** Now we check the content of the other vectors. */
         CPPUNIT_ASSERT (v1.size() == 2);    for (size_t i=0; i<v1.size(); i++)  {  CPPUNIT_ASSERT (v1[i] == table[i+0]);  }
@@ -237,7 +236,7 @@ public:
     /********************************************************************************/
     void parser_check1_aux (IOptionsParser* parser, const string& str, bool ok, size_t nbProps, const string& check)
     {
-        IProperties* props = 0;
+        Properties& props = 0;
         try
         {
             props = parser->parseString (str);
@@ -254,16 +253,16 @@ public:
         {
             CPPUNIT_ASSERT (props != 0);
 
-            if (props->getKeys().size() > 0)
+            if (props.getKeys().size() > 0)
             {
                 stringstream ss;
                 XmlDumpPropertiesVisitor xml (ss, false, false);
-                props->accept (&xml);
+                props.accept (&xml);
 
                 CPPUNIT_ASSERT (check == ss.str());
             }
 
-            CPPUNIT_ASSERT (props->getKeys().size() == nbProps);
+            CPPUNIT_ASSERT (props.getKeys().size() == nbProps);
         }
     }
 

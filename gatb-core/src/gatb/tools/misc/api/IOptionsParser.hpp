@@ -114,17 +114,17 @@ public:
      * \param[in] argv : table of arguments
      * \return object with information about the parsing.
      */
-    virtual misc::IProperties* parse (int argc, char** argv) = 0;
+    virtual misc::Properties& parse (int argc, char** argv) = 0;
 
     /** Perform the analyze of the arguments.
      * \param[in] s : string containing the options to be parsed
      * \return object with information about the parsing.
      */
-    virtual misc::IProperties* parseString (const std::string& s) = 0;
+    virtual misc::Properties& parseString (const std::string& s) = 0;
 
     /** Return the properties found during parsing.
      * \return the parsed properties. */
-    virtual misc::IProperties* getProperties ()  = 0;
+    virtual misc::Properties& getProperties ()  = 0;
 
     /** Tells whether an option has been seen during parsing.
      * \param[in] name : name of the option to be checked
@@ -156,7 +156,7 @@ public:
 
     /** Get the children parsers.
      * \return a list of parsers.*/
-    virtual std::list<IOptionsParser*>& getParsers () = 0;
+    virtual std::list<std::unique_ptr<IOptionsParser>>& getParsers () = 0;
 
     /*************************************************************/
     /*********************   Miscellaneous   *********************/
@@ -164,7 +164,7 @@ public:
 
     /** Return the default properties
      * \return the default properties. */
-    virtual misc::IProperties* getDefaultProperties ()  = 0;
+    virtual misc::Properties& getDefaultProperties ()  = 0;
 
     /** Visitor design pattern. */
     virtual void accept (IOptionsParserVisitor& visitor, size_t depth=0) = 0;
@@ -173,7 +173,7 @@ public:
     struct Result
     {
         /** Provides the properties found during parsing. */
-        misc::impl::Properties properties;
+        misc::Properties properties;
 
         /** Provides the errors found during parsing. */
         std::list<std::string> errors;

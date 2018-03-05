@@ -25,33 +25,6 @@
 namespace gatb { namespace core {  namespace tools {  namespace storage {  namespace impl {
 /********************************************************************************/
 
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-Storage::Storage (StorageMode_e mode, const std::string& name, bool autoRemove)
-    : Cell(0, ""), _name(name), _factory(0), _root(0), _autoRemove(autoRemove)
-{
-    setFactory (new StorageFactory (mode));
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-Storage::~Storage ()
-{
-    setRoot    (0);
-    setFactory (0);
-}
 
 /*********************************************************************
 ** METHOD  :
@@ -63,7 +36,10 @@ Storage::~Storage ()
 *********************************************************************/
 Group* Storage::getRoot ()
 {
-    if (_root == 0)  { setRoot    (_factory->createGroup (this, ""));   _root->setCompressLevel (this->getCompressLevel()); }
+    if (_root == 0)  {
+        _root = _factory->createGroup (this, "");
+        _root->setCompressLevel (this->getCompressLevel());
+    }
     return _root;
 }
 
@@ -75,7 +51,7 @@ Group* Storage::getRoot ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-Group& Storage::operator() (const std::string name)
+Group& Storage::getGroup() (const std::string name)
 {
     if (name.empty())  { return *getRoot(); }
     else               { return getRoot ()->getGroup (name);  }
@@ -94,18 +70,6 @@ void Storage::remove ()
     getRoot()->remove();
 }
 
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-void Storage::setFactory (StorageFactory* factory)
-{
-    SP_SETATTR(factory);
-}
 
 /********************************************************************************
              #####   #######  ######   #######     #     #     #

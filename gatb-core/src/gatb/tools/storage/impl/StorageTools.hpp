@@ -30,7 +30,7 @@
 
 /********************************************************************************/
 
-#include <gatb/tools/collections/api/Collection.hpp>
+
 #include <gatb/tools/math/NativeInt8.hpp>
 
 #include <gatb/tools/storage/impl/Storage.hpp>

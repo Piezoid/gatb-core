@@ -128,9 +128,9 @@ public:
     }
 
     /** Constructor. */
-    MmersFrequency (int mmerSize,  IteratorListener* progress,  uint32_t* m_mer_counts, size_t nbSeqsToSee /* for when to stop estimation*/, bool* cancelIterator)
+    MmersFrequency (int mmerSize,  std::unique_ptr<IteratorListener> progress,  uint32_t* m_mer_counts, size_t nbSeqsToSee /* for when to stop estimation*/, bool* cancelIterator)
     :
-        _minimodel(mmerSize), _progress (progress,System::thread().newSynchronizer()),
+        _minimodel(mmerSize), _progress (std::move(progress), System::thread().newSynchronizer()),
       _m_mer_counts(m_mer_counts),  _nbProcessedMmers(0), _nbSeqsToSee(nbSeqsToSee), _nbSeqsSeenSoFar(0), _cancelIterator(cancelIterator)
     {
         u_int64_t nbminim = (uint64_t)pow(4.0,mmerSize);
@@ -262,27 +262,13 @@ private:
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-RepartitorAlgorithm<span>::RepartitorAlgorithm (
-    IBank* bank,
+RepartitorAlgorithm<span>::RepartitorAlgorithm (IBank& bank,
     Group& group,
     const Configuration& config,
     unsigned int nb_cores,
-    tools::misc::IProperties*   options
+    Properties options
 )
-    :  Algorithm("repartition", nb_cores, options), _config(config), _bank(bank), _group(group), _freq_order(0)
-{
-}
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span>
-RepartitorAlgorithm<span>::~RepartitorAlgorithm ()
+    :  Algorithm("repartition", nb_cores, std::move(options)), _config(config), _bank(bank), _group(group)
 {
 }
 
@@ -327,7 +313,7 @@ void RepartitorAlgorithm<span>::computeFrequencies (Repartitor& repartitor)
     u_int64_t estimateSeqTotalSize;
     u_int64_t estimateSeqMaxSize;
 
-    _bank->estimate (estimateSeqNb, estimateSeqTotalSize, estimateSeqMaxSize);
+    _bank.estimate (estimateSeqNb, estimateSeqTotalSize, estimateSeqMaxSize);
 
     u_int64_t nbseq_sample = std::min ( u_int64_t (estimateSeqNb * 0.05) ,u_int64_t( 50000000ULL) ) ;
     // TODO would be better to just stop estimating minimizer frequency when it becomes stable. not after a fixed number of reads
@@ -338,7 +324,7 @@ void RepartitorAlgorithm<span>::computeFrequencies (Repartitor& repartitor)
 
     Model model (_config._kmerSize, _config._minim_size);
 
-    Iterator<Sequence>* bank_it = _bank->iterator();
+    Iterator<Sequence>* bank_it = _bank.iterator();
     LOCAL(bank_it);
     CancellableIterator<Sequence>* cancellable_it = new CancellableIterator<Sequence> (*bank_it);
     LOCAL(cancellable_it);
@@ -346,7 +332,7 @@ void RepartitorAlgorithm<span>::computeFrequencies (Repartitor& repartitor)
     /** We create a sequence iterator and give it a progress message */
     Iterator<Sequence>* it_all_reads = createIterator<Sequence> (
             cancellable_it,
-            _bank->getNbItems(),
+            _bank.getNbItems(),
              "Approximating frequencies of minimizers"
             );
     LOCAL (it_all_reads);
@@ -375,20 +361,17 @@ void RepartitorAlgorithm<span>::computeFrequencies (Repartitor& repartitor)
     sort (_counts.begin(), _counts.end());
 
     /* assign frequency to minimizers */
-    _freq_order = new uint32_t[rg];
-
-    for (u_int64_t i = 0; i < rg ; i++)
-        _freq_order[i] = rg; // set everything not seen to highest value (not a minimizer)
+    std::vector<uint32_t> freq_order(rg, u_int64_t{rg}); // set everything not seen to highest value (not a minimizer)
 
     for (unsigned int i = 0; i < _counts.size(); i++)
     {
-        _freq_order[_counts[i].second] = i;
+        freq_order[_counts[i].second] = i;
     }
 
     // small but necessary trick: the largest minimizer has to have largest rank, as it's used as the default "largest" value
-    _freq_order[rg-1] = rg-1;
+    freq_order[rg-1] = rg-1;
 
-    repartitor.setMinimizerFrequencies (_freq_order);
+    repartitor.setMinimizerFrequencies (std::move(freq_order));
 }
 
 /*********************************************************************
@@ -405,25 +388,27 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
     DEBUG (("RepartitorAlgorithm<span>::computeRepartition\n"));
 
     /** We create a kmer model; using the frequency order if we're in that mode */
-    Model model (_config._kmerSize, _config._minim_size, typename Kmer<span>::ComparatorMinimizerFrequencyOrLex(), _freq_order);
+    Model model (_config._kmerSize, _config._minim_size,
+                 typename Kmer<span>::ComparatorMinimizerFrequencyOrLex(),
+                 repartitor.getMinimizerFrequencies());
 
     int mmsize = model.getMmersModel().getKmerSize();
 
     PartiInfo<5> sample_info (_config._nb_partitions, mmsize);
 
-    string bankShortName = System::file().getBaseName(_bank->getId());
+    string bankShortName = System::file().getBaseName(_bank.getId());
 
     // In case of multi bank counting, we get a sample from each bank
-    if(_bank->getCompositionNb() > 1){
+    if(_bank.getCompositionNb() > 1){
 
-    	//cout << _bank->getCompositionNb() << endl;
+        //cout << _bank.getCompositionNb() << endl;
     	SerialDispatcher serialDispatcher;
         BankStats bstatsDummy;
 
         u_int64_t nbseq_sample = (_config._estimateSeqNb / _config._nb_banks) * 0.01;
         nbseq_sample = max((u_int64_t)nbseq_sample, (u_int64_t)100000);
 
-        Iterator<Sequence>* it = _bank->iterator(); LOCAL (it);
+        Iterator<Sequence>* it = _bank.iterator(); LOCAL (it);
         std::vector<Iterator<Sequence>*> itBanks =  it->getComposition(); 
 
         /*
@@ -459,7 +444,7 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
     		/** We create a sequence iterator and give it a progress message */
     		//Iterator<Sequence>* it_all_reads = createIterator<Sequence> (
             //		cancellable_it,
-            //		_bank->getNbItems(),
+            //		_bank.getNbItems(),
             //		Stringify::format (progressFormat0, bankShortName.c_str()).c_str()
             //		);
             //LOCAL (it_all_reads);
@@ -489,7 +474,7 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
     }
     else{
 
-        Iterator<Sequence>* it = _bank->iterator();      LOCAL (it);
+        Iterator<Sequence>* it = _bank.iterator();      LOCAL (it);
         CancellableIterator<Sequence>* cancellable_it = new CancellableIterator<Sequence> (*(it));
         LOCAL(cancellable_it);
 
@@ -501,7 +486,7 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
 		/** We create a sequence iterator and give it a progress message */
 		Iterator<Sequence>* it_all_reads = createIterator<Sequence> (
 				cancellable_it,
-				_bank->getNbItems(),
+                _bank.getNbItems(),
 				Stringify::format (progressFormat0, bankShortName.c_str()).c_str()
 				);
 		LOCAL (it_all_reads);
@@ -539,7 +524,7 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
     }
 
     /** We save the distribution (may be useful for debloom for instance). */
-    repartitor.save (getGroup());
+    repartitor.save (_group);
 }
 
 /********************************************************************************/

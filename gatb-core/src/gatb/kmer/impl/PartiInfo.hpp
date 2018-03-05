@@ -328,6 +328,9 @@ public:
     /** Hash value type. */
     typedef u_int16_t Value;
 
+    /** Minimizer frequencies type */
+    using min_freqs = std::vector<uint32_t>;
+
     /** Constructor
      * \param[in] nbpart : hash value will be in range [0..nbpart-1]
      * \param[in] minimsize : size of the minimizers. */
@@ -340,7 +343,7 @@ public:
     Repartitor (tools::storage::impl::Group& group)  : _nbpart(0), _mm(0), _nb_minims(0), _nbPass(0), _freq_order(0)   { this->load (group);  }
 
     /** Destructor */
-    ~Repartitor ()  {  if (_freq_order)  { delete[] _freq_order; } }
+    virtual ~Repartitor ()  {}
 
     /** Compute the hash function for the minimizer.
      * \param[in] pInfo : information about the distribution of the minimizers. */
@@ -369,10 +372,10 @@ public:
     size_t getNbPasses() const { return _nbPass; }
 
     /** Get a buffer on minimizer frequencies. */
-    uint32_t* getMinimizerFrequencies () { return _freq_order; }
+    const min_freqs& getMinimizerFrequencies () const { return _freq_order; }
 
     /** Set the minimizer frequencies. */
-    void setMinimizerFrequencies (uint32_t* freq) { _freq_order = freq; }
+    void setMinimizerFrequencies (min_freqs&& freq) { _freq_order = std::move(freq); }
 
 private:
 
@@ -416,7 +419,7 @@ private:
     u_int16_t          _nbPass;
     std::vector<Value> _repart_table ;
 
-    uint32_t* _freq_order;
+    min_freqs _freq_order;
 };
 
 /********************************************************************************/

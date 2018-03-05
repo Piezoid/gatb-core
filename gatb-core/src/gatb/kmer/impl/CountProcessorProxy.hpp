@@ -94,14 +94,14 @@ public:
     void setName (const std::string& name)  { _ref->setName (name); }
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    tools::misc::impl::Properties getProperties() const  { return _ref->getProperties(); }
+    tools::misc::Properties getProperties() const  { return _ref->getProperties(); }
 
     /** \copydoc ICountProcessor<span>::getInstances */
     std::vector<ICountProcessor<span>*> getInstances () const  { return _ref->getInstances(); }
 
 protected:
 
-    ICountProcessor<span>* _ref;
+    std::shared_ptr<ICountProcessor<span>> _ref;
     void setRef (ICountProcessor<span>* ref) { SP_SETATTR(ref); }
 };
 

@@ -879,7 +879,7 @@ public:
         CPPUNIT_ASSERT (tmpdir.empty() == false);
 
         /** We create the file handle. We need it first for write. */
-        IFile* writer = System::file().newFile (tmpdir, "dummy", "w");
+        std::unique_ptr<IFile> writer = System::file().newFile (tmpdir, "dummy", "w");
 
         /** We check the file handle exists. Note that we will ALWAYS get an instance,
          * even if the path is incorrect for instance. */
@@ -895,7 +895,7 @@ public:
         }
 
         /** We create the file handle. We need it for read. */
-        IFile* reader = System::file().newFile (writer->getPath(), "r");
+        std::unique_ptr<IFile> reader = System::file().newFile (writer->getPath(), "r");
 
         /** We check the file handle exists. Note that we will ALWAYS get an instance,
          * even if the path is incorrect for instance. */
@@ -936,7 +936,7 @@ public:
         /** We create a temporary file. */
         string filename = System::file().getTemporaryDirectory() + "/foo.txt";
 
-        IFile* file = System::file().newFile (filename, "w");
+        std::unique_ptr<IFile> file = System::file().newFile (filename, "w");
         CPPUNIT_ASSERT (file != 0);
         CPPUNIT_ASSERT (System::file().doesExist (filename) == true);
 

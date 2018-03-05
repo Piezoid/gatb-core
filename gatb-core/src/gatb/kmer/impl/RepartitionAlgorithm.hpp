@@ -58,15 +58,15 @@ public:
 
     /** */
     RepartitorAlgorithm (
-        gatb::core::bank::IBank*        bank,
+        gatb::core::bank::IBank&        bank,
         tools::storage::impl::Group&    group,
         const Configuration&            config,
         unsigned int                    nb_cores = 0,
-        tools::misc::IProperties*   options    = 0
+        tools::misc::Properties         options = {}
     );
 
     /** */
-    ~RepartitorAlgorithm ();
+    virtual ~RepartitorAlgorithm () {}
 
     /** */
     void execute ();
@@ -78,12 +78,8 @@ private:
 
     Configuration _config;
 
-    gatb::core::bank::IBank*      _bank;
+    gatb::core::bank::IBank&      _bank;
     tools::storage::impl::Group&  _group;
-
-    uint32_t* _freq_order;
-
-    tools::storage::impl::Group& getGroup() { return  _group; }
 
     std::vector<std::pair<int, int> > _counts;
 };

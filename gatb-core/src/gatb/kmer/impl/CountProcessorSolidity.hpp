@@ -147,9 +147,9 @@ public:
     /*****************************************************************/
 
     /** \copydoc ICountProcessor<span>::getProperties */
-    tools::misc::impl::Properties getProperties() const
+    tools::misc::Properties getProperties() const
     {
-        tools::misc::impl::Properties result;
+        tools::misc::Properties result;
         result.add (0, "kmers");
         result.add (1, "solidity_kind",      "%s", this->getName().c_str());
 
@@ -328,10 +328,10 @@ public:
     }
 
     /** */
-    static ICountProcessor<span>* create (tools::misc::IProperties& props)
+    static ICountProcessor<span>* create (const tools::misc::Properties& props)
     {
         tools::misc::KmerSolidityKind kind;
-        parse (props.getStr (STR_SOLIDITY_KIND), kind);
+        parse (props.getStr (STR_SOLIDITY_KIND).value(), kind);
 		return create (kind);
     }
 };

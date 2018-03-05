@@ -72,17 +72,33 @@ public:
         const Graph_t& graph,
         tools::storage::impl::Storage& storage,
         tools::misc::BranchingKind  kind,
-        size_t                      nb_cores = 0,
-        tools::misc::IProperties*   options  = 0
-    );
+        int64_t                    nb_cores,
+        tools::misc::Properties    options
+    )
+        : Algorithm("branching", nb_cores, std::move(options)), _graph (&graph),  _storage(storage), _kind(kind)
+    {}
+
+    BranchingAlgorithm (
+        const Graph_t& graph,
+        tools::storage::impl::Storage& storage,
+        tools::misc::BranchingKind  kind,
+        int64_t                     nb_cores = -1
+    )
+        : BranchingAlgorithm(graph, storage, kind, nb_cores, {})
+    {}
 
     /** Constructor.
      * \param[in] storage : retrieve the branching nodes from this storage.
      */
-    BranchingAlgorithm (tools::storage::impl::Storage& storage);
+    BranchingAlgorithm (tools::storage::impl::Storage& storage)
+        : Algorithm("branching"), _storage(storage)
+    {
+        std::string xmlString = storage.getGroup(this->getName()).getProperty ("xml");
+        std::stringstream ss; ss << xmlString;   getInfo().readXML (ss);
+    }
 
     /** Destructor. */
-    ~BranchingAlgorithm ();
+    virtual ~BranchingAlgorithm () {}
 
     /** Get an option parser for branching parameters. Dynamic allocation, so must be released when no more used.
      * \return an instance of IOptionsParser.
@@ -95,7 +111,8 @@ public:
     /** Get the branching nodes as a collection of Count objects, ie couples of [kmer,abundance]
      * \return the collection of Count object.
      */
-    tools::collections::Collection<Count>* getBranchingCollection() { return _branchingCollection; }
+    tools::collections::Collection<Count>& getBranchingCollection()
+    { return _storage.getGroup("branching").template getCollection<Count> ("nodes"); }
 
 private:
 
@@ -104,9 +121,6 @@ private:
     tools::storage::impl::Storage& _storage;
 
     tools::misc::BranchingKind  _kind;
-
-    tools::collections::Collection<Count>* _branchingCollection;
-    void setBranchingCollection (tools::collections::Collection<Count>* branchingCollection)  {  SP_SETATTR(branchingCollection); }
 };
 
 /********************************************************************************/

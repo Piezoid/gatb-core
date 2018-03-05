@@ -79,7 +79,7 @@ public:
     void construct_linear_seqs (
         const std::string& L,
         const std::string& R,
-        bank::IBank*       outputBank,
+        std::unique_ptr<bank::IBank>       outputBank,
         bool               swf = false
     );
 

@@ -254,11 +254,11 @@ public:
 private:
 
     /** First iterator. */
-    Iterator<T1>* _it1;
+    std::shared_ptr<Iterator<T1>> _it1;
     void setIt1 (Iterator<T1>* it1)  { SP_SETATTR(it1); }
 
     /** Second iterator. */
-    Iterator<T2>* _it2;
+    std::shared_ptr<Iterator<T2>> _it2;
     void setIt2 (Iterator<T2>* it2)  { SP_SETATTR(it2); }
 
     /** Finish status. */
@@ -281,22 +281,15 @@ public:
 
     /** Destructor. */
     ~AbstractSubjectIterator ()
-    {
-        /** We remove all observers. */
-        for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
-        {
-            (*it)->forget();
-        }
-    }
+    {}
 
     /** Add an observer to the iterator. Such an observer is provided as a functor.
      * \param[in] f : functor to be subscribed to the iterator notifications.
      */
-    void addObserver    (IteratorListener* f)
+    void addObserver    (const std::shared_ptr<IteratorListener>& f)
     {
         if (f != 0)
         {
-            f->use ();
             _listeners.insert (f);
             _hasListeners=true;
         }
@@ -305,13 +298,12 @@ public:
     /** Remove an observer from the iterator. Such an observer is provided as a functor.
      * \param[in] f : functor to be unsubscribed from the iterator notifications.
      */
-    void removeObserver (IteratorListener* f)
+    void removeObserver (const std::shared_ptr<IteratorListener>& f)
     {
         /** We look whether the given functor is already known. */
-        std::set<IteratorListener*>::iterator lookup = _listeners.find (f);
+        auto lookup = _listeners.find (f);
         if (lookup != _listeners.end())
         {
-            (*lookup)->forget();
             _listeners.erase (lookup);
             _hasListeners = _listeners.empty() == false;
         }
@@ -321,9 +313,9 @@ public:
     void setMessage (const std::string& message)
     {
         /** We remove all observers. */
-        for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
+        for (auto& ptr : _listeners)
         {
-            (*it)->setMessage (message);
+            ptr->setMessage (message);
         }
     }
 
@@ -336,10 +328,10 @@ protected:
         if (_isStarted == true)
         {
             /** We call each subscribing functor. */
-            for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
+            for (auto& ptr : _listeners)
             {
                 /** Not very pretty syntax, but that works. */
-               (*it)->inc (current);
+               ptr->inc (current);
             }
         }
     }
@@ -352,9 +344,9 @@ protected:
             _isStarted = true;
 
             /** We call each subscribing functor. */
-            for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
+            for (auto& ptr : _listeners)
             {
-                (*it)->init ();
+                ptr->init ();
             }
         }
     }
@@ -367,16 +359,16 @@ protected:
             _isStarted = false;
 
             /** We call each subscribing functor. */
-            for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
+            for (auto& ptr : _listeners)
             {
-                (*it)->finish ();
+                ptr->finish ();
             }
         }
     }
 
 private:
 
-    std::set<IteratorListener*> _listeners;
+    std::set<std::shared_ptr<IteratorListener>> _listeners;
     bool                        _hasListeners;
     bool                        _isStarted;
 };
@@ -402,7 +394,7 @@ public:
      * \param[in] modulo : notifies every 'modulo' time
      * \param[in] listener : default listener attached to this subject (default value is 0)
      */
-    SubjectIterator (Iterator<Item>* ref, u_int32_t modulo, IteratorListener* listener=0)
+    SubjectIterator (Iterator<Item>* ref, u_int32_t modulo, std::shared_ptr<IteratorListener> listener={})
         : _ref(0), _current(0), _modulo(modulo==0 ? 1 : modulo)
     {
         /** We set the reference. */
@@ -457,7 +449,7 @@ public:
 
 private:
 
-    Iterator<Item>* _ref;
+    std::shared_ptr<Iterator<Item>> _ref;
     void setRef (Iterator<Item>* ref)  { SP_SETATTR(ref); }
 
     u_int64_t _current;
@@ -695,7 +687,7 @@ public:
 
 private:
 
-    Iterator<Item>* _ref;
+    std::shared_ptr<Iterator<Item>> _ref;
     void setRef (Iterator<Item>* ref)  { SP_SETATTR(ref); }
 
     Filter      _filter;
@@ -1044,7 +1036,7 @@ public:
 
 private:
 
-    Iterator<T1>* _ref;
+    std::shared_ptr<Iterator<T1>> _ref;
     void setRef (Iterator<T1>* ref)  { SP_SETATTR(ref); }
 };
 

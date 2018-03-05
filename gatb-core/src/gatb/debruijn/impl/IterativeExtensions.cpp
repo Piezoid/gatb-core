@@ -130,7 +130,7 @@ template<size_t span, typename Node, typename Edge, typename Graph>
 void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
     const string& L,
     const string& R,
-    IBank*        outputBank,
+    std::unique_ptr<IBank>        outputBank,
     bool          swf
 )
 {
@@ -143,9 +143,6 @@ void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
     DEBUG ((cout << "[IterativeExtensions::construct_linear_seqs]  output=" << outputBank->getId() << "  L=" << L
         << "  search=" << searchMode << " swf=" << swf << endl
     ));
-
-    /** We get a token on the bank. */
-    LOCAL (outputBank);
 
     /** We create a Traversal instance. */
     TraversalTemplate<Node,Edge,Graph>* traversal = TraversalTemplate<Node,Edge,Graph>::create (traversalKind, graph, terminator, max_depth, 500, 20);

@@ -118,10 +118,11 @@ public:
      * \param[in] offset : position to be used in the referred data
      * \param[in] length : length of the data
      */
-    void setRef (Data* ref, size_t offset, size_t length)
+    void setRef (std::shared_ptr<Data> ref, size_t offset, size_t length)
     {
         /** We call the parent method. */
-        Vector<char>::setRef (ref, offset, length);
+        Vector<char>::setRef (std::static_pointer_cast< Vector<char> > (std::move(ref)),
+                              offset, length);
 
         /** We set the encoding. */
         encoding = ref->getEncoding();

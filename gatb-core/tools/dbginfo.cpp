@@ -32,7 +32,7 @@ int main (int argc, char* argv[])
     try
     {
         /** We parse the user options. */
-        IProperties* options = parser.parse (argc, argv);
+        Properties& options = parser.parse (argc, argv);
 
         /** We load the graph from the provided uri. */
         Graph graph = Graph::load (options->getStr(STR_URI_INPUT));

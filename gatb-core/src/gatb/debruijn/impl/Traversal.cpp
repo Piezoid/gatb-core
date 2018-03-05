@@ -39,24 +39,20 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-template <typename Node, typename Edge, typename Graph>
-TraversalTemplate<Node,Edge,Graph>* TraversalTemplate<Node,Edge,Graph>::create (
-    TraversalKind   type,
-    const Graph&    graph,
-    TerminatorTemplate<Node,Edge,Graph>&     terminator,
-    int             max_len,
-    int             max_depth,
-    int             max_breadth
-)
+template <typename Node, typename Edge, typename Graph> std::unique_ptr<TraversalTemplate<Node,Edge,Graph>>
+TraversalTemplate<Node,Edge,Graph>::create (
+        TraversalKind   type,
+        const Graph&    graph,
+        TerminatorTemplate<Node,Edge,Graph>&     terminator,
+        int             max_len,
+        int             max_depth,
+        int             max_breadth
+    )
 {
-    TraversalTemplate<Node,Edge,Graph>* result = 0;
-
-         if (type == TRAVERSAL_UNITIG)  { result = new SimplePathsTraversalTemplate<Node,Edge,Graph> (graph, terminator, max_len, max_depth, max_breadth); }
-    else if (type == TRAVERSAL_CONTIG)  { result = new MonumentTraversalTemplate<Node,Edge,Graph>    (graph, terminator, max_len, max_depth, max_breadth); }
-    else if (type == TRAVERSAL_NONE)    { result = new NullTraversalTemplate<Node,Edge,Graph>        (graph, terminator, max_len, max_depth, max_breadth); }
-    else                                { result = new MonumentTraversalTemplate<Node,Edge,Graph>    (graph, terminator, max_len, max_depth, max_breadth); }
-
-    return result;
+         if (type == TRAVERSAL_UNITIG)  { return std::make_unique<SimplePathsTraversalTemplate<Node,Edge,Graph> > (graph, terminator, max_len, max_depth, max_breadth); }
+    else if (type == TRAVERSAL_CONTIG)  { return std::make_unique<MonumentTraversalTemplate<Node,Edge,Graph>    > (graph, terminator, max_len, max_depth, max_breadth); }
+    else if (type == TRAVERSAL_NONE)    { return std::make_unique<NullTraversalTemplate<Node,Edge,Graph>        > (graph, terminator, max_len, max_depth, max_breadth); }
+    else                                { return std::make_unique<MonumentTraversalTemplate<Node,Edge,Graph>    > (graph, terminator, max_len, max_depth, max_breadth); }
 }
 
 /*********************************************************************
@@ -67,8 +63,8 @@ TraversalTemplate<Node,Edge,Graph>* TraversalTemplate<Node,Edge,Graph>::create (
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-template <typename Node, typename Edge, typename Graph>
-TraversalTemplate<Node,Edge,Graph>* TraversalTemplate<Node,Edge,Graph>::create (
+template <typename Node, typename Edge, typename Graph> std::unique_ptr<TraversalTemplate<Node,Edge,Graph>>
+TraversalTemplate<Node,Edge,Graph>::create (
     const std::string&  type,
     const Graph&        graph,
     TerminatorTemplate<Node,Edge,Graph>&         terminator,
@@ -78,7 +74,6 @@ TraversalTemplate<Node,Edge,Graph>* TraversalTemplate<Node,Edge,Graph>::create (
 )
 {
     TraversalKind typeEnum;  parse (type, typeEnum);
-
     return create (typeEnum, graph, terminator, max_len, max_depth, max_breadth);
 }
 

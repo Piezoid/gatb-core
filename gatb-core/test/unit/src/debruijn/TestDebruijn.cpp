@@ -219,14 +219,14 @@ public:
         CPPUNIT_ASSERT (seqLen >= kmerSize);
 
         /** We create a bank with one sequence. */
-        IBank* bank = new BankStrings (seq, 0);
+        std::unique_ptr<IBank> bank = new BankStrings (seq, 0);
 
         /** We configure parameters for a SortingCountAlgorithm object. */
-        IProperties* params = SortingCountAlgorithm<>::getDefaultProperties();
-        params->setInt (STR_KMER_SIZE,          kmerSize);
-        params->setInt (STR_MAX_MEMORY,         MAX_MEMORY);
-        params->setInt (STR_KMER_ABUNDANCE_MIN, nks);
-        params->setStr (STR_URI_OUTPUT,         "foo");
+        Properties& params = SortingCountAlgorithm<>::getDefaultProperties();
+        params.setInt (STR_KMER_SIZE,          kmerSize);
+        params.setInt (STR_MAX_MEMORY,         MAX_MEMORY);
+        params.setInt (STR_KMER_ABUNDANCE_MIN, nks);
+        params.setStr (STR_URI_OUTPUT,         "foo");
 
         /** We create a DSK instance. */
         SortingCountAlgorithm<> sortingCount (bank, params);
@@ -719,7 +719,7 @@ public:
             "TACTTTTTAAATGGTTTTAATTTGTATATCTTTTGTAAATGTAACTATCTTAGATATTTGGCTAATTTTAAGTGGTTTCT";
 
         // We create a bank of reads from a given long sequence
-        IBank* bank = new BankSplitter (new BankStrings (seq, NULL), readSize, kmerSize-1, coverage);
+        std::unique_ptr<IBank> bank = new BankSplitter (new BankStrings (seq, NULL), readSize, kmerSize-1, coverage);
 
         // We create the graph.
         Graph graph = Graph::create (bank,  "-kmer-size %d  -abundance-min %d  -verbose 0  -max-memory %d", kmerSize, nks, MAX_MEMORY);
@@ -904,7 +904,7 @@ public:
     void debruijn_build_aux (const char* sequences[], size_t nbSequences)
     {
         // We build the bank
-        IBank* inputBank = new BankStrings (sequences, nbSequences);
+        std::unique_ptr<IBank> inputBank = new BankStrings (sequences, nbSequences);
         LOCAL (inputBank);
 
         Graph::create (inputBank,  "-kmer-size 31 -out %s -abundance-min 1  -verbose 0  -max-memory %d",                        "g1", MAX_MEMORY);
@@ -1108,7 +1108,7 @@ public:
 	)
     {
         // We create a fake bank with a SNP
-        IBank* bank = new BankStrings (seqs, seqsSize);
+        std::unique_ptr<IBank> bank = new BankStrings (seqs, seqsSize);
 
         // We load the graph
         Graph graph = Graph::create (bank, "-abundance-min 1  -verbose 0  -kmer-size %d  -max-memory %d",

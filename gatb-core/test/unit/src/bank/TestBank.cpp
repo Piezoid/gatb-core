@@ -221,7 +221,7 @@ public:
         CPPUNIT_ASSERT (System::file().doesExist (filename) == true);
 
         /** We declare a Bank instance. */
-        IBank* bank = Bank::open(filename);
+        std::unique_ptr<IBank> bank = Bank::open(filename);
         CPPUNIT_ASSERT (bank != NULL);
         LOCAL (bank);
 
@@ -685,7 +685,7 @@ public:
     void bank_checkRegistery_aux (const string& bankformat, const string& bankuri, size_t nbCheck)
     {
         /** We create a bank handle. */
-        IBank* bank = Bank::open (DBPATH(bankuri));
+        std::unique_ptr<IBank> bank = Bank::open (DBPATH(bankuri));
         LOCAL (bank);
 
         /** We create a bank iterator. */
@@ -864,7 +864,7 @@ public:
         const char* table[] =  {  "ACTACGATCGATGTA",  "TTAGAGCAGCGAG",  "AGGGGCCCATTTCATCTATC" };
 
         /** We create a composite bank. */
-        vector<IBank*> banks;
+        vector<std::unique_ptr<IBank>> banks;
         for (size_t i=0; i<ARRAY_SIZE(table); i++)  {  banks.push_back (new BankStrings (table[i], 0));  }
 
         /** We iterate the composite bank. */
@@ -948,7 +948,7 @@ public:
 
         for (size_t i=0; i<nbBanks; i++)  {  albumFile << filename << endl; }
 
-        IBank* bank = Bank::open (albumFilename);
+        std::unique_ptr<IBank> bank = Bank::open (albumFilename);
         LOCAL (bank);
 
         /** We iterate the sequences. */
@@ -1059,7 +1059,7 @@ public:
     /********************************************************************************/
     void bank_registery_types (void)
     {
-        IBank* bank1 = Bank::open (DBPATH("sample1.fa"));
+        std::unique_ptr<IBank> bank1 = Bank::open (DBPATH("sample1.fa"));
         CPPUNIT_ASSERT (bank1 != 0);
         LOCAL (bank1);
 

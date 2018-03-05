@@ -62,12 +62,12 @@ UnitigsConstructionAlgorithm<span>::UnitigsConstructionAlgorithm (
     tools::storage::impl::Storage& storage,
     std::string                 unitigs_filename,
     size_t                      nb_cores,
-    tools::misc::IProperties*   options,
+    tools::misc::Properties     options,
     bool do_bcalm,
     bool do_bglue,
     bool do_links
 )
-    : Algorithm("bcalm2-wrapper", nb_cores, options), _storage(storage), unitigs_filename(unitigs_filename),
+    : Algorithm("bcalm2-wrapper", nb_cores, std::move(options)), _storage(storage), unitigs_filename(unitigs_filename),
     do_bcalm(do_bcalm), do_bglue(do_bglue), do_links(do_links)
 {
 }
@@ -92,19 +92,19 @@ template <size_t span>
 void UnitigsConstructionAlgorithm<span>::execute ()
 {
     kmerSize =
-            getInput()->getInt(STR_KMER_SIZE);
+            getInput().getInt(STR_KMER_SIZE);
     int abundance = 
-            getInput()->getInt(STR_KMER_ABUNDANCE_MIN); // note: doesn't work when it's "auto"
+            getInput().getInt(STR_KMER_ABUNDANCE_MIN); // note: doesn't work when it's "auto"
     int minimizerSize =
-        getInput()->getInt(STR_MINIMIZER_SIZE);
+        getInput().getInt(STR_MINIMIZER_SIZE);
     int nb_threads =
-        getInput()->getInt(STR_NB_CORES);
+        getInput().getInt(STR_NB_CORES);
     int minimizer_type =
-        getInput()->getInt(STR_MINIMIZER_TYPE);
-    bool verbose = getInput()->getInt(STR_VERBOSE);
+        getInput().getInt(STR_MINIMIZER_TYPE);
+    bool verbose = getInput().getInt(STR_VERBOSE);
     int nb_glue_partitions = 0;
-    if (getInput()->get("-nb-glue-partitions"))
-        nb_glue_partitions = getInput()->getInt("-nb-glue-partitions");
+    if (getInput().get("-nb-glue-partitions"))
+        nb_glue_partitions = getInput().getInt("-nb-glue-partitions");
     
     unsigned int nbThreads = this->getDispatcher()->getExecutionUnitsNumber();
     if ((unsigned int)nb_threads > nbThreads)
@@ -116,11 +116,11 @@ void UnitigsConstructionAlgorithm<span>::execute ()
 
     /** We gather some statistics. */
     // nb_unitigs will be used in GraphUnitigs
-    //getInfo()->add (1, "stats");
-    //getInfo()->add (2, "nb_unitigs", "%ld", /* */);
+    //getInfo().add (1, "stats");
+    //getInfo().add (2, "nb_unitigs", "%ld", /* */);
     
-    //getInfo()->add (1, "time");
-    //getInfo()->add (2, "build", "%.3f", /* */);
+    //getInfo().add (1, "time");
+    //getInfo().add (2, "build", "%.3f", /* */);
 }
 
 // unused but nifty

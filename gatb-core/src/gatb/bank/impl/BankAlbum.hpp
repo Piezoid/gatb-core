@@ -91,8 +91,8 @@ public:
     /** Constructor.
      * \param[in] name : uri of the album.
      * \param[in] banks : vector of banks instance to be added to the album. */
-    BankAlbum (const std::string& name, const std::vector<IBank*>& banks)
-        : BankComposite (banks), _name(name) {}
+    BankAlbum (const std::string& name, std::vector<std::unique_ptr<IBank>>&& banks)
+        : BankComposite (std::move(banks)), _name(name) {}
 
     /** Constructor.
      * \param[in] filenames: uri of the files to be used. */
@@ -102,10 +102,10 @@ public:
     std::string getId ()  { return _name; }
 
     /** Add a bank to the album. */
-    IBank* addBank (const std::string& bankUri);
+    IBank& addBank (const std::string& bankUri);
 
     /** Add a bank to the album. */
-    IBank* addBank (const std::string& directory, const std::string& bankName, bool output_fastq=false, bool output_gz=false);
+    IBank& addBank (const std::string& directory, const std::string& bankName, bool output_fastq=false, bool output_gz=false);
 
     /** \copydoc IBank::remove. */
     void remove ();
@@ -116,7 +116,7 @@ private:
 
     std::vector<std::string> _banksUri;
 
-    system::IFile* getFile (const std::string& name, const char* mode=NULL);
+    std::unique_ptr<system::IFile> getFile (const std::string& name, const char* mode=NULL);
 
     static bool isOnlyFilename (const std::string& path);
 
@@ -134,7 +134,7 @@ class BankAlbumFactory : public IBankFactory
 public:
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri);
+    std::unique_ptr<IBank> createBank (const std::string& uri);
 };
 
 /********************************************************************************/
