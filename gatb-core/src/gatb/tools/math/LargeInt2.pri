@@ -37,6 +37,9 @@ public:
     LargeInt<2> (const __uint128_t& c=0)  {  value = c;  }
 #endif
 
+    template<typename T>
+    auto get() const -> typename std::enable_if<std::is_same<T, LargeInt>::value, const LargeInt&>::type { return *this; }
+
      u_int64_t getVal () const  { return value; }
      inline void setVal (const u_int64_t &c) { value = c; }
      inline void setVal (const LargeInt<2>& c) { value = c.value; }

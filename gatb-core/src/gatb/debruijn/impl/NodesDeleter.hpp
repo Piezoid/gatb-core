@@ -36,9 +36,11 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 /********************************************************************************/
 
 
-template <typename Node, typename Edge, typename Graph>
+template <typename Graph>
 class NodesDeleter
 {
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
 
     public:
         uint64_t nbNodes;

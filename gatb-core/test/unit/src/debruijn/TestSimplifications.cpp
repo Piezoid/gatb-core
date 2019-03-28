@@ -83,6 +83,17 @@ extern std::string DBPATH (const string& a);
 namespace gatb  {  namespace tests  {
 /********************************************************************************/
 
+using Graph = GraphTemplate<>;
+using Node = typename Graph::Node;
+using Edge = typename Graph::Edge;
+using BranchingNode = typename Graph::BranchingNode;
+using BranchingEdge = typename Graph::BranchingEdge;
+using Path = typename Graph::Path;
+using Kmer_t = typename Node::Value;
+
+using Traversal = TraversalTemplate<Graph>;
+using BranchingTerminator = BranchingTerminatorTemplate<Graph>;
+
 /** \brief Test class for genomic databases management
  */
 class TestSimplifications : public Test
@@ -108,11 +119,11 @@ public:
     struct debruijn_build_entry
     {
         debruijn_build_entry () : nbNodes(0), nbNonDeletedNodes(0), nbBranchingNodes(0) {}
-        size_t  nbNodes;
-        size_t  nbNonDeletedNodes;
-        Integer checksumNodes;
-        size_t  nbBranchingNodes;
-        Integer checksumBranchingNodes;
+        size_t nbNodes;
+        size_t nbNonDeletedNodes;
+        Kmer_t checksumNodes;
+        size_t nbBranchingNodes;
+        Kmer_t checksumBranchingNodes;
     };
 
     debruijn_build_entry debruijn_stats (Graph& graph, bool checkNodes, bool checkBranching)
@@ -162,7 +173,7 @@ public:
         BranchingTerminator terminator (graph);
 
 		// We create a node from the start of the first sequence
-        string startKmer = startSeq.substr(0, graph._kmerSize);
+        string startKmer = startSeq.substr(0, graph.getKmerSize());
 		Node node = graph.buildNode (startKmer.c_str());
 
         Path path;

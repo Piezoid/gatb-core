@@ -35,7 +35,7 @@ int main (int argc, char* argv[])
         IProperties* options = parser.parse (argc, argv);
 
         /** We load the graph from the provided uri. */
-        Graph graph = Graph::load (options->getStr(STR_URI_INPUT));
+        auto graph = GraphPoly::load (options->getStr(STR_URI_INPUT));
 
         /** We get information about the graph. */
         cout << graph.getInfo();

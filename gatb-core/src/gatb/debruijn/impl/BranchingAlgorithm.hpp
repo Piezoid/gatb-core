@@ -51,12 +51,14 @@ namespace impl      {
  * Actually, this class is mainly used in the debruijn::impl::Graph class as a fourth step for
  * the de Bruijn graph creation.
  */
-template <size_t span=KMER_DEFAULT_SPAN, typename Node=Node_t<>, typename Edge=Edge_t<Node_t<> >, typename Graph_t=Graph>
+template <size_t span=KMER_DEFAULT_SPAN>
 class BranchingAlgorithm : public gatb::core::tools::misc::impl::Algorithm
 {
 public:
-
     /** Shortcuts. */
+    using Graph = GraphFast<span>;
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
     typedef typename kmer::impl::Kmer<span>::ModelCanonical Model;
     typedef typename kmer::impl::Kmer<span>::Type           Type;
     typedef typename kmer::impl::Kmer<span>::Count          Count;
@@ -69,7 +71,7 @@ public:
      * \param[in] options : extra options
      */
     BranchingAlgorithm (
-        const Graph_t& graph,
+        const Graph& graph,
         tools::storage::impl::Storage& storage,
         tools::misc::BranchingKind  kind,
         size_t                      nb_cores = 0,
@@ -82,7 +84,7 @@ public:
     BranchingAlgorithm (tools::storage::impl::Storage& storage);
 
     /** Destructor. */
-    ~BranchingAlgorithm ();
+    ~BranchingAlgorithm () { setBranchingCollection(0); }
 
     /** Get an option parser for branching parameters. Dynamic allocation, so must be released when no more used.
      * \return an instance of IOptionsParser.
@@ -99,7 +101,7 @@ public:
 
 private:
 
-    const Graph_t* _graph;
+    const Graph* _graph;
 
     tools::storage::impl::Storage& _storage;
 

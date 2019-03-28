@@ -69,8 +69,6 @@ template <size_t span>
 using NodeFast = Node_t<typename gatb::core::kmer::impl::Kmer<span>::Type >;
 template <size_t span>
 using EdgeFast = Edge_t<NodeFast<span> >;
-template <size_t span>
-using GraphDataVariantFast = boost::variant<GraphData<span>>;
 
 struct Parameter
 {
@@ -84,7 +82,7 @@ struct Parameter
 template<size_t span> struct debruijn_mphf_bench {  void operator ()  (Parameter params)
 {
     typedef NodeFast<span> NodeFastT;
-    typedef GraphTemplate<NodeFastT,EdgeFast<span>,GraphDataVariantFast<span>> GraphFast;
+    typedef GraphTemplate<NodeFastT,EdgeFast<span>,GraphData<span>> GraphFast;
 
     size_t kmerSize = params.k;
     

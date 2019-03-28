@@ -80,6 +80,17 @@ extern std::string DBPATH (const string& a);
 namespace gatb  {  namespace tests  {
 /********************************************************************************/
 
+using Graph = GraphTemplate<>;
+using Node = typename Graph::Node;
+using Edge = typename Graph::Edge;
+using BranchingNode = typename Graph::BranchingNode;
+using BranchingEdge = typename Graph::BranchingEdge;
+using Path = typename Graph::Path;
+using Kmer_t = typename Node::Value;
+
+using Traversal = TraversalTemplate<Graph>;
+using BranchingTerminator = BranchingTerminatorTemplate<Graph>;
+
 /** \brief Test class for genomic databases management
  */
 class TestDebruijn : public Test
@@ -125,13 +136,13 @@ public:
     struct Info
     {
         Info() : nbNodes(0), nbNeighbors(0) {}
-        Integer checksum;
+        Kmer_t checksum;
         size_t nbNodes;
         size_t nbNeighbors;
 
         /** */
         void incNodes ()      { nbNodes++;  }
-        void inc      (Integer& t)  { checksum = checksum + t; nbNeighbors++;  }
+        void inc      (Kmer_t& t)  { checksum = checksum + t; nbNeighbors++;  }
 
         /** */
         string toString ()
@@ -298,9 +309,6 @@ public:
                 );
 
                 debruijn_check_sequence (graph, kmerSizes[j], sequences[i]);
-
-                /** We remove the graph. */
-                graph.remove ();
             }
         }
     }
@@ -872,9 +880,9 @@ public:
     {
         debruijn_build_entry () : nbNodes(0), nbBranchingNodes(0) {}
         size_t  nbNodes;
-        Integer checksumNodes;
+        Kmer_t checksumNodes;
         size_t  nbBranchingNodes;
-        Integer checksumBranchingNodes;
+        Kmer_t checksumBranchingNodes;
     };
 
     debruijn_build_entry debruijn_build_aux_aux (const char* name, bool checkNodes, bool checkBranching)
@@ -1099,7 +1107,7 @@ public:
         /** We create a graph. */
         Graph graph = Graph::create ("-verbose 0 -in %s -max-memory %d", filepath.c_str(), MAX_MEMORY);
 
-        Node::Value previous = 0;
+        Node::Value previous = { 0 };
         size_t i=0;
 
         /** We iterate the branching nodes. */

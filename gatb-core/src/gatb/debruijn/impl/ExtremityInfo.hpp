@@ -13,8 +13,8 @@ namespace impl      {
         // cannot start at 0 because i'm using (pos & UNITIG_BEGIN) as a test in many places.
         UNITIG_BEGIN = 1,
         UNITIG_END = 2,
-        UNITIG_BOTH = 3, /* not encoded in ExtremityInfo, but encoded in NodeGU */
-        UNITIG_INSIDE = 4 /* not encoded in ExtremityInfo, but encoded in NodeGU */
+        UNITIG_BOTH = 3, /* not encoded in ExtremityInfo, but encoded in Node */
+        UNITIG_INSIDE = 4 /* not encoded in ExtremityInfo, but encoded in Node */
     };
 
 

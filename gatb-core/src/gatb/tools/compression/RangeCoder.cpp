@@ -21,6 +21,7 @@
 #include "RangeCoder.hpp"
 #include <algorithm>    // std::reverse
 
+using namespace std;
 //#define PRINT_DEBUG_RANGE_CODER
 
 //====================================================================================

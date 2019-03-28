@@ -121,7 +121,7 @@ inline Direction reverse (Direction dir)  { return dir==DIR_OUTCOMING ? DIR_INCO
  *  the abundance of a node.
  */
 
-template <typename Value_t=tools::math::Integer>
+template <typename Value_t=typename kmer::impl::Kmer<KMER_DEFAULT_SPAN>::Type>
 struct Node_t
 {
     /** Type for a kmer value. */
@@ -173,15 +173,15 @@ struct Node_t
     }
 
     template<typename T>
-    const T& getKmer() const;
+    const T& getKmer() const { return kmer.template get<T>(); }
 };
 
-template <> 
-template<typename T>
-const T& Node_t<tools::math::Integer>::getKmer() const
-{
-    return this->kmer.get<T>();
-}
+
+
+
+
+
+
 
 /********************************************************************************/
 
@@ -197,7 +197,7 @@ const T& Node_t<tools::math::Integer>::getKmer() const
  *
  * Its main usage is to be the template specialization type for some Graph class methods.
  */
-template<typename Node>
+template<typename Node=Node_t<>>
 struct BranchingNode_t : Node
 {
 };
@@ -213,7 +213,7 @@ struct BranchingNode_t : Node
  *
  * Its main usage is to be the template specialization type for some Graph class methods.
  */
-template <typename Node>
+template <typename Node=Node_t<>>
 struct SimpleNode : Node
 
 {
@@ -242,14 +242,16 @@ struct SimpleNode : Node
  *
  *  The Edge structure may be used as a template specialization type for some Graph class methods.
  */
-template <typename Node_t>
+template <typename _Node=Node_t<>>
 struct Edge_t
 {
+    using Node = _Node;
+    using NodeValue = typename Node::Value;
     /** The source node of the edge. */
-    Node_t             from;
+    Node             from;
 
     /** The target node of the edge. */
-    Node_t             to;
+    Node             to;
 
     /** The transition nucleotide. */
     kmer::Nucleotide nt;
@@ -258,7 +260,7 @@ struct Edge_t
     Direction        direction;
     
     /** Overload of operator <.  May not really mean much to compare edges, but is used in Minia's graph simplifications */
-    bool operator< (const Edge_t<Node_t>& other) const  { return ((from < other.from) || (from == other.from && to < other.to)); }
+    bool operator< (const Edge_t<Node>& other) const  { return ((from < other.from) || (from == other.from && to < other.to)); }
 
     /** Setter for some attributes of the Edge object.
      * \param[in] kmer_from : kmer value of the 'from' Node
@@ -269,8 +271,8 @@ struct Edge_t
      * \param[in] dir : direction of the transition.
      */
     void set (
-        const typename Node_t::Value& kmer_from, kmer::Strand strand_from,
-        const typename Node_t::Value& kmer_to,   kmer::Strand strand_to,
+        const NodeValue& kmer_from, kmer::Strand strand_from,
+        const NodeValue& kmer_to,   kmer::Strand strand_to,
         kmer::Nucleotide n, Direction dir
     )
     {
@@ -294,9 +296,10 @@ struct Edge_t
  * However, we add a 'distance' attribute that counts the number of transition nucleotides between the two
  * branching nodes.
  */
-template<typename Node, typename Edge>
+template<typename Edge=Edge_t<>>
 struct BranchingEdge_t : Edge 
 {
+    using typename Edge::Node;
     void set (
         const typename Node::Value& kmer_from, kmer::Strand strand_from,
         const typename Node::Value& kmer_to,   kmer::Strand strand_to,
@@ -333,7 +336,7 @@ struct BranchingEdge_t : Edge
  *
  * Note: by now, the structure is not perfect and some adaptations could come.
  */
-template<typename Node>
+template<typename Node=Node_t<>>
 struct Path_t
 {
     /** Constructor (default one)
@@ -357,7 +360,7 @@ struct Path_t
     /** Get the ascii value of the ith nucleotide in the path.
      * \param[in] i : index of the nucleotide
      * \return the ascii code for the ith nucleotide. */
-    char ascii (size_t i) const { return gatb::core::kmer::ascii((*this)[i]); }
+    char ascii (size_t i) const { return kmer::ascii((*this)[i]); }
 
     /** Add a nucleotide to the path.
      * \param[in] nt : nucleotide to be appended to the path. */
@@ -414,7 +417,7 @@ inline std::ostream& operator<< (std::ostream& s, const Path_t<T>& p)
 /* this was previously a member of GraphTemplate::, and it was named Iterator
  * but I see no reason to, no i'm moving it here and calling it GraphIterator
  * it will help readability and convenience: no more need to pass
- * template parameters <Node,Edge,GraphDataVariant>
+ * template parameters <Node, GraphDataVariant>
  */
 template<typename Item>
 class GraphIterator : public tools::dp::ISmartIterator<Item>
@@ -502,6 +505,173 @@ class GraphVector
                 #     #  #    #   #     #  #        #     #
                  #####   #     #  #     #  #        #     #
 ********************************************************************************/
+#if GATB_USE_VARIANTS
+template<typename ResultType=void> using visitor_base = boost::static_visitor<ResultType>;
+#else
+template<typename ResultType=void> struct visitor_base {};
+#endif
+
+
+template<size_t span=KMER_DEFAULT_SPAN>
+struct GraphData;
+
+class GraphBase {
+public:
+    GraphBase(const std::string& name="") : _name(name) {};
+
+    GraphBase& operator=(const GraphBase& graph) {
+        if (this != &graph)
+        {
+            _kmerSize        = graph._kmerSize;
+            _storageMode     = graph._storageMode;
+            _name            = graph._name;
+            _info            = graph._info;
+            _bloomKind       = graph._bloomKind;
+            _debloomKind     = graph._debloomKind;
+            _debloomImpl     = graph._debloomImpl;
+            _branchingKind   = graph._branchingKind;
+            _state           = graph._state;
+
+            setStorage (graph._storage);
+        }
+        return *this;
+    }
+
+    GraphBase(const GraphBase& graph) { *this = graph; }
+
+    GraphBase& operator=(GraphBase&& graph) {
+        if (this != &graph)
+        {
+            operator=(graph);
+            graph.setStorage(nullptr);
+        }
+        return *this;
+    }
+
+    GraphBase(GraphBase&& graph) { *this = std::move(graph); }
+
+    ~GraphBase() { setStorage (nullptr); }
+
+    /** Physycally remove storage */
+    void remove() { getStorage().remove(); }
+
+    /**********************************************************************/
+    /*                         MISC METHODS                               */
+    /**********************************************************************/
+
+    /** Return the name of the graph.
+     * \return the name. */
+    std::string getName() const { return _name; }
+
+    /** Get the size of the kmers.
+     * \return the kmer size. */
+    size_t getKmerSize() const { return _kmerSize; }
+
+    /** Get information about the graph (gathered during its creation).
+     * \return a property object holding graph information. */
+    tools::misc::IProperties& getInfo () const { return (tools::misc::IProperties&)_info; }
+
+
+    /**********************************************************************/
+    /*                         TYPES                                      */
+    /**********************************************************************/
+    enum StateMask
+    {
+        STATE_INIT_DONE           = (1<<0),
+        STATE_CONFIGURATION_DONE  = (1<<1),
+        STATE_SORTING_COUNT_DONE  = (1<<2),
+        STATE_BLOOM_DONE          = (1<<3),
+        STATE_DEBLOOM_DONE        = (1<<4),
+        STATE_BRANCHING_DONE      = (1<<5),
+        STATE_MPHF_DONE           = (1<<6),
+        STATE_ADJACENCY_DONE      = (1<<7),
+        STATE_NONSIMPLE_CACHE     = (1<<8)
+    };
+    typedef u_int64_t State; /* this is a global graph state, not to be confused of the state of a node (deleted or not) */
+    State getState () const { return _state; }
+    bool  checkState (StateMask mask) const { return (_state & (State)mask)==(State)mask; }
+    State setState   (StateMask mask) { _state |=  mask; return _state; }
+    State unsetState (StateMask mask) { _state &= ~mask; return _state; }
+
+
+
+protected:
+    /** Default storage kind. */
+    static const tools::storage::impl::StorageMode_e PRODUCT_MODE_DEFAULT = tools::storage::impl::STORAGE_HDF5;
+
+    /** Kind of storage for the graph. */
+    tools::storage::impl::StorageMode_e _storageMode = PRODUCT_MODE_DEFAULT;
+
+    /** Storage. */
+    tools::storage::impl::Storage* _storage = nullptr;
+    void setStorage (tools::storage::impl::Storage* storage)  { SP_SETATTR(storage); }
+    tools::storage::impl::Storage& getStorage()                           { return (*_storage); }
+    tools::storage::impl::Group&   getGroup  (const std::string name="")  { return getStorage() (name); }
+
+    /** kmer size of the graph */
+    size_t _kmerSize = 0;
+
+    /** Creation information. */
+    tools::misc::impl::Properties _info  = {"graph"};
+
+    /** */
+    std::string _name = {};
+
+    State _state = STATE_INIT_DONE;
+
+    /** */
+    tools::misc::BloomKind       _bloomKind = tools::misc::BloomKind::BLOOM_DEFAULT;
+    tools::misc::DebloomKind     _debloomKind = tools::misc::DebloomKind::DEBLOOM_DEFAULT;
+    tools::misc::DebloomImpl     _debloomImpl = tools::misc::DebloomImpl::DEBLOOM_IMPL_DEFAULT;
+    tools::misc::BranchingKind   _branchingKind = tools::misc::BranchingKind::BRANCHING_STORED;
+
+    // a late addition, because GraphUnitig wants to call it too
+    static void executeAlgorithm (tools::misc::impl::Algorithm& algorithm,
+                                  tools::storage::impl::Storage* storage,
+                                  tools::misc::IProperties* props,
+                                  tools::misc::IProperties& info) {
+        algorithm.getInput()->add (0, STR_VERBOSE, props->getStr(STR_VERBOSE));
+
+        algorithm.run ();
+
+        info.add (1, algorithm.getInfo());
+        info.add (1, algorithm.getSystemInfo());
+
+        if (storage != 0)
+        {
+            /** We memorize information of the algorithm execution as a property of the corresponding group. */
+            storage->getGroup(algorithm.getName()).setProperty("xml", std::string("\n") + algorithm.getInfo()->getXML());
+        }
+    }
+
+    struct configure_visitor : public visitor_base<> {
+        const GraphBase& graph;
+        tools::storage::impl::Storage&     storage;
+
+        configure_visitor (const GraphBase& graph, tools::storage::impl::Storage& storage)  : graph(graph), storage(storage) {}
+
+        template<size_t span>  void operator() (GraphData<span>& data) const;
+    };
+
+    struct build_visitor_solid : public visitor_base<> {
+        GraphBase& graph;
+        bank::IBank* bank;
+        tools::misc::IProperties* props;
+
+        build_visitor_solid (GraphBase& aGraph, bank::IBank* aBank, tools::misc::IProperties* aProps)  : graph(aGraph), bank(aBank), props(aProps) {}
+
+        template<size_t span>  void operator() (GraphData<span>& data) const;
+    };
+
+    /* now build the rest of the graph */
+    struct build_visitor_postsolid : public visitor_base<>    {
+        GraphBase& graph; tools::misc::IProperties* props;
+
+        build_visitor_postsolid (GraphBase& aGraph, tools::misc::IProperties* aProps)  : graph(aGraph), props(aProps) {}
+
+        template<size_t span>  void operator() (GraphData<span>& data) const;
+    };
+};
 
 /** \brief Class representing a De Bruijn graph.
  *
@@ -536,10 +706,19 @@ class GraphVector
  * Note: branching nodes are computed during the graph building; they are also saved in the graph
  * output file.
  */
-template <typename Node, typename Edge, typename GraphDataVariant>
-class GraphTemplate
+template <typename _Node=Node_t<>, typename _GraphData=GraphData<>>
+class GraphTemplate : public GraphBase
 {
 public:
+
+    using Node = _Node;
+    using Edge = Edge_t<Node>;
+    using BranchingNode = BranchingNode_t<Node>;
+    using BranchingEdge = BranchingEdge_t<Edge>;
+    using Path = Path_t<Node>;
+
+    using GraphData = _GraphData; // Somehow, someone decided that a variant with one member is a good idea...
+
 
     /********************************************************************************/
     /*                            STATIC METHODS   (create/load)                    */
@@ -586,16 +765,20 @@ public:
     /********************************************************************************/
 
     /* Default Constructor.*/
-    GraphTemplate ();
+    GraphTemplate () = default;
 
-    /* Copy Constructor.*/
-    GraphTemplate (const GraphTemplate& graph);
+    /* Copy Constructor, made explicit.*/
+    GraphTemplate copy() const { return GraphTemplate(*this); }
+
+    /* Move constructor */
+    GraphTemplate (GraphTemplate&& graph) = default;
+
+    /** Affectation overload (no copy). */
+    GraphTemplate& operator= (GraphTemplate&& graph) = default;
+    GraphTemplate& operator= (const GraphTemplate& graph) = delete;
 
     /* Destructor. */
-    ~GraphTemplate ();
-
-    /** Affectation overload. */
-    GraphTemplate& operator= (const GraphTemplate& graph);
+    ~GraphTemplate () = default;
 
     /**********************************************************************/
     /*                     GLOBAL ITERATOR METHODS                        */
@@ -607,7 +790,7 @@ public:
      * \return the nodes iterator. */
 
     inline GraphIterator<Node> iterator () const  {  return getNodes ();           }
-    inline GraphIterator<BranchingNode_t<Node> > iteratorBranching () const  {  return getBranchingNodes ();           }
+    inline GraphIterator<BranchingNode > iteratorBranching () const  {  return getBranchingNodes ();           }
     GraphIterator<Node> iteratorCachedNodes () const;
 
 
@@ -643,16 +826,16 @@ public:
     inline GraphVector<Edge> neighborsEdge    ( const typename Node::Value& kmer) const          {  return getEdgeValues (kmer);           }
 
 
-    inline GraphVector<BranchingNode_t<Node> > neighborsBranching(Node& node, Direction direction) const
+    inline GraphVector<BranchingNode > neighborsBranching(Node& node, Direction direction) const
     { return getBranchingNodeNeighbors (node, direction);  }
 
-    inline GraphVector<BranchingNode_t<Node> > neighborsBranching(const typename Node::Value& kmer) const
+    inline GraphVector<BranchingNode > neighborsBranching(const typename Node::Value& kmer) const
     { return getBranchingNodeValues (kmer);  }
 
-     inline GraphVector<BranchingEdge_t<Node,Edge> > neighborsBranchingEdge (Node& node, Direction direction) const
+     inline GraphVector<BranchingEdge > neighborsBranchingEdge (Node& node, Direction direction) const
     { return getBranchingEdgeNeighbors (node, direction);  }
 
-    inline GraphVector<BranchingEdge_t<Node,Edge> > neighborsBranchingEdge (const typename Node::Value& kmer) const
+    inline GraphVector<BranchingEdge > neighborsBranchingEdge (const typename Node::Value& kmer) const
     { return getBranchingEdgeValues (kmer);  }
 
 
@@ -672,16 +855,16 @@ public:
     inline GraphVector<Edge> successorsEdge   ( Node& node) const                 {  return getEdges(node, DIR_OUTCOMING); }
     inline GraphVector<Edge> predecessorsEdge ( Node& node) const                 {  return getEdges(node, DIR_INCOMING);  }
 
-    inline GraphVector<BranchingNode_t<Node> > successorsBranching (Node& node) const
+    inline GraphVector<BranchingNode > successorsBranching (Node& node) const
         { return getBranchingNodeNeighbors (node, DIR_OUTCOMING);  }
 
-    inline GraphVector<BranchingNode_t<Node> > predecessorsBranching (Node& node) const
+    inline GraphVector<BranchingNode > predecessorsBranching (Node& node) const
         { return getBranchingNodeNeighbors (node, DIR_INCOMING);  }
 
-    inline GraphVector<BranchingEdge_t<Node,Edge> > successorsBranchingEdge (Node& node) const
+    inline GraphVector<BranchingEdge > successorsBranchingEdge (Node& node) const
         { return getBranchingEdgeNeighbors (node, DIR_OUTCOMING);  }
 
-    inline GraphVector<BranchingEdge_t<Node,Edge> > predecessorsBranchingEdge (Node& node) const
+    inline GraphVector<BranchingEdge > predecessorsBranchingEdge (Node& node) const
         { return getBranchingEdgeNeighbors (node, DIR_INCOMING);  }
 
 
@@ -692,7 +875,7 @@ public:
     /* used to be a template, but I can't specialize it without specializing the whole graph templated class now. so got rid of templates for now*/
     //template <typename T, typename IteratorInput>
     //std::set<T> neighbors (IteratorInput first, IteratorInput last) const;
-    std::set<BranchingNode_t<Node> > neighbors (typename std::set<BranchingNode_t<Node> >::iterator first, typename std::set<BranchingNode_t<Node> >::iterator last) const;
+    std::set<BranchingNode > neighbors (typename std::set<BranchingNode >::iterator first, typename std::set<BranchingNode >::iterator last) const;
 
     /** Returns the successors of two nodes, ie with the same transition nucleotide from both nodes.
      * \param[in] node1 : first node
@@ -828,9 +1011,9 @@ public:
     unsigned int simplePathLength            (Node& node, Direction dir) const;
     double           unitigMeanAbundance     (Node& node) const;
     double       simplePathMeanAbundance     (Node& node, Direction dir) const;
-    void             unitigDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant> >& nodesDeleter) ;
+    void             unitigDelete          (Node& node, Direction dir, NodesDeleter< GraphTemplate<Node, GraphData> >& nodesDeleter) ;
     void             unitigDelete          (Node& node) ;
-    void         simplePathDelete          (Node& node, Direction dir, NodesDeleter<Node,Edge, GraphTemplate<Node, Edge, GraphDataVariant> >& nodesDeleter) ;
+    void         simplePathDelete          (Node& node, Direction dir, NodesDeleter< GraphTemplate<Node, GraphData> >& nodesDeleter) ;
     std::string  unitigSequence (Node& node, bool& isolatedLeft, bool& isolatedRight) const;
     std::string  unitigPathSequence (Node& node, bool& isolatedLeft, bool& isolatedRight) const;
     void         unitigMark            (Node& node) ; // used to flag simple path as traversed, in minia
@@ -852,7 +1035,7 @@ public:
     bool contains (const Node& item) const;
                                   
     template<size_t span> 
-    bool contains (const typename gatb::core::kmer::impl::Kmer<span>::Type& item) const;
+    bool contains (const typename kmer::impl::Kmer<span>::Type& item) const;
 
     /** Get the ascii string for the node, according to its strand.
      * \param[in] node: the node to get the string from
@@ -883,7 +1066,7 @@ public:
     /** Return the reverse complement node of the provided one.
      * param[in] node : the node to be reverted
      * \return the reverted node.  */
-    BranchingNode_t<Node> reverse (const BranchingNode_t<Node>& node) const;
+    BranchingNode reverse (const BranchingNode& node) const;
 
     /** Mutation of a node. */
     GraphVector<Node> mutate (const Node& node, size_t idx, int mode=0) const;
@@ -909,7 +1092,7 @@ public:
 
     // deleted nodes, related to NodeState above
     void deleteNode (Node& node) const;
-    void deleteNodesByIndex(std::vector<bool> &bitmap, int nbCores = 1, gatb::core::system::ISynchronizer* synchro=NULL) const;
+    void deleteNodesByIndex(std::vector<bool> &bitmap, int nbCores = 1, system::ISynchronizer* synchro=NULL) const;
     bool isNodeDeleted(Node& node) const;
 
     // a direct query to the MPHF data strcuture
@@ -927,6 +1110,36 @@ public:
     unsigned long nodeMPHFIndexDummy(Node& node) const; // debug function, for profiling only
 
 
+    /** */
+    GraphIterator<Node> getNodes () const;
+
+    unsigned char countNeighbors (Node&, Direction) const; // simple and much faster version of getNodes, for degree(), outdegree(), indegree() queries
+    void countNeighbors (Node&, size_t&, size_t&) const;  // compute in and out degree at the same time
+
+    /** */
+    GraphIterator<BranchingNode > getBranchingNodes () const;
+
+    /** */
+    GraphIterator<Node> getSimpleNodeIterator (Node& node, Direction dir) const;
+
+    /** */
+    GraphIterator<Edge> getSimpleEdgeIterator (Node& node, Direction dir) const;
+
+    /** */
+    GraphVector<std::pair<Node,Node> > getNodesCouple (const Node& node1, const Node& node2, Direction direction) const;
+
+    /** */
+    GraphVector<Node> getNodes (Node &source, Direction direction)  const;
+
+    /** */
+    GraphVector<BranchingNode > getBranchingNodeNeighbors (Node& source, Direction direction) const;
+
+    /** */
+    GraphVector<Node> getNodeValues (const typename Node::Value& kmer) const;
+
+    /** */
+    GraphVector<BranchingNode > getBranchingNodeValues (const typename Node::Value& kmer) const;
+
     /**********************************************************************/
     /*                         EDGE METHODS                               */
     /**********************************************************************/
@@ -939,37 +1152,40 @@ public:
     /** Get the ascii string for the branching edge
      * \param[in] edge : the edge to get the string from
      * \return the string representation for the provided edge . */
-    std::string toString (const BranchingEdge_t<Node, Edge>& edge) const;
+    std::string toString (const BranchingEdge& edge) const;
 
     /** Tells whether the provided edge is simple: outdegree(from)==1 and indegree(to)==1
      * \param[in] edge : the edge to be asked
      * \return true if the edge is simple, false otherwise. */
     bool isSimple (Edge& edge) const;
 
+
+    /** */
+    GraphVector<Edge> getEdges (Node source, Direction direction) const;
+
+    /** */
+    GraphVector<std::pair<Edge,Edge> > getEdgesCouple (const Node& node1, const Node& node2, Direction direction) const;
+
+    /** */
+    GraphVector<BranchingEdge > getBranchingEdgeNeighbors (Node& source, Direction direction) const;
+
+    /** */
+    GraphVector<Edge> getEdgeValues (const typename Node::Value& kmer) const;
+
+    /** */
+    GraphVector<BranchingEdge > getBranchingEdgeValues (const typename Node::Value& kmer) const;
+
+    /** */
+    Node getNode (Node& source, Direction dir, kmer::Nucleotide nt, bool& exists) const;
+
     /**********************************************************************/
     /*                         MISC METHODS                               */
     /**********************************************************************/
-
-    /** Return the name of the graph.
-     * \return the name. */
-    std::string getName() const { return _name; }
-
-    /** Get the size of the kmers.
-     * \return the kmer size. */
-    size_t getKmerSize() const { return _kmerSize; }
-
-    /** Get information about the graph (gathered during its creation).
-     * \return a property object holding graph information. */
-    tools::misc::IProperties& getInfo () const { return (tools::misc::IProperties&)_info; }
-
-    /** Remove physically a graph. */
-    void remove ();
 
     /** Reverse an edge.
      * param[in] edge: the edge to be reverted
      * \return the reverted edge. */
     Edge reverse (const Edge& edge) const;
-
 
     /** cache adjacency information from the Bloom filter to an array, 8 bits per node, for faster traversal queries*/
     void precomputeAdjacency(unsigned int nbCores = 1, bool verbose = true);
@@ -991,28 +1207,6 @@ public:
     /** */
     std::string debugString (const Edge& edge, kmer::Strand strand = kmer::STRAND_ALL, int mode=0) const;
 
-
-    /**********************************************************************/
-    /*                         TYPES                                      */
-    /**********************************************************************/
-    enum StateMask
-    {
-        STATE_INIT_DONE           = (1<<0),
-        STATE_CONFIGURATION_DONE  = (1<<1),
-        STATE_SORTING_COUNT_DONE  = (1<<2),
-        STATE_BLOOM_DONE          = (1<<3),
-        STATE_DEBLOOM_DONE        = (1<<4),
-        STATE_BRANCHING_DONE      = (1<<5),
-        STATE_MPHF_DONE           = (1<<6),
-        STATE_ADJACENCY_DONE      = (1<<7),
-        STATE_NONSIMPLE_CACHE     = (1<<8)
-    };
-    typedef u_int64_t State; /* this is a global graph state, not to be confused of the state of a node (deleted or not) */
-    State getState () const { return _state; }
-    bool  checkState (StateMask mask) const { return (_state & (State)mask)==(State)mask; }
-    State setState   (StateMask mask) { _state |=  mask; return _state; }
-    State unsetState (StateMask mask) { _state &= ~mask; return _state; }
-
     /** Constructor for empty graph.*/
     GraphTemplate (size_t kmerSize);
 
@@ -1025,98 +1219,22 @@ public:
     /** Constructor. Use for reading from filesystem. */
     GraphTemplate (const std::string& uri);
 
-public: // was private: before, but had many compilation errors during the change from Graph to GraphTemplate. took the easy route, set it to "public:", it solved everything.
-    
-    /** Kind of storage for the graph. */
-    tools::storage::impl::StorageMode_e _storageMode;
+protected:
+    /* private copy constructor, avoiding explicit copies */
+    GraphTemplate (const GraphTemplate& graph) = default;
 
-    /** Default storage kind. */
-    static const tools::storage::impl::StorageMode_e PRODUCT_MODE_DEFAULT = tools::storage::impl::STORAGE_HDF5;
+    /* Configure the variant */
+    void setKmerSize(size_t kmerSize, size_t integerPrecision=0);
 
-    /** Storage. */
-    tools::storage::impl::Storage* _storage;
-    void setStorage (tools::storage::impl::Storage* storage)  { SP_SETATTR(storage); }
-    tools::storage::impl::Storage& getStorage()                           { return (*_storage); }
-    tools::storage::impl::Group&   getGroup  (const std::string name="")  { return getStorage() (name); }
+    /** Either a GraphData<span> or a variant over multiple GraphData<spans>. */
+    GraphData _graph_data;
 
-    /** Defined as a void* for hiding implementation in cpp file. */
-    void* _variant;
+    template<typename F> auto visit_data(F& f) -> decltype(_graph_data.apply_visitor(f)) { return _graph_data.apply_visitor(f); }
+    template<typename F> auto visit_data(F& f) const -> decltype(_graph_data.apply_visitor(f)) { return  _graph_data.apply_visitor(f); }
+    template<typename F> auto visit_data(const F& f) -> decltype(_graph_data.apply_visitor(f)) { return  _graph_data.apply_visitor(f); }
+    template<typename F> auto visit_data(const F& f) const -> decltype(_graph_data.apply_visitor(f)) { return _graph_data.apply_visitor(f); }
 
-    /** kmer size of the graph */
-    size_t _kmerSize;
-
-    /** Creation information. */
-    tools::misc::impl::Properties _info;
-
-    /** */
-    std::string _name;
-
-    State _state;
-
-    /** */
-    tools::misc::BloomKind       _bloomKind;
-    tools::misc::DebloomKind     _debloomKind;
-    tools::misc::DebloomImpl     _debloomImpl;
-    tools::misc::BranchingKind   _branchingKind;
-   
-    /** */
-    GraphIterator<Node> getNodes () const;
-    
-    unsigned char countNeighbors (Node&, Direction) const; // simple and much faster version of getNodes, for degree(), outdegree(), indegree() queries
-    void countNeighbors (Node&, size_t&, size_t&) const;  // compute in and out degree at the same time
-
-    /** */
-    GraphIterator<BranchingNode_t<Node> > getBranchingNodes () const;
-
-    /** */
-    GraphIterator<Node> getSimpleNodeIterator (Node& node, Direction dir) const;
-
-    /** */
-    GraphIterator<Edge> getSimpleEdgeIterator (Node& node, Direction dir) const;
-
-    /** */
-    GraphVector<Edge> getEdges (Node source, Direction direction) const;
-
-    /** */
-    GraphVector<std::pair<Node,Node> > getNodesCouple (const Node& node1, const Node& node2, Direction direction) const;
-
-    /** */
-    GraphVector<std::pair<Edge,Edge> > getEdgesCouple (const Node& node1, const Node& node2, Direction direction) const;
-
-    /** */
-    GraphVector<Node> getNodes (Node &source, Direction direction)  const;
-
-    /** */
-    GraphVector<BranchingNode_t<Node> > getBranchingNodeNeighbors (Node& source, Direction direction) const;
-
-    /** */
-    GraphVector<BranchingEdge_t<Node,Edge> > getBranchingEdgeNeighbors (Node& source, Direction direction) const;
-
-    /** */
-    GraphVector<Edge> getEdgeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    GraphVector<Node> getNodeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    GraphVector<BranchingEdge_t<Node,Edge> > getBranchingEdgeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    GraphVector<BranchingNode_t<Node> > getBranchingNodeValues (const typename Node::Value& kmer) const;
-
-    /** */
-    Node getNode (Node& source, Direction dir, kmer::Nucleotide nt, bool& exists) const;
-
-    /* set the graph variant */
-    void setVariant (void* data, size_t kmerSize, size_t integerPrecision=0);
-
-    /** Friends. */
-    template<typename, typename, typename> friend struct build_visitor_solid ; // i don't know why this template<typename, typename> trick works, but it does
-    template<typename, typename, typename> friend struct build_visitor_postsolid ;
-    template<typename, typename, typename> friend struct configure_visitor;
-
-    // a late addition, because GraphUnitig wants to call it too
-    static void executeAlgorithm (gatb::core::tools::misc::impl::Algorithm& algorithm, gatb::core::tools::storage::impl::Storage* storage, gatb::core::tools::misc::IProperties* props, gatb::core::tools::misc::IProperties& info);
+    friend build_visitor_postsolid;
 };
 
 
@@ -1161,6 +1279,8 @@ class NodeHasher
 
 /********************************************************************************/
 
+
+
 /* We define a structure that holds all the necessary stuff for implementing the graph API.
  *  Here, the structure is templated by the span (ie. the kmer max size).
  *
@@ -1171,16 +1291,16 @@ template<size_t span>
 struct GraphData
 {
     /** Shortcuts. */
-    typedef typename gatb::core::kmer::impl::Kmer<span>::ModelCanonical Model;
-    typedef typename gatb::core::kmer::impl::Kmer<span>::Type           Type;
-    typedef typename gatb::core::kmer::impl::Kmer<span>::Count          Count;
-    typedef typename gatb::core::kmer::impl::MPHFAlgorithm<span>::AbundanceMap   AbundanceMap;
-    typedef typename gatb::core::kmer::impl::MPHFAlgorithm<span>::NodeStateMap   NodeStateMap;
-    typedef typename gatb::core::kmer::impl::MPHFAlgorithm<span>::AdjacencyMap   AdjacencyMap;
+    typedef typename kmer::impl::Kmer<span>::ModelCanonical Model;
+    typedef typename kmer::impl::Kmer<span>::Type           Type;
+    typedef typename kmer::impl::Kmer<span>::Count          Count;
+    typedef typename kmer::impl::MPHFAlgorithm<span>::AbundanceMap   AbundanceMap;
+    typedef typename kmer::impl::MPHFAlgorithm<span>::NodeStateMap   NodeStateMap;
+    typedef typename kmer::impl::MPHFAlgorithm<span>::AdjacencyMap   AdjacencyMap;
     typedef typename std::unordered_map<Type, std::pair<char,std::string>, NodeHasher<Type> > NodeCacheMap; // rudimentary for now
 
     /** Constructor. */
-    GraphData () : _model(0), _solid(0), _container(0), _branching(0), _abundance(0), _nodestate(0), _adjacency(0), _nodecache(0) {}
+    GraphData () = default;
 
     /** Destructor. */
     ~GraphData ()
@@ -1196,17 +1316,7 @@ struct GraphData
     }
 
     /** Constructor (copy). */
-    GraphData (const GraphData& d) : _model(0), _solid(0), _container(0), _branching(0), _abundance(0), _nodestate(0), _adjacency(0), _nodecache(0)
-    {
-        setModel     (d._model);
-        setSolid     (d._solid);
-        setContainer (d._container);
-        setBranching (d._branching);
-        setAbundance (d._abundance);
-        setNodeState (d._nodestate);
-        setAdjacency (d._adjacency);
-        setNodeCache (d._nodecache);
-    }
+    GraphData (const GraphData& d) { *this = d; }
 
     /** Assignment operator. */
     GraphData& operator= (const GraphData& d)
@@ -1225,15 +1335,36 @@ struct GraphData
         return *this;
     }
 
+    /** Constructor (move). */
+    GraphData (GraphData&& d) { *this = std::move(d); }
+
+    /** Move operator. */
+    GraphData& operator= (GraphData&& d) {
+        this->~GraphData(); // Free local ressources
+
+        if (this != &d)
+        {
+            std::swap(_model, d._model);
+            std::swap(_solid, d._solid);
+            std::swap(_container, d._container);
+            std::swap(_branching, d._branching);
+            std::swap(_abundance, d._abundance);
+            std::swap(_nodestate, d._nodestate);
+            std::swap(_adjacency, d._adjacency);
+            std::swap(_nodecache, d._nodecache);
+        }
+        return *this;
+    }
+
     /** Required attributes. */
-    Model*                _model;
-    tools::storage::impl::Partition<Count>*   _solid;
-    IContainerNode<Type>*                     _container;
-    tools::collections::Collection<Count>*    _branching;
-    AbundanceMap*         _abundance;
-    NodeStateMap*         _nodestate;
-    AdjacencyMap*         _adjacency;
-    NodeCacheMap*         _nodecache; // so, nodecache also records branching node, but also more stuff. i'm keeping _branching for historical reasons.
+    Model*                _model = nullptr;
+    tools::storage::impl::Partition<Count>*   _solid = nullptr;
+    IContainerNode<Type>*                     _container = nullptr;
+    tools::collections::Collection<Count>*    _branching = nullptr;
+    AbundanceMap*         _abundance = nullptr;
+    NodeStateMap*         _nodestate = nullptr;
+    AdjacencyMap*         _adjacency = nullptr;
+    NodeCacheMap*         _nodecache = nullptr; // so, nodecache also records branching node, but also more stuff. i'm keeping _branching for historical reasons.
 
     /** Setters. */
     void setModel       (Model*                                       model)      { SP_SETATTR (model);     }
@@ -1270,6 +1401,10 @@ struct GraphData
 
         return true;
     }
+
+    // Simulate Visitable when there is no variant wrapper
+    template<typename F> auto apply_visitor(F&& f) -> decltype(f(*this)) { return f(*this); }
+    template<typename F> auto apply_visitor(F&& f) const -> decltype(f(*this)) { return f(*this); }
 };
 
 /* This definition is the basis for having a "generic" Graph class, ie. not relying on a template
@@ -1284,23 +1419,25 @@ template<typename T>  struct ToGraphDataVariant  {  typedef GraphData<T::value> 
 
 /* typedef for compatibility with all existing GATB tools */
 
-typedef Node_t<> Node; // default Node type: tools::math::Integer (which is a boost::variant)
-typedef Edge_t<Node> Edge;
-typedef Path_t<Node> Path; 
-typedef BranchingNode_t<Node> BranchingNode; 
-typedef BranchingEdge_t<Node,Edge> BranchingEdge; 
-typedef boost::make_variant_over<boost::mpl::transform<gatb::core::tools::math::IntegerList, ToGraphDataVariant<boost::mpl::_> >::type >::type GraphDataVariant;
-typedef GraphTemplate<Node, Edge, GraphDataVariant> Graph; // define classical GATB Graph
+#if GATB_USE_VARIANTS
+typedef Node_t<tools::math::Integer> NodeVariant;
+typedef Edge_t<NodeVariant> EdgeVariant;
+typedef Path_t<NodeVariant> PathVariant;
+typedef BranchingNode_t<NodeVariant> BranchingNodeVariant;
+typedef BranchingEdge_t<EdgeVariant> BranchingEdgeVariant;
+typedef boost::make_variant_over<boost::mpl::transform<tools::math::IntegerList, ToGraphDataVariant<boost::mpl::_> >::type >::type GraphDataVariantFull;
+typedef GraphTemplate<NodeVariant, GraphDataVariantFull> GraphPoly; // define classical GATB Graph
+#endif
 
 
 /* rationale: Node is when you have no idea what the kmer size is going to be. NodeFast is when you do. and it's faster */
 
 template <size_t span>
-using NodeFast = Node_t<typename gatb::core::kmer::impl::Kmer<span>::Type >;
+using NodeFast = Node_t<typename kmer::impl::Kmer<span>::Type >;
 template <size_t span>
 using EdgeFast = Edge_t<NodeFast<span> >;
 template <size_t span>
-using GraphDataVariantFast = boost::variant<GraphData<span> >; 
+using GraphFast = GraphTemplate<NodeFast<span>, GraphData<span>>;
 
 
 template <typename Type, class Listener>
@@ -1309,41 +1446,6 @@ class ProgressGraphIterator : public ProgressGraphIteratorTemplate<Type, Listene
     ProgressGraphIterator (const GraphIterator<Type>& items, const char* msg = "compute", size_t divide=100) : 
         ProgressGraphIteratorTemplate<Type, Listener> (items,msg,divide)
     {}
-};
-    
-
-template<typename Node, typename Edge, typename GraphDataVariant>
-struct configure_visitor : public boost::static_visitor<>    {
-
-    const GraphTemplate<Node, Edge, GraphDataVariant>& graph;
-    tools::storage::impl::Storage&     storage;
-
-    configure_visitor (const GraphTemplate<Node, Edge, GraphDataVariant>& graph, tools::storage::impl::Storage& storage)  : graph(graph), storage(storage) {}
-
-    template<size_t span>  void operator() (GraphData<span>& data) const;
-};
-
-template<typename Node, typename Edge, typename GraphDataVariant>
-struct build_visitor_solid : public boost::static_visitor<>    {
-
-    GraphTemplate<Node, Edge, GraphDataVariant>& graph; 
-    bank::IBank* bank; 
-    tools::misc::IProperties* props;
-
-    build_visitor_solid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, bank::IBank* aBank, tools::misc::IProperties* aProps)  : graph(aGraph), bank(aBank), props(aProps) {}
-
-    template<size_t span>  void operator() (GraphData<span>& data) const;
-};
-
-/* now build the rest of the graph */
-template<typename Node, typename Edge, typename GraphDataVariant>
-struct build_visitor_postsolid : public boost::static_visitor<>    {
-
-    GraphTemplate<Node, Edge, GraphDataVariant>& graph; tools::misc::IProperties* props; 
-
-    build_visitor_postsolid (GraphTemplate<Node, Edge, GraphDataVariant>& aGraph, tools::misc::IProperties* aProps)  : graph(aGraph), props(aProps) {}
-
-    template<size_t span>  void operator() (GraphData<span>& data) const;
 };
 
 

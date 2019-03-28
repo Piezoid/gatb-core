@@ -127,6 +127,9 @@ public:
         return buffer;
     }
 
+    template<typename T>
+    auto get() const -> typename std::enable_if<std::is_same<T, LargeInt>::value, const LargeInt&>::type { return *this; }
+
     /** Get the 64 less significant bits of the LargeInt object as a native integer type.
      * \return (part of) the LargeInt object as a native integer type.
      */
@@ -771,7 +774,7 @@ template<int precision>  inline u_int64_t hash2 (const LargeInt<precision>& elem
 
 
 /********************************************************************************/
-template<int precision>  u_int64_t oahash (const LargeInt<precision>& elem)
+template<int precision>  inline u_int64_t oahash (const LargeInt<precision>& elem)
 {
     // hash = XOR_of_series[hash(i-th chunk iof 64 bits)]
     u_int64_t result = 0, chunk, mask = ~0;

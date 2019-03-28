@@ -1,4 +1,5 @@
 // has Node::Value all over, plus minia doesn't need them anymore.
+//FIXME: let me RIP
 #if 0
 
 #include <gatb/debruijn/impl/Traversal.cpp>
@@ -14,19 +15,19 @@ using namespace gatb::core::kmer::impl;
 namespace gatb { namespace core { namespace debruijn { namespace impl  {
 /********************************************************************************/
 
-template class TraversalTemplate <NodeGU,EdgeGU, 
+template class TraversalTemplate <Node,Edge, 
          GraphUnitigsTemplate<${KSIZE}>>; 
-template class MonumentTraversalTemplate <NodeGU,EdgeGU, 
+template class MonumentTraversalTemplate <Node,Edge, 
          GraphUnitigsTemplate<${KSIZE}>>; 
-template class TerminatorTemplate <NodeGU,EdgeGU,  
+template class TerminatorTemplate <Node,Edge,  
          GraphUnitigsTemplate<${KSIZE}>>; 
-template class MPHFTerminatorTemplate <NodeGU,EdgeGU, 
+template class MPHFTerminatorTemplate <Node,Edge, 
          GraphUnitigsTemplate<${KSIZE}>>; 
-template class BranchingTerminatorTemplate <NodeGU,EdgeGU, 
+template class BranchingTerminatorTemplate <Node,Edge, 
          GraphUnitigsTemplate<${KSIZE}>>; 
-template class FrontlineTemplate <NodeGU,EdgeGU, 
+template class FrontlineTemplate <Node,Edge, 
          GraphUnitigsTemplate<${KSIZE}>>; 
-template class FrontlineBranchingTemplate <NodeGU,EdgeGU, 
+template class FrontlineBranchingTemplate <Node,Edge, 
          GraphUnitigsTemplate<${KSIZE}>>; 
 
 /********************************************************************************/

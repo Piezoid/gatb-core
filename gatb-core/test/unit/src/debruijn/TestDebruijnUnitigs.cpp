@@ -81,11 +81,17 @@ extern std::string DBPATH (const string& a);
 namespace gatb  {  namespace tests  {
 /********************************************************************************/
 
+using GraphUnitigs = GraphUnitigsTemplate<32>;
+using Node = typename GraphUnitigs::Node;
+using Edge = typename GraphUnitigs::Edge;
+using BranchingNode = typename GraphUnitigs::BranchingNode;
+using BranchingEdge = typename GraphUnitigs::BranchingEdge;
+using Path = typename GraphUnitigs::Path;
+
 /** \brief Test class for genomic databases management
  */
 class TestDebruijnUnitigs : public Test
 {
-    typedef gatb::core::debruijn::impl::GraphUnitigsTemplate<32> GraphUnitigs;
 
     /********************************************************************************/
     CPPUNIT_TEST_SUITE_GATB (TestDebruijnUnitigs);
@@ -144,9 +150,9 @@ public:
     void debruijn_unitigs_test2_aux (GraphUnitigs& graph)
     {
         /** We get an iterator over all the nodes of the graph. */
-        GraphIterator<NodeGU> itNodes = graph.iterator();
+        GraphIterator<Node> itNodes = graph.iterator();
 
-        GraphVector<EdgeGU> successors;
+        GraphVector<Edge> successors;
         Info    info;
 
         TimeInfo ti;
@@ -231,13 +237,13 @@ public:
         /** We create the graph. */
         GraphUnitigs graph = GraphUnitigs::create (new BankStrings (seq, (char*)0), "-kmer-size 27  -abundance-min 1  -verbose 0  -max-memory %d -nb-cores 1", MAX_MEMORY);
 
-        GraphIterator<NodeGU> it = graph.iterator();  it.first();
+        GraphIterator<Node> it = graph.iterator();  it.first();
 
-        NodeGU n1 = it.item();
+        Node n1 = it.item();
         CPPUNIT_ASSERT (n1.strand == STRAND_FORWARD);
         CPPUNIT_ASSERT (graph.toString(n1).compare (seq) == 0);
 
-        NodeGU n2 = n1;
+        Node n2 = n1;
         n2.reverse();
         CPPUNIT_ASSERT (n2.strand == STRAND_REVCOMP);
         CPPUNIT_ASSERT (graph.toString(n2).compare (rev) == 0);
@@ -253,10 +259,10 @@ public:
         char* seq = (char*) "ACCAGTT";
         char* rev = (char*) "AACTGGT";
 
-        NodeGU n1 = graph.debugBuildNode (seq);
+        Node n1 = graph.debugBuildNode (seq);
         CPPUNIT_ASSERT (graph.toString (n1) == seq);
 
-        NodeGU n2 = n1;
+        Node n2 = n1;
         n2.reverse();
         CPPUNIT_ASSERT (graph.toString (n2) == rev);
     }
@@ -267,20 +273,20 @@ public:
         debruijn_unitigs_test6_fct (const GraphUnitigs& graph) : graph(graph) {}
         const GraphUnitigs& graph;
 
-        void operator() (NodeGU& node) const
+        void operator() (Node& node) const
         {
             string snode = graph.toString (node);
 
-            NodeGU rev = node;
+            Node rev = node;
             rev.reverse();
             string srev = graph.toString (rev);
 
             /** We build a node from the reverse string. */
-            NodeGU rev2 = graph.debugBuildNode (srev);
+            Node rev2 = graph.debugBuildNode (srev);
             CPPUNIT_ASSERT (graph.toString(rev2) == srev);
 
             /** We reverse the reversed node. */
-            NodeGU node2 = rev2;
+            Node node2 = rev2;
             node2.reverse();
             CPPUNIT_ASSERT (graph.toString(node2) == snode);
         }
@@ -300,12 +306,12 @@ public:
     /********************************************************************************/
     struct debruijn_unitigs_test7_fct
     {
-        debruijn_unitigs_test7_fct (const GraphUnitigs& graph, NodeGU& n1, NodeGU& n2) : graph(graph), n1(n1), n2(n2) {}
+        debruijn_unitigs_test7_fct (const GraphUnitigs& graph, Node& n1, Node& n2) : graph(graph), n1(n1), n2(n2) {}
         const GraphUnitigs& graph;
-        NodeGU& n1;
-        NodeGU& n2;
+        Node& n1;
+        Node& n2;
 
-        void operator() (NodeGU& current) const
+        void operator() (Node& current) const
         {
             string currentStr = graph.toString(current);
             
@@ -314,14 +320,14 @@ public:
             //CPPUNIT_ASSERT (currentStr==graph.toString(n1) || currentStr==graph.toString(n2) ); // restore once dummy node to address MPHF bug is resolved (see below)
 
             /** We get all possible edges from the current node */
-            GraphVector<EdgeGU> neighbors = graph.neighborsEdge(current);
+            GraphVector<Edge> neighbors = graph.neighborsEdge(current);
             
             CPPUNIT_ASSERT (neighbors.size()>=1);
 
             for (size_t i=0; i<neighbors.size(); i++)
             {
                 /** Shortcut. */
-                EdgeGU& edge = neighbors[i];
+                Edge& edge = neighbors[i];
 
                 //std::cout << "curstr "  << currentStr << std::endl;
                 if (currentStr==graph.toString(n1))  // 1 neighbor
@@ -377,7 +383,7 @@ public:
             }
 
 
-            GraphVector<EdgeGU> neighborsIncoming = graph.neighborsEdge(current, DIR_INCOMING);
+            GraphVector<Edge> neighborsIncoming = graph.neighborsEdge(current, DIR_INCOMING);
 
             if (currentStr==graph.toString(n1))  // 0 incoming neighbor
             {
@@ -392,7 +398,7 @@ public:
                 if (currentStr==graph.toString(n2))  // 1 incoming neighbor
                 {
                     /** Shortcut. */
-                    EdgeGU& edge = neighborsIncoming[i];
+                    Edge& edge = neighborsIncoming[i];
                     CPPUNIT_ASSERT (neighborsIncoming.size()==1);
                     CPPUNIT_ASSERT (graph.toString(edge.to)=="GGCGC");
                     CPPUNIT_ASSERT (edge.direction==DIR_INCOMING);
@@ -410,8 +416,8 @@ public:
          *      - AGGCG / CGCCT
          *      - GCGCC / GGCGC
          */
-        NodeGU n1 = graph.debugBuildNode ((char*)"AGGCG");
-        NodeGU n2 = graph.debugBuildNode ((char*)"GCGCC");
+        Node n1 = graph.debugBuildNode ((char*)"AGGCG");
+        Node n2 = graph.debugBuildNode ((char*)"GCGCC");
 
         // We should get as neighborhood
         // GCGCC  [GCGCC --T--> CGCCT]
@@ -436,8 +442,8 @@ public:
          *      - AGGCG / CGCCT
          *      - GCGCC / GGCGC
          */
-        NodeGU n1 = graph.debugBuildNode ((char*)"AGGCG");
-        NodeGU n2 = graph.debugBuildNode ((char*)"GCGCC");
+        Node n1 = graph.debugBuildNode ((char*)"AGGCG");
+        Node n2 = graph.debugBuildNode ((char*)"GCGCC");
 
         // We should get as neighborhood
         // GCGCC  [GCGCC --T--> CGCCT]
@@ -453,14 +459,14 @@ public:
     {
         GraphUnitigs graph = GraphUnitigs::create (new BankStrings ("AGGCGA", "TTGCGA", "GCGAT", "GCGAA",(char*)0),  "-kmer-size 5  -abundance-min 1  -verbose 0 -max-memory %d -out dummy -minimizer-size 3 -nb-cores 1", MAX_MEMORY);
 
-        NodeGU n1 = graph.debugBuildNode ((char*)"GGCGA");
-        NodeGU n2 = graph.debugBuildNode ((char*)"GCGAT");
+        Node n1 = graph.debugBuildNode ((char*)"GGCGA");
+        Node n2 = graph.debugBuildNode ((char*)"GCGAT");
 
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1, DIR_OUTCOMING);// GGCGA
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1, DIR_OUTCOMING);// GGCGA
         CPPUNIT_ASSERT (neighbors.size() == 2);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "GCGAA" && graph.toString(edge.to) != "GCGAT" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -471,11 +477,11 @@ public:
         }
 
 
-        GraphVector<EdgeGU> neighbors2 = graph.neighborsEdge(n2, DIR_INCOMING); //GCGAT
+        GraphVector<Edge> neighbors2 = graph.neighborsEdge(n2, DIR_INCOMING); //GCGAT
         CPPUNIT_ASSERT (neighbors2.size() == 2);
         for (size_t i=0; i<neighbors2.size(); i++)
         {
-            EdgeGU& edge = neighbors2[i];
+            Edge& edge = neighbors2[i];
 
             if (graph.toString(edge.to) != "GGCGA" && graph.toString(edge.to) != "TGCGA" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -493,13 +499,13 @@ public:
 	// the following line seems to crash at BankStrings if i dont set the last argument as char*, see http://stackoverflow.com/questions/39121792/c-function-with-any-parameters-make-segmentation-fault
 	GraphUnitigs graph = GraphUnitigs::create (new BankStrings ("AGGCGA", "TTGCGA", "GCGAT", "CGATA", "CGATT", (char*)0),  "-kmer-size 5  -abundance-min 1  -verbose 0 -max-memory %d -out dummy -minimizer-size 3 -nb-cores 1", MAX_MEMORY);
 
-        NodeGU n1 = graph.debugBuildNode ((char*)"GCGAT");
+        Node n1 = graph.debugBuildNode ((char*)"GCGAT");
 
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1, DIR_OUTCOMING);// GCGAT
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1, DIR_OUTCOMING);// GCGAT
         CPPUNIT_ASSERT (neighbors.size() == 2);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "CGATA" && graph.toString(edge.to) != "CGATT" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -510,11 +516,11 @@ public:
         }
 
 
-        GraphVector<EdgeGU> neighbors2 = graph.neighborsEdge(n1, DIR_INCOMING); //GCGAT
+        GraphVector<Edge> neighbors2 = graph.neighborsEdge(n1, DIR_INCOMING); //GCGAT
         CPPUNIT_ASSERT (neighbors2.size() == 2);
         for (size_t i=0; i<neighbors2.size(); i++)
         {
-            EdgeGU& edge = neighbors2[i];
+            Edge& edge = neighbors2[i];
 
             if (graph.toString(edge.to) != "GGCGA" && graph.toString(edge.to) != "TGCGA" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -528,13 +534,13 @@ public:
         // same as before, except on revcomp of that node
         //
         
-        NodeGU n1rev = graph.debugBuildNode ((char*)"ATCGC");
+        Node n1rev = graph.debugBuildNode ((char*)"ATCGC");
 
          neighbors = graph.neighborsEdge(n1rev, DIR_OUTCOMING);
         CPPUNIT_ASSERT (neighbors.size() == 2);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "TCGCC" && graph.toString(edge.to) != "TCGCA" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -549,7 +555,7 @@ public:
         CPPUNIT_ASSERT (neighbors2.size() == 2);
         for (size_t i=0; i<neighbors2.size(); i++)
         {
-            EdgeGU& edge = neighbors2[i];
+            Edge& edge = neighbors2[i];
 
             if (graph.toString(edge.to) != "TATCG" && graph.toString(edge.to) != "AATCG" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -567,13 +573,13 @@ public:
     {
         GraphUnitigs graph = GraphUnitigs::create (new BankStrings ("AGGCGA", "TTGCGA", "GCGAT", "CGATA", (char*)0),  "-kmer-size 5  -abundance-min 1  -verbose 0 -max-memory %d -out dummy -minimizer-size 3 -nb-cores 1", MAX_MEMORY);
 
-        NodeGU n1 = graph.debugBuildNode ((char*)"GCGAT");
+        Node n1 = graph.debugBuildNode ((char*)"GCGAT");
 
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1, DIR_OUTCOMING);// GCGAT
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1, DIR_OUTCOMING);// GCGAT
         CPPUNIT_ASSERT (neighbors.size() == 1);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "CGATA" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -584,11 +590,11 @@ public:
         }
 
 
-        GraphVector<EdgeGU> neighbors2 = graph.neighborsEdge(n1, DIR_INCOMING); //GCGAT
+        GraphVector<Edge> neighbors2 = graph.neighborsEdge(n1, DIR_INCOMING); //GCGAT
         CPPUNIT_ASSERT (neighbors2.size() == 2);
         for (size_t i=0; i<neighbors2.size(); i++)
         {
-            EdgeGU& edge = neighbors2[i];
+            Edge& edge = neighbors2[i];
 
             if (graph.toString(edge.to) != "GGCGA" && graph.toString(edge.to) != "TGCGA" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -602,13 +608,13 @@ public:
         // same as before, except on revcomp of that node
         //
         
-        NodeGU n1rev = graph.debugBuildNode ((char*)"ATCGC");
+        Node n1rev = graph.debugBuildNode ((char*)"ATCGC");
 
          neighbors = graph.neighborsEdge(n1rev, DIR_OUTCOMING);
         CPPUNIT_ASSERT (neighbors.size() == 2);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "TCGCC" && graph.toString(edge.to) != "TCGCA" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -623,7 +629,7 @@ public:
         CPPUNIT_ASSERT (neighbors2.size() == 1);
         for (size_t i=0; i<neighbors2.size(); i++)
         {
-            EdgeGU& edge = neighbors2[i];
+            Edge& edge = neighbors2[i];
 
             if (graph.toString(edge.to) != "TATCG" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -645,13 +651,13 @@ public:
             ,(char*)0),
                 "-kmer-size 21  -abundance-min 1  -verbose 0 -max-memory %d -out dummy -nb-cores 1 -minimizer-size 3" /* minimizer size 3 is important to reproduce the problem found in Simplifications*/, MAX_MEMORY);
 
-        NodeGU n1 = graph.debugBuildNode ((char*)"TGTCATCTAGTTCAACAACCA"); // part of the tip
+        Node n1 = graph.debugBuildNode ((char*)"TGTCATCTAGTTCAACAACCA"); // part of the tip
 
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1, DIR_INCOMING);
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1, DIR_INCOMING);
         CPPUNIT_ASSERT (neighbors.size() == 1);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "GTGTCATCTAGTTCAACAACC" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -661,7 +667,7 @@ public:
             CPPUNIT_ASSERT (graph.toString(edge.to)  == "GTGTCATCTAGTTCAACAACC" );
         }
 
-        NodeGU n2 = graph.debugBuildNode ((char*)"TGGTTGTTGAACTAGATGACA"); // part of the tip
+        Node n2 = graph.debugBuildNode ((char*)"TGGTTGTTGAACTAGATGACA"); // part of the tip
 
         neighbors = graph.neighborsEdge(n2, DIR_INCOMING);
         CPPUNIT_ASSERT (neighbors.size() == 1);
@@ -669,7 +675,7 @@ public:
             /* 
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "TTGGTTGTTGAACTAGATGAC" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -691,12 +697,12 @@ public:
             ,(char*)0),
                 "-kmer-size 21  -abundance-min 1  -verbose 0 -max-memory %d -out dummy -nb-cores 1", MAX_MEMORY);
 
-        NodeGU n1 = graph.debugBuildNode ((char*)"TGTCATCTAGTTCAACAACCA"); // part of the tip
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1, DIR_INCOMING);
+        Node n1 = graph.debugBuildNode ((char*)"TGTCATCTAGTTCAACAACCA"); // part of the tip
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1, DIR_INCOMING);
         CPPUNIT_ASSERT (neighbors.size() == 1);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "GTGTCATCTAGTTCAACAACC" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -715,12 +721,12 @@ public:
             ,(char*)0),
                 "-kmer-size 31  -abundance-min 1  -verbose 0 -max-memory %d -out dummy -nb-cores 1", MAX_MEMORY);
 
-        NodeGU n1 = graph.debugBuildNode ((char*)"AGAGCCCGCTTATCCGGTGGTGATACCTACC"); // 
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1);
+        Node n1 = graph.debugBuildNode ((char*)"AGAGCCCGCTTATCCGGTGGTGATACCTACC"); //
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1);
         CPPUNIT_ASSERT (neighbors.size() == 1);
         for (size_t i=0; i<neighbors.size(); i++)
         {
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (graph.toString(edge.to) != "AAGAGCCCGCTTATCCGGTGGTGATACCTAC" ) 
                 std::cout << std::endl << "anticipation of assert fail, from: " <<  graph.toString(edge.from) << " to: " << graph.toString(edge.to) << std::endl;
@@ -793,7 +799,7 @@ public:
 
         if (checkNodes)
         {
-            GraphIterator<NodeGU> iterNodes = graph.iterator();
+            GraphIterator<Node> iterNodes = graph.iterator();
             for (iterNodes.first(); !iterNodes.isDone(); iterNodes.next())
             { result.nbNodes++; /*result.checksumNodes = iterNodes.item().kmer + result.checksumNodes; */ /* disabled because of unsupported largeint operation apparently! */ }
         }
@@ -857,15 +863,15 @@ public:
 			kmerSize, MAX_MEMORY);
 
         // We create a Terminator object
-        MPHFTerminatorTemplate<NodeGU,EdgeGU,GraphUnitigs> terminator (graph);
+        MPHFTerminatorTemplate<GraphUnitigs> terminator (graph);
 
 		// We create a node from the start of the first sequence
-		NodeGU node = graph.debugBuildNode (seqs[0]);
+		Node node = graph.debugBuildNode (seqs[0]);
 
-        Path_t<NodeGU> path;
+        Path_t<Node> path;
 
         // We create a Traversal instance according to the chosen traversal kind
-        TraversalTemplate<NodeGU,EdgeGU,GraphUnitigs>* traversal = TraversalTemplate<NodeGU,EdgeGU,GraphUnitigs>::create (traversalKind, graph, terminator);
+        TraversalTemplate<GraphUnitigs>* traversal = TraversalTemplate<GraphUnitigs>::create (traversalKind, graph, terminator);
         LOCAL (traversal);
 
         traversal->traverse (node, DIR_OUTCOMING, path);
@@ -904,14 +910,14 @@ public:
     /********************************************************************************/
     void debruijn_unitigs_deletenode_fct (GraphUnitigs& graph) 
     {
-        NodeGU n1 = graph.debugBuildNode ((char*)"AGGCG");
-        //NodeGU n2 = graph.debugBuildNode ((char*)"GGCGC"); // hum it's the same as n3..
-        NodeGU n3 = graph.debugBuildNode ((char*)"GCGCC");
+        Node n1 = graph.debugBuildNode ((char*)"AGGCG");
+        //Node n2 = graph.debugBuildNode ((char*)"GGCGC"); // hum it's the same as n3..
+        Node n3 = graph.debugBuildNode ((char*)"GCGCC");
 
         graph.deleteNode(n3);
 
         /** We get all possible edges from the current kmer (note: not from the current node). */
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1);
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1);
 
         CPPUNIT_ASSERT (neighbors.size()==0);
     }
@@ -925,13 +931,13 @@ public:
 
     void debruijn_unitigs_deletenode2_fct (GraphUnitigs& graph) 
     {
-        NodeGU n1 = graph.debugBuildNode ((char*)"AGGCG");
-        NodeGU n2 = graph.debugBuildNode ((char*)"GGCGA");
+        Node n1 = graph.debugBuildNode ((char*)"AGGCG");
+        Node n2 = graph.debugBuildNode ((char*)"GGCGA");
 
         graph.deleteNode(n2);
 
         /** We get all possible edges from the current kmer (note: not from the current node). */
-        GraphVector<EdgeGU> neighbors = graph.neighborsEdge(n1);
+        GraphVector<Edge> neighbors = graph.neighborsEdge(n1);
 
         std::cout<<"unfinished test" << std::endl;
     return; // TODO: finish it;
@@ -941,7 +947,7 @@ public:
         for (size_t i=0; i<neighbors.size(); i++)
         {
             /** Shortcut. */
-            EdgeGU& edge = neighbors[i];
+            Edge& edge = neighbors[i];
 
             if (neighbors.size() != 1) 
                 std::cout << "anticipation of assert fail: neighbors size of n1 " << neighbors.size() << std::endl;

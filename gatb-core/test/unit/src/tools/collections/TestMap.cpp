@@ -22,6 +22,7 @@
 #include <gatb/tools/designpattern/api/Iterator.hpp>
 #include <gatb/tools/collections/impl/OAHash.hpp>
 #include <gatb/tools/collections/impl/MapMPHF.hpp>
+#include <gatb/tools/math/NativeInt8.hpp>
 #include <gatb/tools/math/NativeInt64.hpp>
 #include <gatb/tools/math/NativeInt128.hpp>
 #include <gatb/tools/math/LargeInt.hpp>

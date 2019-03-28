@@ -40,6 +40,9 @@ public:
     LargeInt<1> (const LargeInt<1>& other)  {  value = other.value;  }
 #endif
 
+    template<typename T>
+    auto get() const -> typename std::enable_if<std::is_same<T, LargeInt>::value, const LargeInt&>::type { return *this; }
+
      u_int64_t getVal () const   { return value; }
      inline void setVal (u_int64_t val) { value = val; }
      inline void setVal (const LargeInt<1>& other) { value = other.value; }

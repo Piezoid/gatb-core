@@ -77,8 +77,8 @@ struct NodeDepth
  * our assembly graph is connected by (k-1)-overlaps,
  * so this function is used to make sure we see each (k-1)-overlap in at most one right extremity
  */
-template<size_t span, typename Node, typename Edge, typename Graph>
-bool IterativeExtensions<span, Node, Edge, Graph>::compare_and_mark_last_k_minus_one_mer (const string& node, set<kmer_type>& kmers_set)
+template<size_t span, typename Graph>
+bool IterativeExtensions<span, Graph>::compare_and_mark_last_k_minus_one_mer (const string& node, set<kmer_type>& kmers_set)
 {
     KmerModelDirect leftKmer = modelMinusOne.codeSeed (node.c_str(), Data::ASCII, node.size() - modelMinusOne.getKmerSize());
     kmer_type kmer = leftKmer.value();
@@ -98,10 +98,10 @@ bool IterativeExtensions<span, Node, Edge, Graph>::compare_and_mark_last_k_minus
  ** RETURN  :
  ** REMARKS :
  *********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
-IterativeExtensions<span, Node, Edge, Graph>::IterativeExtensions (
+template<size_t span, typename Graph>
+IterativeExtensions<span, Graph>::IterativeExtensions (
     const Graph&        graph,
-    TerminatorTemplate<Node,Edge,Graph>&         terminator,
+    TerminatorTemplate<Graph>&         terminator,
     TraversalKind       traversalKind,
     ExtendStopMode_e    whenToStop,
     SearchMode_e        searchMode,
@@ -126,8 +126,8 @@ IterativeExtensions<span, Node, Edge, Graph>::IterativeExtensions (
  ** RETURN  :
  ** REMARKS :
  *********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
-void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
+template<size_t span, typename Graph>
+void IterativeExtensions<span, Graph>::construct_linear_seqs (
     const string& L,
     const string& R,
     IBank*        outputBank,
@@ -148,7 +148,7 @@ void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
     LOCAL (outputBank);
 
     /** We create a Traversal instance. */
-    TraversalTemplate<Node,Edge,Graph>* traversal = TraversalTemplate<Node,Edge,Graph>::create (traversalKind, graph, terminator, max_depth, 500, 20);
+    TraversalTemplate<Graph>* traversal = TraversalTemplate<Graph>::create (traversalKind, graph, terminator, max_depth, 500, 20);
     LOCAL (traversal);
 
     long long nbNodes = 0;
@@ -311,8 +311,8 @@ void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
-void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
+template<size_t span, typename Graph>
+void IterativeExtensions<span, Graph>::construct_linear_seqs (
     const std::string& L,
     const std::string& R,
     const std::string& output_file,
@@ -333,8 +333,8 @@ void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-template<size_t span, typename Node, typename Edge, typename Graph>
-void IterativeExtensions<span, Node, Edge, Graph>::buildSequence (
+template<size_t span, typename Graph>
+void IterativeExtensions<span, Graph>::buildSequence (
     const Node&     node,
     const Path_t<Node>&     consensusRight,
     size_t          nbNodes,

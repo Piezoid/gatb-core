@@ -74,16 +74,8 @@ template<typename Type, typename Number=u_int16_t> struct Abundance
     Abundance (const Type& val, const Number& abund) : value(val), abundance(abund) {}
     Abundance (const Type& val) : value(val), abundance(0) {}
     Abundance () :  abundance(0) { Type zero; zero.setVal(0); value = zero;}
-
-    /** Affectation operator.
-     * \param[in] a : object to be copied.
-     * \return the copied instance.
-     */
-    Abundance& operator=(const Abundance& a)
-    {
-        if (&a != this)  {  value = a.value;  abundance=a.abundance;  }
-        return *this;
-    }
+    Abundance(const Abundance&) = default;
+    Abundance& operator=(const Abundance&) = default;
 
     /** Get the abundance of the object
      * \return the abundance.

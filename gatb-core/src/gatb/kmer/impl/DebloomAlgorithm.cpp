@@ -44,9 +44,6 @@
 #include <map>
 #include <math.h>
 
-#include <gatb/tools/math/Integer.hpp>
-#include <gatb/tools/math/NativeInt8.hpp>
-
 #include <gatb/debruijn/impl/ContainerNode.hpp>
 
 #include <gatb/tools/storage/impl/StorageTools.hpp>

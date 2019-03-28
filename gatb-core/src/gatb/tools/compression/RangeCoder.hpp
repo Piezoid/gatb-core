@@ -32,7 +32,6 @@
 #include <sys/types.h>
 //#include "File.hpp"
 
-using namespace std;
 
 const u_int64_t TOP = (u_int64_t) 1<<56;
 const u_int64_t BOTTOM = (u_int64_t) 1<<48;
@@ -56,7 +55,7 @@ class Order0Model
 		unsigned int charCount();
 	
 	private:
-		vector<u_int64_t> _charRanges;
+		std::vector<u_int64_t> _charRanges;
 		int _charCount;
 		
 		void rescale();
@@ -100,8 +99,8 @@ class RangeEncoder : AbstractRangeCoder
 		bool updateModel; //Used by leon when PRINT_STAT macro is defined
 		
 	private:
-		vector<u_int8_t> _buffer;
-		vector<u_int8_t> _reversedBuffer;
+		std::vector<u_int8_t> _buffer;
+		std::vector<u_int8_t> _reversedBuffer;
 };
 
 //====================================================================================
@@ -114,13 +113,13 @@ class RangeDecoder : AbstractRangeCoder
 		RangeDecoder();
 		~RangeDecoder();
 		
-		void setInputFile(istream* inputFile, bool reversed=false);
+		void setInputFile(std::istream* inputFile, bool reversed=false);
 		u_int8_t nextByte(Order0Model& model);
 		void clear();
 		
 	private:
 		
-		istream* _inputFile;
+		std::istream* _inputFile;
 		u_int64_t _code;
 		bool _reversed;
 		

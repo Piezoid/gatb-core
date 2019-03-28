@@ -11,15 +11,14 @@
 #include "ograph.h" // just for kmerIndice
 
 
-using namespace std;
 
 
 class graph4{
 	public:
 		uint k,indiceUnitigs,nbElement,minimizer,minsize;
 		binSeq* unitigs;
-		vector<kmerIndice> left;
-		vector<kmerIndice> right;
+		std::vector<kmerIndice> left;
+		std::vector<kmerIndice> right;
 		void addvertex(string& str);
         void addtuple(tuple<binSeq,uint,uint>& tuple);
 		void addleftmin(unsigned int mini);
@@ -47,8 +46,8 @@ class graph4{
 };
 
 
-void compareUnitigs(const string& fileFa,const string& fileDot);
-void compareKmers(const string& fileFa,const string& fileDot);
+void compareUnitigs(const std::string& fileFa,const std::string& fileDot);
+void compareKmers(const std::string& fileFa,const std::string& fileDot);
 
 
 

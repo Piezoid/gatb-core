@@ -36,7 +36,6 @@
 #include "Leon.hpp"
 //#include "CompressionUtils.hpp"
 
-using namespace std;
 class Leon;
 //====================================================================================
 // ** AbstractHeaderCoder

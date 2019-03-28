@@ -50,6 +50,8 @@ public:
     /** Constructor.
      * \param[in] c : initial value of the large integer. */
     NativeInt16 (const u_int8_t& c=0)  {  value[0] = c;  }
+    NativeInt16(const NativeInt16&) = default;
+    NativeInt16& operator=(const NativeInt16&) = default;
 
     static const char* getName ()  { return "NativeInt16"; }
 

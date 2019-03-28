@@ -33,10 +33,12 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 /********************************************************************************/
 
 /** */
-template<typename GraphType, typename Node, typename Edge>
+template<typename GraphType>
 class Simplifications : public system::SmartPointer
 {
 public:
+    using Node = typename GraphType::Node;
+    using Edge = typename GraphType::Edge;
 
     Simplifications (/*const, removed because of cacheNonSimpleNodes calling a setStats */ GraphType * /* set as a pointer because could be null*/ graph, int nbCores, bool verbose = false);
 

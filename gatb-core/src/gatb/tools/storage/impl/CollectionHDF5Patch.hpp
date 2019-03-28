@@ -426,8 +426,7 @@ public:
         _data(0), _dataSize(0), _dataIdx(0), _isDone (true),
         _nbRead(0), _total(0), _memspaceId(0)
     {
-        _data = (Item*) MALLOC (_blockSize*sizeof(Item));
-        memset (_data, 0, _blockSize*sizeof(Item));
+        _data = (Item*) CALLOC (_blockSize, sizeof(Item));
         _total = _ref->_nbItems;
     }
 
@@ -437,9 +436,7 @@ public:
           _data(0), _dataSize(0), _dataIdx(0), _isDone (true),
           _nbRead(0), _total(0), _memspaceId(0)
     {
-        _data = (Item*) MALLOC (_blockSize*sizeof(Item));
-        memset (_data, 0, _blockSize*sizeof(Item));
-
+        _data = (Item*) CALLOC (_blockSize, sizeof(Item));
         _total = _ref->_common->_nbItems;
     }
 
@@ -458,7 +455,7 @@ public:
 
             if (_data)  { FREE (_data); }
             _data = (Item*) MALLOC (_blockSize*sizeof(Item));
-            memcpy (_data, it._data, _blockSize*sizeof(Item));
+            std::copy(it._data, it._data+_blockSize, _data);
         }
         return *this;
     }

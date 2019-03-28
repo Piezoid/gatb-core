@@ -66,8 +66,8 @@ static const char* simplprogressFormat2 = "removing bulges,  pass %2d ";
 static const char* simplprogressFormat3 = "removing ec,      pass %2d ";
 
 
-template<typename GraphType, typename Node, typename Edge>
-Simplifications<GraphType, Node, Edge>::Simplifications(GraphType *graph, int nbCores, bool verbose)
+template<typename GraphType>
+Simplifications<GraphType>::Simplifications(GraphType *graph, int nbCores, bool verbose)
         : _nbTipRemovalPasses(0), _nbBubbleRemovalPasses(0), _nbBulgeRemovalPasses(0), _nbECRemovalPasses(0), _graph(*graph), 
         _nbCores(nbCores), _firstNodeIteration(true), _verbose(verbose)
 {
@@ -109,8 +109,8 @@ Simplifications<GraphType, Node, Edge>::Simplifications(GraphType *graph, int nb
 
 /* this functions performs many rounds of all available graph simplifications 
  * this is what Minia does by default */
-template<typename GraphType, typename Node, typename Edge>
-void Simplifications<GraphType,Node,Edge>::simplify()
+template<typename GraphType>
+void Simplifications<GraphType>::simplify()
 {
     unsigned long nbTipsRemoved = 0, nbTipsRemovedPreviously = 0;
     unsigned long nbBubblesRemoved = 0, nbBubblesRemovedPreviously = 0;
@@ -192,8 +192,8 @@ void Simplifications<GraphType,Node,Edge>::simplify()
 // gets the mean abundance of neighboring paths around a branching node (excluding the path that starts with nodeToExclude, e.g. the tip itself)
 // only considers the first 100 kmers of neighboring paths
 //
-template<typename GraphType, typename Node, typename Edge>
-double Simplifications<GraphType,Node,Edge>::getMeanAbundanceOfNeighbors(Node& branchingNode, Node nodeToExclude)
+template<typename GraphType>
+double Simplifications<GraphType>::getMeanAbundanceOfNeighbors(Node& branchingNode, Node nodeToExclude)
 {
     GraphVector<Edge> neighbors = _graph.neighborsEdge(branchingNode);
     unsigned int nbNeighbors = 0;
@@ -226,8 +226,8 @@ double Simplifications<GraphType,Node,Edge>::getMeanAbundanceOfNeighbors(Node& b
 }
 
 // this needs to be in Graph.cpp of gatb-core
-template<typename GraphType, typename Node, typename Edge>
-string Simplifications<GraphType,Node,Edge>::path2string(Direction dir, Path_t<Node> p, Node endNode)
+template<typename GraphType>
+string Simplifications<GraphType>::path2string(Direction dir, Path_t<Node> p, Node endNode)
 {
     // naive conversion from path to string
     string p_str;
@@ -263,10 +263,10 @@ string unitig2string(Direction dir, Path_t<Node> p, Node endNode)
 // skip_first: skip N nucleotides at beginning of path
 // skip_last: skip N nucleotides at end of path
 // e.g. skip_first=skip_last=1 will skip the first and last kmer of path
-template<typename GraphType, typename Node, typename Edge>
-double Simplifications<GraphType,Node,Edge>::path2abundance(Direction dir, Path_t<Node> p, Node endNode, unsigned int skip_first, unsigned int skip_last)
+template<typename GraphType>
+double Simplifications<GraphType>::path2abundance(Direction dir, Path_t<Node> p, Node endNode, unsigned int skip_first, unsigned int skip_last)
 {
-    // the buildnode call here needs to be adapted for NodeGU
+    // the buildnode call here needs to be adapted for Node
 #if 0
     string s = path2string(dir,p,endNode);
     if (p.size() == 0) return 0;
@@ -301,8 +301,8 @@ inline string maybe_print(long value, string str)
  * but here i'm using it loosely to mean "Relative Coverage"
  * this function gets coverage of the simple path,
    then compares it to coverage of other paths connected to the last node of it. */
-template<typename GraphType, typename Node, typename Edge>
-bool Simplifications<GraphType,Node,Edge>::satisfyRCTC(double pathAbundance, Node& node, double RCTCcutoff, Direction dir)
+template<typename GraphType>
+bool Simplifications<GraphType>::satisfyRCTC(double pathAbundance, Node& node, double RCTCcutoff, Direction dir)
 {
     // explore the other two or more simple paths connected to that path, to get an abundance estimate
     // but first, get the branching node(s) the tip is connected to 
@@ -384,8 +384,8 @@ bool Simplifications<GraphType,Node,Edge>::satisfyRCTC(double pathAbundance, Nod
  *
  * so TODO: make it more strict. but for now I'm focusing on EC.
  */
-template<typename GraphType, typename Node, typename Edge>
-unsigned long Simplifications<GraphType,Node,Edge>::removeTips()
+template<typename GraphType>
+unsigned long Simplifications<GraphType>::removeTips()
 {
     unsigned int k = _graph.getKmerSize();
     unsigned int _maxTipLengthTopological = (unsigned int)((float)k * _tipLen_Topo_kMult); // aggressive with SPAdes length threshold, but no coverage criterion
@@ -421,7 +421,7 @@ unsigned long Simplifications<GraphType,Node,Edge>::removeTips()
     Dispatcher dispatcher (_nbCores);
 
     // nodes deleter stuff
-    NodesDeleter<Node,Edge,GraphType> nodesDeleter(_graph, nbNodes, _nbCores, _verbose);
+    NodesDeleter<GraphType> nodesDeleter(_graph, nbNodes, _nbCores, _verbose);
 
     dispatcher.iterate (*itNode, [&] (Node& node)
     {
@@ -660,8 +660,8 @@ static double unitigs_chain2abundance(vector<int> &unitigs_lengths, vector<int> 
 /* this function finds the most covered path between start and end node
  * note: the returned mean abundance does not include start and end nodes */
 // endNode is a node just after the bulge path. it's branching.
-template<typename GraphType, typename Node, typename Edge>
-void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path(
+template<typename GraphType>
+void Simplifications<GraphType>::heuristic_most_covered_path(
         Direction dir, Node& startNode, Node& endNode, 
         int traversal_depth, int& success, double &mean_abundance, 
         Path_t<Node> &res_path,
@@ -732,10 +732,10 @@ void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path(
         cout << "number of path-finding calls: " << nbCalls << endl;
 }
 
-#if 0 //the nt stuff is not supported in EdgeGU anymore, so i'm disabling this code
+#if 0 //the nt stuff is not supported in Edge anymore, so i'm disabling this code
 
-template<typename GraphType, typename Node, typename Edge>
-void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path_old(
+template<typename GraphType>
+void Simplifications<GraphType>::heuristic_most_covered_path_old(
         Direction dir, Node& startNode, Node& endNode,
         int traversal_depth, Path_t<Node>& current_path, set<Node>& usedNode, int& success, vector<int>& abundances,
         unsigned int backtrackingLimit, Node *avoidFirstNode, 
@@ -840,8 +840,8 @@ void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path_old(
 
 /* faster variant of the algo above, with cached simple paths instead of traversing node-by-node */
 // Note: not totally equivalent to the kmer version, some bubbles are found in the kmer version but not in this one
-template<typename GraphType, typename Node, typename Edge>
-void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path(
+template<typename GraphType>
+void Simplifications<GraphType>::heuristic_most_covered_path(
         Direction dir, Node& startNode, Node& endNode, 
         int traversal_depth, Path_t<Node>& current_path, set<Node>& usedNode, int& success, double &mean_abundance,
         unsigned int backtrackingLimit, Node *avoidFirstNode, 
@@ -1008,8 +1008,8 @@ void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path(
 
 /* GraphUnitigs version of the algo above. 
  * doesn't construct a Path anymore, and handles abundances differently, so i preferred to make another function rather than re-using the one above */
-template<typename GraphType, typename Node, typename Edge>
-void Simplifications<GraphType,Node,Edge>::heuristic_most_covered_path_unitigs(
+template<typename GraphType>
+void Simplifications<GraphType>::heuristic_most_covered_path_unitigs(
         Direction dir, Node& startNode, Node& endNode, 
         int traversal_depth, set<Node>& usedNode, int& success, vector<int>& unitigs_lengths, vector<int>& unitigs_abundances, double& mean_abundance,
         unsigned int backtrackingLimit, Node *avoidFirstNode, 
@@ -1275,8 +1275,8 @@ class DebugBR
  * so we're looking for alternative paths which are of length [bulgelen-delta;bulgelen+delta]
  *
  */ 
-template<typename GraphType, typename Node, typename Edge>
-unsigned long Simplifications<GraphType,Node,Edge>::removeBulges()
+template<typename GraphType>
+unsigned long Simplifications<GraphType>::removeBulges()
 {
     unsigned int k = _graph.getKmerSize();
     unsigned int maxBulgeLength = std::max((unsigned int)((double)k * _bulgeLen_kMult), (unsigned int)(k + _bulgeLen_kAdd)); // SPAdes, exactly
@@ -1322,7 +1322,7 @@ unsigned long Simplifications<GraphType,Node,Edge>::removeBulges()
     // parallel stuff: create a dispatcher ; support atomic operations
     Dispatcher dispatcher (_nbCores);
 
-    NodesDeleter<Node,Edge,GraphType> nodesDeleter(_graph, nbNodes, _nbCores, _verbose);
+    NodesDeleter<GraphType> nodesDeleter(_graph, nbNodes, _nbCores, _verbose);
 
 #ifdef SIMPLIFICATION_LAMBDAS 
     dispatcher.iterate (itNode, [&] (Node& node) {
@@ -1608,8 +1608,8 @@ unsigned long Simplifications<GraphType,Node,Edge>::removeBulges()
   so anyway, since we're not computing the coverage model like SPAdes does, I'm going to use RCTC 4 (found that RCTC 2 gives too many misassemblies)
 
 */
-template<typename GraphType, typename Node, typename Edge>
-unsigned long Simplifications<GraphType,Node,Edge>::removeErroneousConnections()
+template<typename GraphType>
+unsigned long Simplifications<GraphType>::removeErroneousConnections()
 {
     unsigned int k = _graph.getKmerSize();
     unsigned int maxECLength = (unsigned int)((float)k * _ecLen_kMult) ;  // SPAdes mode 
@@ -1645,7 +1645,7 @@ unsigned long Simplifications<GraphType,Node,Edge>::removeErroneousConnections()
     Dispatcher dispatcher (_nbCores);
 
     // parallel stuff
-    NodesDeleter<Node,Edge,GraphType> nodesDeleter(_graph, nbNodes, _nbCores, _verbose);
+    NodesDeleter<GraphType> nodesDeleter(_graph, nbNodes, _nbCores, _verbose);
 
 #ifdef SIMPLIFICATION_LAMBDAS 
     dispatcher.iterate (itNode, [&] (Node& node) {
@@ -1833,7 +1833,9 @@ unsigned long Simplifications<GraphType,Node,Edge>::removeErroneousConnections()
 }
 
 // instantiation
-template class Simplifications<Graph, Node, Edge>; 
+#if GATB_USE_VARIANTS
+    template class Simplifications<GraphPoly>;
+#endif
 
 /********************************************************************************/
 } } } } /* end of namespaces. */

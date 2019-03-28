@@ -29,15 +29,78 @@
 #include <gatb/tools/math/LargeInt.hpp>
 #include <gatb/system/api/Exception.hpp>
 
+#ifdef GATB_USE_VARIANTS
 #include <boost/variant.hpp>
-#include <boost/mpl/vector.hpp>
 #include <boost/mpl/pop_front.hpp>
 #include <boost/mpl/int.hpp>
+#endif
+
+#include <boost/mpl/vector.hpp>
 #include <boost/mpl/at.hpp>
 
 /********************************************************************************/
 namespace gatb  {  namespace core  { namespace tools {  namespace math  {
 /********************************************************************************/
+
+
+/** \brief Allows to dispatch a functor over a range of kmer size, providing the right LargeInt's span for holding the kmer
+ */
+template<typename IntegerList>
+struct Dispatch {
+    /** Apply a functor with the best template specialization according to the provided kmer size. */
+    template <template<size_t> class Functor, typename Parameter>
+    static void apply (size_t kmerSize, Parameter params)
+    {
+        typedef typename boost::mpl::empty<IntegerList>::type empty;
+
+        /** We delegate the execution to the Apply structure, defined with two template specializations
+         * that allows recursion. */
+        Apply<Functor, Parameter, IntegerList, empty::value>::execute (kmerSize, params);
+    }
+
+private:
+    /** Now, we define the Apply structure that allows to find the correct implementation of LargeInt
+     * according to the given kmerSize (at runtime). */
+
+    /** My initial guess didn't work, although it should have (pb with boost::mpl ?)... I went back on an implementation
+     * similar to http://www.developpez.net/forums/d1193120/c-cpp/cpp/bibliotheques/boost/vecteur-vide-boost-mpl */
+
+    /** Template definition. */
+    template<template<size_t> class Functor, class Parameter, class T, bool empty> struct Apply  {};
+
+    /** Template specialization for a vector of types. */
+    template<template<size_t> class Functor, class Parameter, class T>
+    struct Apply<Functor, Parameter, T, false>
+    {
+        static void execute (size_t kmerSize, Parameter params)
+        {
+            /** Shortcut : we get the current kmer size threshold. */
+            static const size_t K = boost::mpl::front<T>::type::value;
+
+            /** We check whether the kmerSize parameter falls into the current K threshold.
+             * If yes, we run the functor and leave. */
+            if (kmerSize < K)  { Functor<K>() (params);  return; }
+
+            typedef typename boost::mpl::pop_front<T>::type tail;
+            typedef typename boost::mpl::empty<tail>::type  empty;
+
+            /** The current K threshold doesn't work, try the next kmer value. */
+            Apply<Functor, Parameter, tail, empty::value>::execute (kmerSize, params);
+        }
+    };
+
+    /** Template specialization for an empty type. */
+    template<template<size_t> class Functor, class Parameter, class T>
+    struct Apply<Functor, Parameter, T, true>
+    {
+        static void execute (size_t kmerSize, Parameter params)
+        {
+            throw system::Exception ("Failure because of unhandled kmer size %d", kmerSize);
+        }
+    };
+};
+
+#ifdef GATB_USE_VARIANTS
 
 /** \brief Class for large integers calculus
  *
@@ -56,7 +119,7 @@ namespace gatb  {  namespace core  { namespace tools {  namespace math  {
  *
  */
 template <typename IntegerList>
-class IntegerTemplate
+class IntegerTemplate : public Dispatch<IntegerList>
 {
 private:
 
@@ -72,17 +135,6 @@ public:
      typedef typename boost::variant<LargeInt<1>, LargeInt<2>, LargeInt<3>, LargeInt<4> > Type;
      I checked: the new make_variant_over has no impact on runtime performance. Probably not surprising, as this code is probably purely compile-time.
      */
-
-    /** Apply a functor with the best template specialization according to the provided kmer size. */
-    template <template<size_t> class Functor, typename Parameter>
-    static void apply (size_t kmerSize, Parameter params)
-    {
-        typedef typename boost::mpl::empty<IntegerList>::type empty;
-
-        /** We delegate the execution to the Apply structure, defined with two template specializations
-         * that allows recursion. */
-        Apply<Functor, Parameter, IntegerList, empty::value>::execute (kmerSize, params);
-    }
 
     /** Constructor. Note that the type (see getType and setType) has to be first initialized
      * otherwise no instance can be created (exception thrown).
@@ -438,47 +490,6 @@ private:
 
           Type& operator *()       { return v; }
     const Type& operator *() const { return v; }
-
-
-    /** Now, we define the Apply structure that allows to find the correct implementation of LargeInt
-     * according to the given kmerSize (at runtime). */
-
-    /** My initial guess didn't work, although it should have (pb with boost::mpl ?)... I went back on an implementation
-     * similar to http://www.developpez.net/forums/d1193120/c-cpp/cpp/bibliotheques/boost/vecteur-vide-boost-mpl */
-
-    /** Template definition. */
-    template<template<size_t> class Functor, class Parameter, class T, bool empty> struct Apply  {};
-
-    /** Template specialization for a vector of types. */
-    template<template<size_t> class Functor, class Parameter, class T>
-    struct Apply<Functor, Parameter, T, false>
-    {
-        static void execute (size_t kmerSize, Parameter params)
-        {
-            /** Shortcut : we get the current kmer size threshold. */
-            static const size_t K = boost::mpl::front<T>::type::value;
-
-            /** We check whether the kmerSize parameter falls into the current K threshold.
-             * If yes, we run the functor and leave. */
-            if (kmerSize < K)  { Functor<K>() (params);  return; }
-
-            typedef typename boost::mpl::pop_front<T>::type tail;
-            typedef typename boost::mpl::empty<tail>::type  empty;
-
-            /** The current K threshold doesn't work, try the next kmer value. */
-            Apply<Functor, Parameter, tail, empty::value>::execute (kmerSize, params);
-        }
-    };
-
-    /** Template specialization for an empty type. */
-    template<template<size_t> class Functor, class Parameter, class T>
-    struct Apply<Functor, Parameter, T, true>
-    {
-        static void execute (size_t kmerSize, Parameter params)
-        {
-            throw system::Exception ("Failure because of unhandled kmer size %d", kmerSize);
-        }
-    };
 };
 
 
@@ -495,12 +506,23 @@ private:
     Type v;
 };
 
+#else /* GATB_USE_VARIANTS */
+
+// Some code use the dispatcher from IntegerTemplate
+template <typename IntegerList>
+class IntegerTemplate : public Dispatch<IntegerList> {};
+
+template <typename IntegerList>
+class IntegerTemplateDummy {};
+
+#endif /* GATB_USE_VARIANTS */
 /********************************************************************************/
 
 /** We define a mpl::vector holding the int_<K> types, one per kmer size value chosen by the user. */
 typedef boost::mpl::vector<KSIZE_LIST_TYPE>::type  IntegerList;
 
-/** We specialize IntegerTemplate class based on the list of kmer size values chosen by the user. */
+/** We ~~specialize~~*instantiate* IntegerTemplate class based on the list of kmer size values chosen by the user. */
+//FIXME::
 typedef  IntegerTemplate <IntegerList> Integer;
 typedef  IntegerTemplateDummy<IntegerList> IntegerDummy;
 

@@ -42,9 +42,6 @@
 
 #include <gatb/tools/misc/api/IProperty.hpp>
 
-#include <gatb/tools/math/NativeInt8.hpp>
-
-#include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
 
 #include <string>
 #include <sstream>

@@ -20,6 +20,8 @@
 /********************************************************************************/
 
 #include <gatb/tools/storage/impl/Storage.hpp>
+#include <gatb/tools/math/NativeInt8.hpp>
+#include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
 
 /********************************************************************************/
 namespace gatb { namespace core {  namespace tools {  namespace storage {  namespace impl {

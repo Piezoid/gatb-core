@@ -17,6 +17,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *****************************************************************************/
 
+#ifndef _GATB_CORE_SYSTEM_CONFIG_HPP_
+#define _GATB_CORE_SYSTEM_CONFIG_HPP_
+
+#define GATB_USE_VARIANTS 1
 #define INT128_FOUND            ${INT128_FOUND}
 
 #define KSIZE_LIST    ${KSIZE_STRING_COMMA}
@@ -32,3 +36,5 @@
 
 #define GATB_HDF5_NB_ITEMS_PER_BLOCK (4*1024)
 #define GATB_HDF5_CLEANUP_WORKAROUND 4
+
+#endif /* _GATB_CORE_SYSTEM_CONFIG_HPP_ */

@@ -37,8 +37,6 @@
 #include <gatb/tools/misc/api/IProperty.hpp>
 #include <gatb/tools/misc/impl/TimeInfo.hpp>
 
-#include <gatb/tools/math/NativeInt8.hpp>
-
 /********************************************************************************/
 namespace gatb      {
 namespace core      {

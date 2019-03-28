@@ -52,6 +52,8 @@ public:
     /** Constructor.
      * \param[in] c : initial value of the large integer. */
     NativeInt64 (const u_int64_t& c=0)  {  value = c;  }
+    NativeInt64(const NativeInt64&) = default;
+    NativeInt64& operator=(const NativeInt64&) = default;
 
     static const char* getName ()  { return "NativeInt64"; }
 

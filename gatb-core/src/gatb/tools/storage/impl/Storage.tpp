@@ -17,6 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *****************************************************************************/
 
+#include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
+
 /********************************************************************************/
 namespace gatb  {  namespace core  {  namespace tools  {  namespace storage  {  namespace impl {
 /********************************************************************************/

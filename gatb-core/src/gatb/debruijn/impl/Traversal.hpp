@@ -96,10 +96,12 @@ struct TraversalStats
  * \snippet traversal2.cpp  snippet1_traversal
  *
  */
-template <typename Node, typename Edge, typename Graph>
+template <typename Graph>
 class TraversalTemplate: public system::SmartPointer
 {
 public:
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
 
     /** Factory method that creates an instance of Traversal
      * \param[in] type : kind of traversal
@@ -109,10 +111,10 @@ public:
      * \param[in] max_depth : maximum depth of the traversal
      * \param[in] max_breadth : maximum depth of the traversal
      */
-    static TraversalTemplate<Node,Edge,Graph>* create (
+    static TraversalTemplate<Graph>* create (
         tools::misc::TraversalKind  type,
         const Graph&                graph,
-        TerminatorTemplate<Node,Edge,Graph>&                         terminator,
+        TerminatorTemplate<Graph>&                         terminator,
         int                         max_len     = defaultMaxLen,
         int                         max_depth   = defaultMaxDepth,
         int                         max_breadth = defaultMaxBreadth
@@ -126,10 +128,10 @@ public:
      * \param[in] max_depth : maximum depth of the traversal
      * \param[in] max_breadth : maximum depth of the traversal
      */
-    static TraversalTemplate<Node,Edge,Graph>* create (
+    static TraversalTemplate<Graph>* create (
         const std::string&  type,
         const Graph&        graph,
-        TerminatorTemplate<Node,Edge,Graph>&                 terminator,
+        TerminatorTemplate<Graph>&                 terminator,
         int                 max_len     = defaultMaxLen,
         int                 max_depth   = defaultMaxDepth,
         int                 max_breadth = defaultMaxBreadth
@@ -190,14 +192,14 @@ protected:
     /** */
     TraversalTemplate (
         const Graph& graph,
-        TerminatorTemplate<Node,Edge,Graph>         & terminator,
+        TerminatorTemplate<Graph>         & terminator,
         int maxlen,
         int max_depth,
         int max_breadth
     );
 
     const Graph& graph;
-    TerminatorTemplate<Node,Edge,Graph>&          terminator;
+    TerminatorTemplate<Graph>&          terminator;
 
     int maxlen;
     int max_depth;
@@ -217,10 +219,12 @@ protected:
  *
  * This class returns empty Path as a result of traverse.
  */
-template <typename Node, typename Edge, typename Graph>
-class NullTraversalTemplate: public TraversalTemplate<Node,Edge,Graph>
+template <typename Graph>
+class NullTraversalTemplate: public TraversalTemplate<Graph>
 {
 public:
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
 
     /** Factory method that creates an instance of NullTraversal
      * \param[in] graph : graph object to be traversed
@@ -231,11 +235,11 @@ public:
      */
     NullTraversalTemplate (
         const Graph& graph,
-        TerminatorTemplate<Node,Edge,Graph>& terminator,
+        TerminatorTemplate<Graph>& terminator,
         int maxlen      = NullTraversalTemplate::defaultMaxLen,
         int max_depth   = NullTraversalTemplate::defaultMaxDepth,
         int max_breadth = NullTraversalTemplate::defaultMaxBreadth
-    ) : TraversalTemplate<Node,Edge,Graph> (graph, terminator, maxlen, max_depth, max_breadth) {}
+    ) : TraversalTemplate<Graph> (graph, terminator, maxlen, max_depth, max_breadth) {}
 
     /** Get the name of the traversal
      * \return the name */
@@ -250,10 +254,12 @@ private:
 
 /** \brief Implementation of Traversal that produces unitigs.
  */
-template <typename Node, typename Edge, typename Graph>
-class SimplePathsTraversalTemplate: public TraversalTemplate<Node,Edge,Graph>
+template <typename Graph>
+class SimplePathsTraversalTemplate: public TraversalTemplate<Graph>
 {
 public:
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
 
     /** Factory method that creates an instance of SimplePathsTraversal
      * \param[in] graph : graph object to be traversed
@@ -264,7 +270,7 @@ public:
      */
     SimplePathsTraversalTemplate (
         const Graph& graph,
-        TerminatorTemplate<Node,Edge,Graph>& terminator,
+        TerminatorTemplate<Graph>& terminator,
         int maxlen      = SimplePathsTraversalTemplate::defaultMaxLen,
         int max_depth   = SimplePathsTraversalTemplate::defaultMaxDepth,
         int max_breadth = SimplePathsTraversalTemplate::defaultMaxBreadth
@@ -284,10 +290,14 @@ private:
 
 /** \brief Implementation of Traversal that produces contigs.
  */
-template <typename Node, typename Edge, typename Graph>
-class MonumentTraversalTemplate: public TraversalTemplate<Node,Edge,Graph>
+template <typename Graph>
+class MonumentTraversalTemplate: public TraversalTemplate<Graph>
 {
 public:
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
+    using Path = Path_t<Node>;
+    using Path_set = std::set<Path>;
 
     /** Factory method that creates an instance of MonumentTraversal
      * \param[in] graph : graph object to be traversed
@@ -298,7 +308,7 @@ public:
      */
     MonumentTraversalTemplate (
         const Graph& graph,
-        TerminatorTemplate<Node,Edge,Graph>&          terminator,
+        TerminatorTemplate<Graph>&          terminator,
         int maxlen      = MonumentTraversalTemplate::defaultMaxLen,
         int max_depth   = MonumentTraversalTemplate::defaultMaxDepth,
         int max_breadth = MonumentTraversalTemplate::defaultMaxBreadth
@@ -349,7 +359,7 @@ private:
         std::set<Node>& all_involved_extensions
     );
  
-    std::set<Path_t<Node> > all_consensuses_between (
+    Path_set all_consensuses_between (
         Direction    dir,
         Node& startNode,
         Node& endNode,
@@ -363,19 +373,19 @@ private:
 
     void mark_extensions (std::set<Node>& extensions_to_mark);
 
-    Path_t<Node> most_abundant_consensus(std::set<Path_t<Node> >& consensuses);
+    Path most_abundant_consensus(std::set<Path_t<Node> >& consensuses);
 
     static const int consensuses_identity = 80; // traversing bubble if paths are all pair-wise identical by 80% 
     //(used to be > 90% in legacy minia) // by legacy minia i mean minia 1 and minia 2 up to the assembly algo rewrite in may 2015
 };
 
 /* typedef for compatibility with all existing GATB tools */
-
-typedef TraversalTemplate<Node, Edge, Graph> Traversal; 
-typedef MonumentTraversalTemplate<Node, Edge, Graph> MonumentTraversal; 
-typedef NullTraversalTemplate<Node, Edge, Graph> NullTraversal; 
-typedef SimplePathsTraversalTemplate<Node, Edge, Graph> SimplePathsTraversal;
-
+#if GATB_USE_VARIANTS
+typedef TraversalTemplate<GraphPoly> TraversalPoly;
+typedef MonumentTraversalTemplate<GraphPoly> MonumentTraversalPoly;
+typedef NullTraversalTemplate<GraphPoly> NullTraversalPoly;
+typedef SimplePathsTraversalTemplate<GraphPoly> SimplePathsTraversalPoly;
+#endif
 
 
 /********************************************************************************/

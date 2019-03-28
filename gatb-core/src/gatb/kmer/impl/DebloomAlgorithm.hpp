@@ -30,7 +30,6 @@
 
 #include <gatb/tools/misc/impl/Algorithm.hpp>
 
-#include <gatb/tools/math/Integer.hpp>
 #include <gatb/tools/designpattern/impl/IteratorHelpers.hpp>
 #include <gatb/tools/designpattern/impl/Command.hpp>
 #include <gatb/tools/misc/impl/TimeInfo.hpp>

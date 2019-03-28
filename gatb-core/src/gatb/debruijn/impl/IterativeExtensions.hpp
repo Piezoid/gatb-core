@@ -38,12 +38,15 @@ namespace impl      {
  * The implementation relies on the Graph class of GATB-CORE, which provides the
  * API to traverse a de Bruijn graph.
  */
-template <size_t span=KMER_DEFAULT_SPAN, typename Node=Node_t<>, typename Edge=Edge_t<Node_t<> >, typename Graph_t=Graph>
+template <size_t span, typename Graph_t>
 class IterativeExtensions
 {
 public:
 
     /** ShortcutS. */
+    using Graph = Graph_t;
+    using Node = typename Graph::Node;
+    using Edge = typename Graph::Edge;
     typedef typename kmer::impl::Kmer<span>::ModelCanonical       Model;
     typedef typename kmer::impl::Kmer<span>::ModelCanonical::Kmer KmerModel;
     typedef typename kmer::impl::Kmer<span>::ModelDirect       ModelDirect;
@@ -61,8 +64,8 @@ public:
      * \param[in] max_nodes : max nodes
      */
     IterativeExtensions (
-        const Graph_t&                  graph,
-        TerminatorTemplate<Node,Edge,Graph_t>&                   terminator,
+        const Graph&                  graph,
+        TerminatorTemplate<Graph>&    terminator,
         tools::misc::TraversalKind    traversalKind,
         tools::misc::ExtendStopMode_e whenToStop,
         tools::misc::SearchMode_e     searchMode,
@@ -101,8 +104,8 @@ public:
 
 private:
 
-    const Graph_t&                  graph;
-    TerminatorTemplate<Node,Edge,Graph_t>&                   terminator;
+    const Graph&                  graph;
+    TerminatorTemplate<Graph>&    terminator;
     tools::misc::TraversalKind      traversalKind;
     tools::misc::ExtendStopMode_e   when_to_stop_extending;
     tools::misc::SearchMode_e       searchMode;

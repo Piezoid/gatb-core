@@ -1572,11 +1572,11 @@ struct Kmer
          * \param[in] abund : abundance for the kmer */
         Count(const Type& val, const CountNumber& abund) : tools::misc::Abundance<Type,CountNumber>(val, abund) {}
 
+        Count(const Count&) = default;
+        Count& operator=(const Count&) = default;
+
         /** Default constructor. */
         Count() : tools::misc::Abundance<Type,CountNumber>() {}
-
-        /** Copy constructor. */
-        Count(const Count& val) : tools::misc::Abundance<Type,CountNumber>(val.value, val.abundance) {}
 
         /** Comparison operator
          * \param[in] other : object to be compared to

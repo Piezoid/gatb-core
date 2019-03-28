@@ -75,13 +75,8 @@ using namespace gatb::core::tools::storage::impl;
 using namespace gatb::core::tools::misc;
 using namespace gatb::core::tools::misc::impl;
 
-#undef NDEBUG
 #include <cassert>
 
-#define DEBUG(a)  //a
-
-// some shorthands for unitigs
-#define BaseGraph GraphTemplate< NodeFast<span>, EdgeFast<span>, GraphDataVariantFast<span> >
 
 #ifndef _GATB_CORE_DEBRUIJN_IMPL_GRAPHUNITIGSCPP_
 #define _GATB_CORE_DEBRUIJN_IMPL_GRAPHUNITIGSCPP_
@@ -175,7 +170,7 @@ GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (const char* fmt,
 *********************************************************************/
 template<size_t span>
 GraphUnitigsTemplate<span>::GraphUnitigsTemplate (size_t kmerSize)
-    : GraphTemplate<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span> >(kmerSize)
+    : BaseGraph(kmerSize)
 {
     // will call Graph's constructor for (kmerSize), no big deal
     //std::cout << "kmersize graphUtemplate constructor" << std::endl;
@@ -211,14 +206,14 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (bank::IBank* bank, tools::misc
     BaseGraph::_kmerSize = params->getInt (STR_KMER_SIZE);
     size_t integerPrecision = params->getInt (STR_INTEGER_PRECISION);
     /** We configure the data variant according to the provided kmer size. */
-    BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize, integerPrecision);
+    BaseGraph::setKmerSize( BaseGraph::_kmerSize, integerPrecision);
     string unitigs_filename = "dummy.unitigs.fa"; // because there's already a bank, but we don't know its name maybe? so just to be safe, i'm setting a dummy unitigs file. anyway, this constructor is only called in tests i think, not by minia for sure.
 
     params->setInt(STR_REPARTITION_TYPE, 1);
     params->setInt(STR_MINIMIZER_TYPE, 1);
 
     /** We build the graph according to the wanted precision. */
-    boost::apply_visitor ( build_visitor_solid<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(*this, bank,params),  *(GraphDataVariantFast<span>*)BaseGraph::_variant);
+    BaseGraph::visit_data ( GraphBase::build_visitor_solid(*this, bank,params));
 
     build_unitigs_postsolid(unitigs_filename, params);
 
@@ -226,7 +221,7 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (bank::IBank* bank, tools::misc
 }
 
 static /* important that it's static! else TemplateSpecialization8 will complain*/
-char revcomp (char s) {
+inline char revcomp (char s) {
 	if (s == 'A') return 'T';
 	else if (s == 'C') return 'G';
 	else if (s == 'G') return 'C';
@@ -238,7 +233,7 @@ char revcomp (char s) {
 	return 'X';
 }
 
-static string revcomp (const string &s) {
+static inline string revcomp (const string &s) {
 	string rc;
 	for (signed int i = s.length() - 1; i >= 0; i--) {rc += revcomp(s[i]);}
 	return rc;
@@ -299,7 +294,7 @@ void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_fil
     BaseGraph::getGroup().setProperty ("state",          Stringify::format("%d", BaseGraph::_state));
 }
 
-static void
+static inline void
 parse_unitig_header(string header, float& mean_abundance, vector<uint64_t>& inc, vector<uint64_t>& outc)
 {
     bool debug = false;
@@ -357,14 +352,14 @@ parse_unitig_header(string header, float& mean_abundance, vector<uint64_t>& inc,
     }
 }
 
-static void
+static inline void
 insert_navigational_vector(std::vector<uint64_t> &v, std::vector<uint64_t>& to_insert, std::vector<uint64_t> &v_map)
 {
     v_map.push_back(v.size());
     v.insert(v.end(), to_insert.begin(), to_insert.end());
 }
 
-static void
+static inline  void
 insert_compressed_navigational_vector(std::vector<uint64_t> &v, std::vector<uint64_t>& to_insert, dag::dag_vector &v_map)
 {
     v_map.push_back(to_insert.size());
@@ -377,7 +372,7 @@ insert_compressed_navigational_vector(std::vector<uint64_t> &v, std::vector<uint
 
 // here we dynamically insert at the next open space in the vector after the position indicated by the v_map (pos variable)
 // since we precomputed v_map, we know that there is no way to overflow
-static void
+static inline void
 insert_navigational_vector_gfa(std::vector<uint64_t> &v, uint64_t to_insert, uint64_t pos)
 {
     bool inserted = false;
@@ -413,14 +408,14 @@ class range {
 };
 
 template <class Container>
-range<typename Container::const_iterator> 
+static inline range<typename Container::const_iterator>
 make_range(Container& c, size_t b, size_t e) {
     return range<typename Container::const_iterator> (c.begin()+b, c.begin()+e);
 }
 
 
 /* returns an iterator of all incoming or outcoming edges from an unitig */
-static 
+static inline
 range<std::vector<uint64_t>::const_iterator >
 get_from_navigational_vector(const std::vector<uint64_t> &v, uint64_t utig, const std::vector<uint64_t> &v_map) 
 {
@@ -438,7 +433,7 @@ get_from_navigational_vector(const std::vector<uint64_t> &v, uint64_t utig, cons
 
 
 /* compressed counterpart of the function above */
-static 
+static inline
 range<std::vector<uint64_t>::const_iterator >
 get_from_compressed_navigational_vector(const std::vector<uint64_t> &v, uint64_t utig, const dag::dag_vector &v_map) 
 {
@@ -909,10 +904,10 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
         props->readXML (ss);  BaseGraph::getInfo().add (1, props);
         
         /** We configure the data variant according to the provided kmer size. */
-        BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize);
+        BaseGraph::setKmerSize( BaseGraph::_kmerSize);
 
         /* call the configure visitor to load everything (e.g. solid kmers, MPHF, etc..) that's been done so far */
-        boost::apply_visitor ( configure_visitor<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(*this, BaseGraph::getStorage()),  *(GraphDataVariantFast<span>*)BaseGraph::_variant);
+        BaseGraph::visit_data ( GraphBase::configure_visitor(*this, BaseGraph::getStorage()));
 
         build_unitigs_postsolid(unitigs_filename, params);
       
@@ -930,13 +925,13 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
         size_t integerPrecision = params->getInt (STR_INTEGER_PRECISION);
 
         /** We configure the data variant according to the provided kmer size. */
-        BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize, integerPrecision);
+        BaseGraph::setKmerSize( BaseGraph::_kmerSize, integerPrecision);
 
         /** We build a Bank instance for the provided reads uri. */
         bank::IBank* bank = Bank::open (params->getStr(STR_URI_INPUT));
 
         /** We build the graph according to the wanted precision. */
-        boost::apply_visitor ( build_visitor_solid<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(*this, bank,params),  *(GraphDataVariantFast<span>*)BaseGraph::_variant);
+        BaseGraph::visit_data ( GraphBase::build_visitor_solid(*this, bank,params));
 
         build_unitigs_postsolid(unitigs_filename, params);
         
@@ -945,132 +940,6 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
     }
 }
 
-template<size_t span>
-GraphUnitigsTemplate<span>::GraphUnitigsTemplate ()
-    : GraphTemplate<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>()
-{
-}
-
-template<size_t span>
-GraphUnitigsTemplate<span>::GraphUnitigsTemplate (const GraphUnitigsTemplate<span>& graph)
-    : GraphTemplate<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(graph)
-{
-    // will call Graph's constructor
-    std::cout << "GraphU copy-constructor called" << std::endl;
-    // doesn't it need other stuff to be copied tho? like all that's in operator=. so weird.
-}
-
-/*********************************************************************
-** PURPOSE : copy assignment operator
-*********************************************************************/
-template<size_t span>
-GraphUnitigsTemplate<span>& GraphUnitigsTemplate<span>::operator= (GraphUnitigsTemplate<span> const& graph)
-{
-    std::cout <<"assignment constructor called" << std::endl;
-    if (this != &graph)
-    {
-        BaseGraph::_kmerSize        = graph._kmerSize;
-        BaseGraph::_storageMode     = graph._storageMode;
-        BaseGraph::_name            = graph._name;
-        BaseGraph::_info            = graph._info;
-        BaseGraph::_state           = graph._state;
-
-        BaseGraph::setStorage (graph._storage);
-
-        if (graph._variant)  {  *((GraphDataVariantFast<span>*)BaseGraph::_variant) = *((GraphDataVariantFast<span>*)graph._variant);  }
-
-        // don't forget those!
-        // I garantee that bugs will occur if i add a GraphUnitigs member variable and forget to copy it here
-        // DO ALSO THE MOVE FUNCTION BELOW
-    
-        incoming  = graph.incoming;
-        outcoming = graph.outcoming;
-        incoming_map  = graph.incoming_map;
-        outcoming_map = graph.outcoming_map;
-        dag_incoming  = graph.dag_incoming;
-        dag_outcoming = graph.dag_outcoming;
-        dag_incoming_map  = graph.dag_incoming_map;
-        dag_outcoming_map = graph.dag_outcoming_map;
-        compress_navigational_vectors = graph.compress_navigational_vectors;
-        pack_unitigs = graph.pack_unitigs;
-        packed_unitigs = graph.packed_unitigs;
-        packed_unitigs_sizes = graph.packed_unitigs_sizes;
-        unitigs = graph.unitigs;
-        unitigs_sizes = graph.unitigs_sizes;
-        unitigs_mean_abundance = graph.unitigs_mean_abundance;
-        unitigs_traversed = graph.unitigs_traversed;
-        unitigs_deleted = graph.unitigs_deleted;
-        nb_unitigs = graph.nb_unitigs;
-        nb_unitigs_extremities = graph.nb_unitigs_extremities;
-        
-    }
-    return *this;
-}
-
-/*********************************************************************
-** PURPOSE : move assignment operator
-** this seems important, if it was not there, in Minia, the line "graph = create (..)" would incur a copy of the graph :/ didn't investigate further, implementing that move operator was enough to prevent the copy.
-// also the copy-and-swap idiom didn't seem to help, i got infinite loop because of effect described here http://stackoverflow.com/questions/25942131/should-copy-assignment-operator-leverage-stdswap-as-a-general-rule
-*********************************************************************/
-template<size_t span>
-GraphUnitigsTemplate<span>& GraphUnitigsTemplate<span>::operator= (GraphUnitigsTemplate<span> && graph)
-{
-    //std::cout <<"move constructor called" << std::endl;
-    
-    if (this != &graph)
-    {
-        BaseGraph::_kmerSize        = graph._kmerSize;
-        BaseGraph::_storageMode     = graph._storageMode;
-        BaseGraph::_name            = graph._name;
-        BaseGraph::_info            = graph._info;
-        BaseGraph::_state           = graph._state;
-
-        BaseGraph::setStorage (graph._storage);
-
-        if (graph._variant)  {  *((GraphDataVariantFast<span>*)BaseGraph::_variant) = *((GraphDataVariantFast<span>*)graph._variant);  }
-
-        // don't forget those!
-        // I garantee that bugs will occur if i add a GraphUnitigs member variable and forget to copy it here
-    
-        incoming  = std::move(graph.incoming);
-        outcoming = std::move(graph.outcoming);
-        incoming_map  = std::move(graph.incoming_map);
-        outcoming_map = std::move(graph.outcoming_map);
-        dag_incoming  = std::move(graph.dag_incoming);
-        dag_outcoming = std::move(graph.dag_outcoming);
-        dag_incoming_map  = std::move(graph.dag_incoming_map);
-        dag_outcoming_map = std::move(graph.dag_outcoming_map);
-        compress_navigational_vectors = std::move(graph.compress_navigational_vectors);
-        pack_unitigs = std::move(graph.pack_unitigs);
-        packed_unitigs = std::move(graph.packed_unitigs);
-        packed_unitigs_sizes = std::move(graph.packed_unitigs_sizes);
-        unitigs = std::move(graph.unitigs);
-        unitigs_sizes = std::move(graph.unitigs_sizes);
-        unitigs_mean_abundance = std::move(graph.unitigs_mean_abundance);
-        unitigs_traversed = std::move(graph.unitigs_traversed);
-        unitigs_deleted = std::move(graph.unitigs_deleted);
-        nb_unitigs = std::move(graph.nb_unitigs);
-        nb_unitigs_extremities = std::move(graph.nb_unitigs_extremities);
-        
-    }
-    return *this;
-}
-
-
-/*********************************************************************
-** METHOD  :
-** PURPOSE :
-** INPUT   :
-** OUTPUT  :
-** RETURN  :
-** REMARKS :
-*********************************************************************/
-template<size_t span>
-GraphUnitigsTemplate<span>::~GraphUnitigsTemplate<span> ()
-{
-    // base deleter already called
-    //std::cout <<"unitigs graph destructor called" << std::endl;
-}
 
 /*********************************************************************
 ** METHOD  :
@@ -1098,7 +967,7 @@ void GraphUnitigsTemplate<span>::remove ()
      */
 
 template<size_t span>
-GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, Direction direction)  const
+GraphUnitigsBase::EdgeVector GraphUnitigsTemplate<span>::getEdges (const Node& source, Direction direction)  const
 {
     bool debug = false;
 
@@ -1112,7 +981,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
         std::cout << "Error: called getEdges on a node that's UNITIG_INSIDE: " << toString(source) << std::endl; exit(1);
     }
  
-    GraphVector<EdgeGU> res;
+    GraphUnitigsBase::EdgeVector res;
 
     res.resize(0);
     
@@ -1196,7 +1065,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
             if (unitigs_deleted[li.unitig]) 
             {
                 if (debug)
-                    std::cout << "found deleted neighbor unitig "<<  li.unitig <<" (kmer: " << this->/*not putting this this crashes gcc 4.7 */toString(NodeGU(li.unitig, li.pos)) << ")" << std::endl;
+                    std::cout << "found deleted neighbor unitig "<<  li.unitig <<" (kmer: " << this->/*not putting this this crashes gcc 4.7 */toString(Node(li.unitig, li.pos)) << ")" << std::endl;
                 continue;
             }
 
@@ -1211,7 +1080,7 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
 
             if (debug) 
             {
-                NodeGU node(unitig, pos, strand);
+                Node node(unitig, pos, strand);
                 std::cout << "[out-of-unitig getEdges], found neighbor " << this->/*not putting this this crashes gcc 4.7 */toString(node) << " dir " << dir << std::endl;
             }
     
@@ -1254,10 +1123,10 @@ GraphVector<EdgeGU> GraphUnitigsTemplate<span>::getEdges (const NodeGU& source, 
 /* this function isn't the most efficient, but then again, Minia doesn't use it */
 // I think I only implemented it so that it passes simple tests (TestDebruijnUnitigs.cpp)
 template<size_t span>
-GraphVector<NodeGU> GraphUnitigsTemplate<span>::getNodes (const NodeGU &source, Direction direction)  const
+GraphUnitigsBase::NodeVector GraphUnitigsTemplate<span>::getNodes (const Node &source, Direction direction)  const
 {
-    GraphVector<NodeGU> nodes;
-    GraphVector<EdgeGU> edges = getEdges (source, direction);
+    GraphUnitigsBase::NodeVector nodes;
+    GraphUnitigsBase::EdgeVector edges = getEdges (source, direction);
     nodes.resize(edges.size());
     for (unsigned int i = 0; i < edges.size(); i++)
     {
@@ -1268,32 +1137,32 @@ GraphVector<NodeGU> GraphUnitigsTemplate<span>::getNodes (const NodeGU &source, 
 
 
 template<size_t span>
-unsigned char GraphUnitigsTemplate<span>::countNeighbors (const NodeGU &source, Direction direction)  const
+unsigned char GraphUnitigsTemplate<span>::countNeighbors (const Node &source, Direction direction)  const
 {
     // for the sake of no duplication and removing bugs, i'm de-optimizing this function for now.
-    GraphVector<EdgeGU> edges = getEdges(source, direction);
+    GraphUnitigsBase::EdgeVector edges = getEdges(source, direction);
     return edges.size();
 }
 
 template<size_t span>
-void GraphUnitigsTemplate<span>::countNeighbors (const NodeGU &source, size_t &in, size_t &out)  const
+void GraphUnitigsTemplate<span>::countNeighbors (const Node &source, size_t &in, size_t &out)  const
 {
     std::cout << "GraphU countNeighbors source,in,out not implememented" << std::endl;exit(1);
 }
 
 template<size_t span>
-NodeGU GraphUnitigsTemplate<span>::getNode (const NodeGU& source, Direction dir, kmer::Nucleotide nt, bool& exists) const
+GraphUnitigsBase::Node GraphUnitigsTemplate<span>::getNode (const Node& source, Direction dir, kmer::Nucleotide nt, bool& exists) const
 {
     std::cout << "GraphU getNode source,dir,nt,exists  not implememented" << std::endl;exit(1);
-    return NodeGU();
+    return Node();
 }
 
 template<size_t span>
-GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getNodes () const
+GraphUnitigsBase::NodeIterator GraphUnitigsTemplate<span>::getNodes () const
 {
     /* emulates iteration of nodes à la original GATB Graph */
     /* except that here, we only iterate the extremities of unitigs */
-    class NodeIterator : public tools::dp::ISmartIterator<NodeGU>
+    class NodeIterator : public tools::dp::ISmartIterator<Node>
     {
         public:
             NodeIterator (const /*dag::dag_vector*/ std::vector<uint32_t>& unitigs_sizes, const std::vector<bool>& unitigs_deleted, unsigned int k, unsigned int nb_unitigs_extremities) 
@@ -1342,9 +1211,9 @@ GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getNodes () const
             bool isDone() { return _isDone;  }
 
             /** \copydoc  Iterator::item */
-            NodeGU& item ()  {  return *(this->_item);  }
+            Node& item ()  {  return *(this->_item);  }
 
-            void setItem (NodeGU& i)
+            void setItem (Node& i)
             {
                 /** We set the node item to be set for the current iterator. */
                 this->_item = &i;
@@ -1369,7 +1238,7 @@ GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getNodes () const
 }
 
 template<size_t span> 
-bool GraphUnitigsTemplate<span>::isNodeDeleted(const NodeGU& node) const
+bool GraphUnitigsTemplate<span>::isNodeDeleted(const Node& node) const
 {
     return unitigs_deleted[node.unitig];
 }
@@ -1378,14 +1247,14 @@ bool GraphUnitigsTemplate<span>::isNodeDeleted(const NodeGU& node) const
 
 // emulation of MPHF, but it's not used in minia
 template<size_t span> 
-unsigned long GraphUnitigsTemplate<span>::nodeMPHFIndex(const NodeGU& node) const 
+unsigned long GraphUnitigsTemplate<span>::nodeMPHFIndex(const Node& node) const
 {
     return (((node.pos == UNITIG_BEGIN )) ? 0 : 1) + (node.unitig << 1); 
 }
 
 /* warning: will delete the whole simple path */
 template<size_t span>
-void GraphUnitigsTemplate<span>::deleteNode (NodeGU& node) 
+void GraphUnitigsTemplate<span>::deleteNode (Node& node)
 {
     unitigDelete (node);
 }
@@ -1405,7 +1274,7 @@ void GraphUnitigsTemplate<span>::deleteNodesByIndex(vector<bool> &bitmap, int nb
 
 /********************************************************************************/
 template<size_t span>
-bool GraphUnitigsTemplate<span>::contains (const NodeGU& item) const
+bool GraphUnitigsTemplate<span>::contains (const Node& item) const
 {
     std::cout << "contains() not implemeneted in GraphUnitigs" << std::endl; exit(1);
     return false;
@@ -1413,13 +1282,13 @@ bool GraphUnitigsTemplate<span>::contains (const NodeGU& item) const
 
 template<size_t span>
 bool GraphUnitigsTemplate<span>::
-node_in_same_orientation_as_in_unitig(const NodeGU& node) const
+node_in_same_orientation_as_in_unitig(const Node& node) const
 {
     return node.strand == kmer::STRAND_FORWARD;
 }
 
 template<size_t span>
-std::string GraphUnitigsTemplate<span>::toString (const NodeGU& node) const
+std::string GraphUnitigsTemplate<span>::toString (const Node& node) const
 {
     const std::string& seq = internal_get_unitig_sequence(node.unitig);
     int kmerSize = BaseGraph::_kmerSize;
@@ -1442,7 +1311,7 @@ std::string GraphUnitigsTemplate<span>::toString (const NodeGU& node) const
 // high-level functions that used to be in Simplifications.cpp
 template<size_t span>
 bool GraphUnitigsTemplate<span>::
-isLastNode(const NodeGU& node, Direction dir) const
+isLastNode(const Node& node, Direction dir) const
 {
     if (internal_get_unitig_length(node.unitig) == BaseGraph::_kmerSize) // special case.
         return true;
@@ -1461,7 +1330,7 @@ isLastNode(const NodeGU& node, Direction dir) const
 
 template<size_t span>
 bool GraphUnitigsTemplate<span>::
-isFirstNode(const NodeGU& node, Direction dir) const
+isFirstNode(const Node& node, Direction dir) const
 {
     // special case
     if (internal_get_unitig_length(node.unitig) == BaseGraph::_kmerSize)
@@ -1474,7 +1343,7 @@ isFirstNode(const NodeGU& node, Direction dir) const
 
 template<size_t span>
 double GraphUnitigsTemplate<span>::
-simplePathMeanAbundance     (const NodeGU& node, Direction dir) 
+simplePathMeanAbundance     (const Node& node, Direction dir)
 {
     if (isLastNode(node,dir))
     {
@@ -1496,14 +1365,14 @@ simplePathMeanAbundance     (const NodeGU& node, Direction dir)
  */
 template<size_t span>
 double GraphUnitigsTemplate<span>::
-unitigMeanAbundance     (const NodeGU& node) const
+unitigMeanAbundance     (const Node& node) const
 {
     return unitigs_mean_abundance[node.unitig];
 }
 
 template<size_t span>
 unsigned int GraphUnitigsTemplate<span>::
-simplePathLength            (const NodeGU& node, Direction dir) 
+simplePathLength            (const Node& node, Direction dir)
 {
     float coverage = 0;
     int endDegree;
@@ -1514,7 +1383,7 @@ simplePathLength            (const NodeGU& node, Direction dir)
 
 template<size_t span>
 unsigned int GraphUnitigsTemplate<span>::
-unitigLength            (const NodeGU& node, Direction dir) const
+unitigLength            (const Node& node, Direction dir) const
 {
     int length;
     if (isLastNode(node,dir))
@@ -1525,8 +1394,8 @@ unitigLength            (const NodeGU& node, Direction dir) const
 }
 
 template<size_t span>
-NodeGU GraphUnitigsTemplate<span>::
-unitigLastNode          (const NodeGU& node, Direction dir) const
+GraphUnitigsBase::Node GraphUnitigsTemplate<span>::
+unitigLastNode          (const Node& node, Direction dir) const
 {
     //std::cout << "lastnode" << toString(node) << " dir " << dir  << std::endl;
     
@@ -1535,19 +1404,19 @@ unitigLastNode          (const NodeGU& node, Direction dir) const
 
     // otherwise we know that we just take the other extremity, easy peasy
     
-    NodeGU res;
+    Node res;
     if ((node.pos & UNITIG_BEGIN))
-        res = NodeGU(node.unitig, UNITIG_END, node.strand);
+        res = Node(node.unitig, UNITIG_END, node.strand);
     else
-        res = NodeGU(node.unitig, UNITIG_BEGIN, node.strand);
+        res = Node(node.unitig, UNITIG_BEGIN, node.strand);
     return res;
 }
 
 template<size_t span>
-NodeGU GraphUnitigsTemplate<span>::
-simplePathLastNode          (const NodeGU& node, Direction dir) 
+GraphUnitigsBase::Node GraphUnitigsTemplate<span>::
+simplePathLastNode          (const Node& node, Direction dir)
 {
-    std::vector<NodeGU> nodesList;
+    std::vector<Node> nodesList;
     int seqLength = 0, endDegree;
     float coverage = 0;
     simplePathLongest_avance(node, dir, seqLength, endDegree, false /*markDuringTraversal*/, coverage, nullptr, &nodesList);
@@ -1562,7 +1431,7 @@ simplePathLastNode          (const NodeGU& node, Direction dir)
 
 template<size_t span>
 void GraphUnitigsTemplate<span>::
-unitigDelete (NodeGU& node) 
+unitigDelete (Node& node)
 {
     unitigs_deleted[node.unitig] = true;
     //std::cout << "GraphU deleted unitig " << node.unitig << " seq: "  << unitigs[node.unitig] << std::endl; 
@@ -1572,7 +1441,7 @@ unitigDelete (NodeGU& node)
 // wrapper that only puts the node into nodesDeleter
 template<size_t span>
 void GraphUnitigsTemplate<span>::
-unitigDelete (NodeGU& node, Direction dir, NodesDeleter<NodeGU, EdgeGU, GraphUnitigsTemplate<span>>& nodesDeleter) 
+unitigDelete (Node& node, Direction dir, NodesDeleter<GraphUnitigsTemplate<span>>& nodesDeleter)
 {
     nodesDeleter.onlyListMethod = true; // a bit inefficient to always tell the deleter to be in that mode, but so be it for now. just 1 instruction, won't hurt.
     //std::cout << "GraphU queuing to delete unitig " << node.unitig << " seq: "  << unitigs[node.unitig] << " mean abundance " << unitigMeanAbundance(node) << std::endl; 
@@ -1581,9 +1450,9 @@ unitigDelete (NodeGU& node, Direction dir, NodesDeleter<NodeGU, EdgeGU, GraphUni
 
 template<size_t span>
 void GraphUnitigsTemplate<span>::
-simplePathDelete (NodeGU& node, Direction dir, NodesDeleter<NodeGU, EdgeGU, GraphUnitigsTemplate<span>>& nodesDeleter) 
+simplePathDelete (Node& node, Direction dir, NodesDeleter<GraphUnitigsTemplate<span>>& nodesDeleter)
 {
-    std::vector<NodeGU> nodesList;
+    std::vector<Node> nodesList;
     int seqLength = 0, endDegree;
     float coverage = 0;
     unitigDelete(node, dir, nodesDeleter);
@@ -1597,13 +1466,13 @@ simplePathDelete (NodeGU& node, Direction dir, NodesDeleter<NodeGU, EdgeGU, Grap
 /* actually I don't think this function is called at all */
 template<size_t span>
 std::string GraphUnitigsTemplate<span>::
-unitigSequence (const NodeGU& node, bool& isolatedLeft, bool& isolatedRight) const
+unitigSequence (const Node& node, bool& isolatedLeft, bool& isolatedRight) const
 {
     const string& seq = internal_get_unitig_sequence(node.unitig);
 
     //std::cout << " seq " << seq << " node " << toString(node) << std::endl;
-    NodeGU left = NodeGU(node.unitig, UNITIG_BEGIN);
-    NodeGU right = NodeGU(node.unitig, UNITIG_END);
+    Node left = Node(node.unitig, UNITIG_BEGIN);
+    Node right = Node(node.unitig, UNITIG_END);
 
     isolatedLeft  = (indegree(left)   == 0);
     isolatedRight = (outdegree(right) == 0);
@@ -1622,7 +1491,7 @@ unitigSequence (const NodeGU& node, bool& isolatedLeft, bool& isolatedRight) con
  */
 template<size_t span>
 void GraphUnitigsTemplate<span>::
-simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int& endDegree, bool markDuringTraversal, float& coverage, string* seq, std::vector<NodeGU> *nodesList) 
+simplePathLongest_avance(const Node& node, Direction dir, int& seqLength, int& endDegree, bool markDuringTraversal, float& coverage, string* seq, std::vector<Node> *nodesList)
 {
     bool debug = false;
     if (debug)
@@ -1630,7 +1499,7 @@ simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int&
 
     seqLength = 0;
     unsigned int kmerSize = BaseGraph::_kmerSize;
-    NodeGU cur_node = node;
+    Node cur_node = node;
     if (!isLastNode(cur_node,dir))
     {
         // first node in unitig may have in-branching, it's fine for a simple path traversal. we'll just go to last node and record the sequence of that unitig
@@ -1678,7 +1547,7 @@ simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int&
 
         assert(isLastNode(cur_node,dir));
 
-        GraphVector<EdgeGU> neighbors = this->neighborsEdge (cur_node, dir);
+        GraphUnitigsBase::EdgeVector neighbors = this->neighborsEdge (cur_node, dir);
         endDegree = neighbors.size();
         
         /** We check we have no outbranching. */
@@ -1705,7 +1574,7 @@ simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int&
         if (debug)
             std::cout << "simplePathLongest_avance continues now at a last node = " << toString(cur_node) << " strand " << cur_node.strand << " of unitig " << cur_node.unitig << " length " << internal_get_unitig_length(cur_node.unitig) << ", neighbor.to " << toString(neighbors[0].to) << " strand " << neighbors[0].to.strand << " of unitig " << neighbors[0].to.unitig << " new seq length: " << unitigLength << std::endl;
 
-        // fix for 1-bit encoded unitig position. That fix could have happened in unitig_parse_header but i didn't want to encode pos in 2 bits. Also, could have happened in NodeGU constructor, but didn't want to waste time checking unitig size there
+        // fix for 1-bit encoded unitig position. That fix could have happened in unitig_parse_header but i didn't want to encode pos in 2 bits. Also, could have happened in Node constructor, but didn't want to waste time checking unitig size there
         if (internal_get_unitig_length(neighbors[0].to.unitig) == kmerSize)
             neighbors[0].to.pos = UNITIG_BOTH;
 
@@ -1741,7 +1610,7 @@ simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int&
 
         }
        
-        GraphVector<EdgeGU> in_neighbors_vec = this->neighborsEdge (neighbors[0].to, reverse(dir));
+        GraphUnitigsBase::EdgeVector in_neighbors_vec = this->neighborsEdge (neighbors[0].to, reverse(dir));
         int in_neighbors = in_neighbors_vec.size();
 
             
@@ -1757,7 +1626,7 @@ simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int&
             return;
         } 
 
-        NodeGU last_node = unitigLastNode(neighbors[0].to, dir);
+        Node last_node = unitigLastNode(neighbors[0].to, dir);
         cur_node = last_node;
 
         if (nodesList != nullptr)
@@ -1795,15 +1664,15 @@ simplePathLongest_avance(const NodeGU& node, Direction dir, int& seqLength, int&
 /* returns the longest simple path; may have to traverse multiple unitigs, due to some branches being deleted */
 template<size_t span>
 std::string GraphUnitigsTemplate<span>::
-simplePathBothDirections(const NodeGU& node, bool& isolatedLeft, bool& isolatedRight, bool markDuringTraversal, float &coverage) 
+simplePathBothDirections(const Node& node, bool& isolatedLeft, bool& isolatedRight, bool markDuringTraversal, float &coverage)
 {
     string seq = internal_get_unitig_sequence(node.unitig);
     
     int kmerSize = BaseGraph::_kmerSize;
     float midTotalCoverage = unitigMeanAbundance(node) * (seq.size() - kmerSize + 1);
 
-    NodeGU left(node.unitig, UNITIG_BEGIN);
-    NodeGU right(node.unitig, UNITIG_END);
+    Node left(node.unitig, UNITIG_BEGIN);
+    Node right(node.unitig, UNITIG_END);
 
     //std::cout << "starting seq " << seq << " (from node " << toString(node) << ") left: " << toString(left) << " right: " << toString(right) << std::endl;
 
@@ -1831,14 +1700,14 @@ simplePathBothDirections(const NodeGU& node, bool& isolatedLeft, bool& isolatedR
 // marks the whole unitig, not just an extremity
 template<size_t span>
 void GraphUnitigsTemplate<span>::
-unitigMark            (const NodeGU& node) 
+unitigMark            (const Node& node)
 {
     unitigs_traversed[node.unitig] = true;
 } 
 
 template<size_t span>
 bool GraphUnitigsTemplate<span>::
-unitigIsMarked        (const NodeGU& node) const 
+unitigIsMarked        (const Node& node) const
 {
     return unitigs_traversed[node.unitig];
 }
@@ -1856,16 +1725,16 @@ debugPrintAllUnitigs() const
 
         for (Direction dir=DIR_OUTCOMING; dir<DIR_END; dir = (Direction)((int)dir + 1) )
         { 
-            GraphVector<EdgeGU> neighbors;
+            GraphUnitigsBase::EdgeVector neighbors;
             if (dir == DIR_OUTCOMING)
             {
-                NodeGU cur_node(i, UNITIG_END);
+                Node cur_node(i, UNITIG_END);
                 neighbors = this->neighborsEdge (cur_node, dir);
                 std::cout << "out: ";
             }
             else
             {
-                NodeGU cur_node(i, UNITIG_BEGIN);
+                Node cur_node(i, UNITIG_BEGIN);
                 neighbors = this->neighborsEdge (cur_node, dir);
                 std::cout << "in: ";
             }
@@ -1883,7 +1752,7 @@ debugPrintAllUnitigs() const
 
 /* slow, O(|unitigs|) construction of a node given its kmer. for debug only */
 template<size_t span>
-NodeGU GraphUnitigsTemplate<span>::
+GraphUnitigsBase::Node GraphUnitigsTemplate<span>::
 debugBuildNode(string startKmer) const
 {
     bool debug=false;
@@ -1897,11 +1766,11 @@ debugBuildNode(string startKmer) const
                 unitig = revcomp(unitig);
             if (unitig.substr(0, BaseGraph::_kmerSize) == startKmer)
             {
-                return NodeGU(i,rc?UNITIG_END:UNITIG_BEGIN, rc?STRAND_REVCOMP:STRAND_FORWARD);
+                return Node(i,rc?UNITIG_END:UNITIG_BEGIN, rc?STRAND_REVCOMP:STRAND_FORWARD);
             }
             if (unitig.substr(unitig.size() - BaseGraph::_kmerSize) == startKmer)
             {
-                return NodeGU(i,rc?UNITIG_BEGIN:UNITIG_END, rc?STRAND_REVCOMP:STRAND_FORWARD);
+                return Node(i,rc?UNITIG_BEGIN:UNITIG_END, rc?STRAND_REVCOMP:STRAND_FORWARD);
             }
         }
     }
@@ -1926,7 +1795,7 @@ debugBuildNode(string startKmer) const
 
 
 template<size_t span>
-bool GraphUnitigsTemplate<span>::isBranching (const NodeGU& node) const
+bool GraphUnitigsTemplate<span>::isBranching (const Node& node) const
 /** REMARKS : it's a bit of a misnomer, but in GATB language, Branching means "anything not simple". I.e. simple means outdegree=indegree=1 and branching is every other degree combination, including 0's */
 {
     size_t in, out;
@@ -1935,30 +1804,30 @@ bool GraphUnitigsTemplate<span>::isBranching (const NodeGU& node) const
 }
 
 template<size_t span>
-bool GraphUnitigsTemplate<span>::isSimple (EdgeGU& edge) const
+bool GraphUnitigsTemplate<span>::isSimple (Edge& edge) const
 {    return this->outdegree(edge.from)==1  &&  this->indegree(edge.to)==1;}
 
 template<size_t span>
-size_t GraphUnitigsTemplate<span>::indegree (const NodeGU& node) const  {  return degree(node, DIR_INCOMING);   }
+size_t GraphUnitigsTemplate<span>::indegree (const Node& node) const  {  return degree(node, DIR_INCOMING);   }
 
 template<size_t span>
-size_t GraphUnitigsTemplate<span>::outdegree (const NodeGU& node) const  {  return degree(node, DIR_OUTCOMING);  }
+size_t GraphUnitigsTemplate<span>::outdegree (const Node& node) const  {  return degree(node, DIR_OUTCOMING);  }
 
 template<size_t span>
-size_t GraphUnitigsTemplate<span>::degree (const NodeGU& node, Direction dir) const  {  return countNeighbors(node, dir);  } // used to be getNodes(node,dir).size() but made it faster
+size_t GraphUnitigsTemplate<span>::degree (const Node& node, Direction dir) const  {  return countNeighbors(node, dir);  } // used to be getNodes(node,dir).size() but made it faster
 
 template<size_t span>
-void GraphUnitigsTemplate<span>::degree (const NodeGU& node, size_t &in, size_t &out) const  {  countNeighbors(node, in, out);  } 
+void GraphUnitigsTemplate<span>::degree (const Node& node, size_t &in, size_t &out) const  {  countNeighbors(node, in, out);  }
 
 
 template<size_t span>
-int GraphUnitigsTemplate<span>::simplePathAvance (const NodeGU& node, Direction dir) const
+int GraphUnitigsTemplate<span>::simplePathAvance (const Node& node, Direction dir) const
 {
-    EdgeGU output;  return simplePathAvance (node, dir, output);
+    Edge output;  return simplePathAvance (node, dir, output);
 }
 
 template<size_t span>
-int GraphUnitigsTemplate<span>::simplePathAvance (const NodeGU& node, Direction dir, EdgeGU& output) const
+int GraphUnitigsTemplate<span>::simplePathAvance (const Node& node, Direction dir, Edge& output) const
 {
     std::cout << "GraphU simplePathAvance called, not allowed in GraphUnitigs. try simplePathLongest_avance but it won't be edge-by-edge." << std::endl; exit(1);
     // shouldn't be called!
@@ -1970,7 +1839,7 @@ int GraphUnitigsTemplate<span>::simplePathAvance (const NodeGU& node, Direction 
 template<size_t span>
 void GraphUnitigsTemplate<span>::simplify(unsigned int nbCores, bool verbose)
 {
-        Simplifications<GraphUnitigsTemplate<span>,NodeGU,EdgeGU> 
+        Simplifications<GraphUnitigsTemplate<span>>
             graphSimplifications(this, nbCores, verbose);
         graphSimplifications.simplify();
 }
@@ -1984,23 +1853,23 @@ void GraphUnitigsTemplate<span>::simplify(unsigned int nbCores, bool verbose)
  */
 
 template<size_t span> 
-GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getSimpleNodeIterator (const NodeGU& node, Direction dir) const
+GraphUnitigsBase::NodeIterator GraphUnitigsTemplate<span>::getSimpleNodeIterator (const Node& node, Direction dir) const
 {
     std::cout << "getSimpleNodeIterator called in GraphU, not implemented" << std::endl; 
     exit(1);
-    return GraphIterator<NodeGU> ();
+    return GraphUnitigsBase::NodeIterator ();
 }
 
 template<size_t span> 
-GraphIterator<EdgeGU> GraphUnitigsTemplate<span>::getSimpleEdgeIterator (const NodeGU& node, Direction dir) const
+GraphUnitigsBase::EdgeIterator GraphUnitigsTemplate<span>::getSimpleEdgeIterator (const Node& node, Direction dir) const
 {
     std::cout << "getSimpleEdgeIterator called in GraphU, not implemented" << std::endl; 
     exit(1);
-    return GraphIterator<EdgeGU>();
+    return GraphUnitigsBase::EdgeIterator();
 }
 
 template<size_t span> 
-int GraphUnitigsTemplate<span>::queryAbundance (const NodeGU& node) const
+int GraphUnitigsTemplate<span>::queryAbundance (const Node& node) const
 {
     std::cout << "queryAbundance called for a single node" << std::endl; 
     exit(1);
@@ -2008,7 +1877,7 @@ int GraphUnitigsTemplate<span>::queryAbundance (const NodeGU& node) const
 }
 
 template<size_t span>
-int GraphUnitigsTemplate<span>::queryNodeState (const NodeGU& node) const 
+int GraphUnitigsTemplate<span>::queryNodeState (const Node& node) const
 {
     std::cout << "queryNodeState called in GraphU" << std::endl; 
     std::cout << "not implemented" << std::endl; exit(1);
@@ -2016,24 +1885,21 @@ int GraphUnitigsTemplate<span>::queryNodeState (const NodeGU& node) const
 }
 
 template<size_t span>
-void GraphUnitigsTemplate<span>::setNodeState (const NodeGU& node, int state) const 
+void GraphUnitigsTemplate<span>::setNodeState (const Node& node, int state) const
 {
-    //boost::apply_visitor (setNodeState_visitor<span>(node, state),  *(span*)BaseGraph::_variant);
     std::cout << "GraphUnitigs::setNodeState() not implemented" << std::endl; exit(1);
 }
 
 template<size_t span>
 void GraphUnitigsTemplate<span>::resetNodeState() const
 {
-    //boost::apply_visitor (resetNodeState_visitor<span>(),  *(span*)BaseGraph::_variant);
     std::cout << "GraphUnitigs::resetNodeState() not implemented" << std::endl; exit(1);
 }
 
 template<size_t span>
 void GraphUnitigsTemplate<span>::disableNodeState() const
 {
-    //boost::apply_visitor (disableNodeState_visitor<span>(),  *(span*)BaseGraph::_variant);
-    std::cout << "GraphUnitigs::disableNodeState() not implemented" << std::endl;
+    std::cout << "GraphUnitigs::disableNodeState() not implemented" << std::endl; exit(1);
 }
 
 /*

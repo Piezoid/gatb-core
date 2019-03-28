@@ -1,8 +1,11 @@
+// Avoid the instantiation of polymorphic graph
+#include <gatb/system/api/config.hpp>
+#undef GATB_USE_VARIANTS
+#define GATB_USE_VARIANTS 0
 
 #include <gatb/debruijn/impl/Traversal.cpp>
 #include <gatb/debruijn/impl/Terminator.cpp>
 #include <gatb/debruijn/impl/Frontline.cpp>
-#include <gatb/tools/math/Integer.hpp>
 
 using namespace gatb::core::kmer;
 using namespace gatb::core::kmer::impl;
@@ -11,22 +14,15 @@ using namespace gatb::core::kmer::impl;
 namespace gatb { namespace core { namespace debruijn { namespace impl  {
 /********************************************************************************/
 
-typedef boost::variant<GraphData<${KSIZE}> > GraphDataVariantT;
+using GraphT = GraphTemplate<Node_t<Kmer<${KSIZE}>::Type> , GraphData<${KSIZE}>>;
 
-template class TraversalTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
-template class MonumentTraversalTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
-template class TerminatorTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
-template class MPHFTerminatorTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
-template class BranchingTerminatorTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
-template class FrontlineTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
-template class FrontlineBranchingTemplate <Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type > >, 
-         GraphTemplate<Node_t<Kmer<${KSIZE}>::Type>,Edge_t<Node_t<Kmer<${KSIZE}>::Type >>, GraphDataVariantT>>; 
+template class TraversalTemplate <GraphT>;
+template class MonumentTraversalTemplate <GraphT>;
+template class TerminatorTemplate <GraphT>;
+template class MPHFTerminatorTemplate <GraphT>;
+template class BranchingTerminatorTemplate <GraphT>;
+template class FrontlineTemplate <GraphT>;
+template class FrontlineBranchingTemplate <GraphT>;
 
 /********************************************************************************/
 } } } } /* end of namespaces. */

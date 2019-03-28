@@ -83,12 +83,15 @@ extern std::string DBPATH (const string& a);
 namespace gatb  {  namespace tests  {
 /********************************************************************************/
 
+using GraphUnitigs = GraphUnitigsTemplate<32>;
+using Node = typename GraphUnitigs::Node;
+
+
+
 /** \brief Test class for genomic databases management
  */
 class TestSimplificationsUnitigs : public Test
 {
-    typedef gatb::core::debruijn::impl::GraphUnitigsTemplate<32> GraphUnitigs;
-
     /********************************************************************************/
     CPPUNIT_TEST_SUITE_GATB (TestSimplificationsUnitigs);
         CPPUNIT_TEST_GATB (debruijn_simplunitigs_ec);
@@ -126,7 +129,7 @@ public:
 
         if (checkNodes)
         {
-            GraphIterator<NodeGU> iterNodes = graph.iterator();
+            GraphIterator<Node> iterNodes = graph.iterator();
             for (iterNodes.first(); !iterNodes.isDone(); iterNodes.next())
             { result.nbNodes++; /*result.checksumNodes += iterNodes.item().kmer; */
             
@@ -172,8 +175,8 @@ public:
     void debruijn_traversal (GraphUnitigs& graph, string startSeq ,const char* checkStr, const char *checkStr2 = nullptr)
     {
 
-        string startKmer = startSeq.substr(0, graph._kmerSize);
-		NodeGU node = graph.debugBuildNode(startKmer);
+        string startKmer = startSeq.substr(0, graph.getKmerSize());
+		Node node = graph.debugBuildNode(startKmer);
 
         bool isolatedLeft, isolatedRight;
         float coverage = 0;

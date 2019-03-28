@@ -28,7 +28,7 @@ static const char* STR_CHECK_DUMP   = "-check-dump";
 
 int    manageException (IProperties* options, const std::string& message);
 void   sendEmail       (IProperties* options, IProperties* graphInfo);
-size_t checkResult     (const Graph& graph, IProperties* inputProps);
+size_t checkResult     (const GraphPoly& graph, IProperties* inputProps);
 
 /********************************************************************************/
 int main (int argc, char* argv[])
@@ -36,7 +36,7 @@ int main (int argc, char* argv[])
     size_t nbErrors = 0;
 
     /** We create a command line parser. */
-    IOptionsParser* parser = Graph::getOptionsParser();  LOCAL (parser);
+    IOptionsParser* parser = GraphPoly::getOptionsParser();  LOCAL (parser);
 
     IOptionsParser* parserGeneral = parser->getParser ("general");
     if (parserGeneral != 0)
@@ -63,7 +63,7 @@ int main (int argc, char* argv[])
         IProperties* props = parser->parse (argc, argv);
 
         /** We create the graph with the provided options. */
-        Graph graph = Graph::create (props);
+        auto graph = GraphPoly::create (props);
 
         /** We may have to check the result. */
         if (props->get (STR_CHECK) != 0)  {  nbErrors = checkResult (graph, props);  }
@@ -142,7 +142,7 @@ int manageException (IProperties* options, const std::string& message)
 }
 
 /********************************************************************************/
-size_t checkResult (const Graph& graph, IProperties* inputProps)
+size_t checkResult (const GraphPoly& graph, IProperties* inputProps)
 {
     size_t nbErrors = 0;
 
