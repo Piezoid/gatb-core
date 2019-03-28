@@ -42,7 +42,7 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 ** REMARKS :
 *********************************************************************/
 template <typename Graph>
-BranchingTerminatorTemplate<Graph>::BranchingTerminatorTemplate (const Graph& graph)
+BranchingTerminatorTemplate<Graph>::BranchingTerminatorTemplate (Graph& graph)
     : TerminatorTemplate<Graph> (graph)
 {
     /** We loop over the branching nodes. */

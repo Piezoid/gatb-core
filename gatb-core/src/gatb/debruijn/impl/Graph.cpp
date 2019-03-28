@@ -733,7 +733,6 @@ GraphTemplate<Node, GraphDataVariant>  GraphTemplate<Node, GraphDataVariant>::cr
 *********************************************************************/
 template<typename Node, typename GraphDataVariant>
 GraphTemplate<Node, GraphDataVariant>::GraphTemplate (size_t kmerSize)
-    : GraphBase(),
 {
     this->_kmerSize = kmerSize;
 
@@ -754,7 +753,7 @@ GraphTemplate<Node, GraphDataVariant>::GraphTemplate (size_t kmerSize)
 *********************************************************************/
 template<typename Node, typename GraphDataVariant>
 GraphTemplate<Node, GraphDataVariant>::GraphTemplate (const std::string& uri)
-    : GraphBase(System::file().getBaseName(uri)),
+    : GraphBase(System::file().getBaseName(uri))
 {
     /** We create a storage instance. */
     /* (this is actually loading, not creating, the storage at "uri") */
@@ -786,7 +785,6 @@ GraphTemplate<Node, GraphDataVariant>::GraphTemplate (const std::string& uri)
 *********************************************************************/
 template<typename Node, typename GraphDataVariant>
 GraphTemplate<Node, GraphDataVariant>::GraphTemplate (bank::IBank* bank, tools::misc::IProperties* params)
-    : GraphBase()
 {
     /** We get the kmer size from the user parameters. */
     _kmerSize = params->getInt (STR_KMER_SIZE);
@@ -818,7 +816,6 @@ GraphTemplate<Node, GraphDataVariant>::GraphTemplate (bank::IBank* bank, tools::
 *********************************************************************/
 template<typename Node, typename GraphDataVariant>
 GraphTemplate<Node, GraphDataVariant>::GraphTemplate (tools::misc::IProperties* params)
-    : GraphBase()
 {
     /** We get the kmer size from the user parameters. */
     _kmerSize = params->getInt (STR_KMER_SIZE);
@@ -3117,7 +3114,7 @@ unsigned long getNodeIndex (const GraphData<span>& data, Node_in& node)
 #endif
 
     // we use _abundance as the mphf. we could also use _nodestate but it might be null if disabled by disableNodeState()
-    unsigned long hashIndex = (*(data._abundance)).getCode(value);
+    unsigned long hashIndex = data._abundance->getCode(value);
 
     node.mphfIndex = hashIndex;
     
@@ -3229,7 +3226,7 @@ struct setNodeState_visitor : public visitor_base<int>    {
 
 /** */
 template<typename Node, typename GraphDataVariant>
-void GraphTemplate<Node, GraphDataVariant>::setNodeState (Node& node, int state) const
+void GraphTemplate<Node, GraphDataVariant>::setNodeState (Node& node, int state)
 {
     visit_data(setNodeState_visitor<Node, GraphDataVariant>(node, state));
 }
@@ -3241,13 +3238,13 @@ struct resetNodeState_visitor : public visitor_base<int>    {
 
     template<size_t span> int operator() (const GraphData<span>& data) const
     {
-        (*(data._nodestate)).clearData();
+        data._nodestate->clearData();
         return 0;
     }
 };
 
 template<typename Node, typename GraphDataVariant>
-void GraphTemplate<Node, GraphDataVariant>::resetNodeState() const
+void GraphTemplate<Node, GraphDataVariant>::resetNodeState()
 {
     visit_data(resetNodeState_visitor<Node, GraphDataVariant>());
 }
@@ -3272,7 +3269,7 @@ struct disableNodeState_visitor : public visitor_base<int>    {
  * NOTE: irreversible!
  */
 template<typename Node, typename GraphDataVariant>
-void GraphTemplate<Node, GraphDataVariant>::disableNodeState() const
+void GraphTemplate<Node, GraphDataVariant>::disableNodeState()
 {
     visit_data(disableNodeState_visitor<Node, GraphDataVariant>());
 }
@@ -3449,7 +3446,7 @@ void GraphTemplate<Node, GraphDataVariant>::precomputeAdjacency(unsigned int nbC
 
 // now deleteNode depends on getNodeAdjacency
 template<typename Node, typename GraphDataVariant>
-void GraphTemplate<Node, GraphDataVariant>::deleteNode (Node& node) const
+void GraphTemplate<Node, GraphDataVariant>::deleteNode (Node& node)
 {
     bool hasAdjacency = getState() & GraphTemplate<Node, GraphDataVariant>::STATE_ADJACENCY_DONE;
     if (hasAdjacency)
@@ -3597,7 +3594,7 @@ bool GraphTemplate<Node, GraphDataVariant>::debugCompareNeighborhoods(Node& node
 
 // TODO: it makes sense someday to introduce a graph._nbCore parameter, because this function, simplify() and precomputeAdjacency() all want it
 template<typename Node, typename GraphDataVariant>
-void GraphTemplate<Node, GraphDataVariant>::deleteNodesByIndex(vector<bool> &bitmap, int nbCores, gatb::core::system::ISynchronizer* synchro) const
+void GraphTemplate<Node, GraphDataVariant>::deleteNodesByIndex(vector<bool> &bitmap, int nbCores, gatb::core::system::ISynchronizer* synchro)
 {
     GraphIterator<Node> itNode = this->iterator();
     Dispatcher dispatcher (nbCores); 

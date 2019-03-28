@@ -1192,7 +1192,7 @@ public:
 
 
     /********************************************************************************/
-    void debruijn_deletenode_fct (const Graph& graph) 
+    void debruijn_deletenode_fct (Graph& graph)
     {
         Node n1 = graph.buildNode ((char*)"AGGCG");
         Node n2 = graph.buildNode ((char*)"GGCGC");
@@ -1220,7 +1220,7 @@ public:
         debruijn_deletenode_fct (graph2);
     }
 
-    void debruijn_deletenode2_fct (const Graph& graph) 
+    void debruijn_deletenode2_fct (Graph& graph)
     {
         Node n1 = graph.buildNode ((char*)"AGGCG");
         Node n2 = graph.buildNode ((char*)"GGCGA");

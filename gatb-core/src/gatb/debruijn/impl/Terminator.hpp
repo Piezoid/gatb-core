@@ -59,7 +59,7 @@ public:
 
     /** Constructor
      * \param[in] graph : the graph */
-    TerminatorTemplate (const Graph& graph) : _graph(graph)  {}
+    TerminatorTemplate (Graph& graph) : _graph(graph)  {}
 
     /** Destructor. */
     virtual ~TerminatorTemplate ()  {}
@@ -112,7 +112,7 @@ public:
 
 protected:
 
-    const Graph& _graph;
+    Graph& _graph;
 };
 
 /********************************************************************************/
@@ -184,7 +184,7 @@ public:
 
     /** Constructor
      * \param[in] graph : the graph */
-    BranchingTerminatorTemplate (const Graph& graph);
+    BranchingTerminatorTemplate (Graph& graph);
 
     /** Copy constructor
      * \param[in] terminator: the graph */
@@ -318,7 +318,7 @@ public:
     /** \copydoc Terminator::dump */
     virtual void dump () { printf("not expecting a call to MPHFTermiantor.dump\n"); exit(1); };
 
-    MPHFTerminatorTemplate (const Graph& graph) : TerminatorTemplate<Graph>(graph)  {}
+    using TerminatorTemplate<Graph>::TerminatorTemplate;
 };
 
 #if GATB_USE_VARIANTS
