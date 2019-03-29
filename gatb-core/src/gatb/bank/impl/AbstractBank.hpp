@@ -46,7 +46,7 @@ namespace impl      {
  * Note that it implements the system::ISmartPointer interface as well, so it can be
  * used as a smart pointer.
  */
-class AbstractBank : public IBank, public system::SmartPointer
+class AbstractBank : public virtual IBank
 {
 public:
 
@@ -60,9 +60,9 @@ public:
 	int64_t estimateNbItemsBanki (int i)  { return this->estimateNbItems(); }
 
 	/** \copydoc IBank::getBanks */
-	const std::vector<IBank*> getBanks() const  {
-		std::vector<IBank*> _banks;
-		_banks.push_back((IBank *)this);
+	const IBank::vector getBanks() const  {
+		IBank::vector _banks;
+		_banks.push_back(as_shared_ptr((IBank*)this));
 		return _banks;
 	};
 
@@ -94,7 +94,7 @@ public:
     /** \copydoc IBank::getCompositionNb */
     size_t getCompositionNb ()
     {
-        tools::dp::Iterator<Sequence>* it = this->iterator();  LOCAL(it);
+        tools::dp::Iterator<Sequence>::sptr it = this->iterator();
         return it->getComposition().size();
     }
 

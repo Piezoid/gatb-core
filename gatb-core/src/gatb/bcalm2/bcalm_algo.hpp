@@ -27,7 +27,7 @@
 namespace gatb { namespace core { namespace debruijn { namespace impl  {
 
     template<size_t SPAN>
-void bcalm2(gatb::core::tools::storage::impl::Storage* storage, 
+void bcalm2(gatb::core::tools::storage::impl::Storage::sptr storage, 
         std::string prefix,
         int kmerSize, 
         int abundance, 

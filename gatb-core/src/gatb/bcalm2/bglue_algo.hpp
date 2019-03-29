@@ -145,7 +145,7 @@ class UnbufferedFastaIterator
 };
 
     template<size_t SPAN>
-void bglue(gatb::core::tools::storage::impl::Storage* storage, 
+void bglue(gatb::core::tools::storage::impl::Storage::sptr storage, 
         std::string prefix,
         int kmerSize, 
         int nb_glue_partitions, 

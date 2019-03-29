@@ -128,7 +128,7 @@ public:
     }
 
     /** Constructor. */
-    MmersFrequency (int mmerSize,  IteratorListener* progress,  uint32_t* m_mer_counts, size_t nbSeqsToSee /* for when to stop estimation*/, bool* cancelIterator)
+    MmersFrequency (int mmerSize,  IteratorListener::sptr progress,  uint32_t* m_mer_counts, size_t nbSeqsToSee /* for when to stop estimation*/, bool* cancelIterator)
     :
         _minimodel(mmerSize), _progress (progress,System::thread().newSynchronizer()),
       _m_mer_counts(m_mer_counts),  _nbProcessedMmers(0), _nbSeqsToSee(nbSeqsToSee), _nbSeqsSeenSoFar(0), _cancelIterator(cancelIterator)
@@ -224,7 +224,7 @@ public:
         size_t            nbPasses,
         size_t            currentPass,
         size_t            nbPartitions,
-        IteratorListener* progress,
+        IteratorListener::sptr progress,
         bool *            cancelIterator,
         size_t            nbSeqsToSee,
         BankStats&        bankStats,
@@ -263,11 +263,11 @@ private:
 *********************************************************************/
 template<size_t span>
 RepartitorAlgorithm<span>::RepartitorAlgorithm (
-    IBank* bank,
+    IBank::sptr bank,
     Group& group,
     const Configuration& config,
     unsigned int nb_cores,
-    tools::misc::IProperties*   options
+    tools::misc::IProperties::sptr   options
 )
     :  Algorithm("repartition", nb_cores, options), _config(config), _bank(bank), _group(group), _freq_order(0)
 {
@@ -341,13 +341,13 @@ void RepartitorAlgorithm<span>::computeFrequencies (Repartitor& repartitor)
 
     Model model (_config._kmerSize, _config._minim_size);
 
-    Iterator<Sequence>* bank_it = _bank->iterator();
+    seq_iterator_ptr bank_it = _bank->iterator();
     LOCAL(bank_it);
-    CancellableIterator<Sequence>* cancellable_it = new CancellableIterator<Sequence> (*bank_it);
+    Cancellableseq_iterator_ptr cancellable_it = new CancellableIterator<Sequence> (*bank_it);
     LOCAL(cancellable_it);
 
     /** We create a sequence iterator and give it a progress message */
-    Iterator<Sequence>* it_all_reads = createIterator<Sequence> (
+    seq_iterator_ptr it_all_reads = createIterator<Sequence> (
             cancellable_it,
             _bank->getNbItems(),
              "Approximating frequencies of minimizers"
@@ -426,8 +426,8 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
         u_int64_t nbseq_sample = (_config._estimateSeqNb / _config._nb_banks) * 0.01;
         nbseq_sample = max((u_int64_t)nbseq_sample, (u_int64_t)100000);
 
-        Iterator<Sequence>* it = _bank->iterator(); LOCAL (it);
-        std::vector<Iterator<Sequence>*> itBanks =  it->getComposition(); 
+        seq_iterator_ptr it = _bank->iterator(); LOCAL (it);
+        iterator_vector<Sequence> itBanks =  it->getComposition();
 
         /*
         bool dummyBoolean = false;
@@ -450,17 +450,17 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
         for(size_t i=0; i<_config._nb_banks; i++){
         	//cout << i << endl;
         	//u_int64_t nbseq_sample_ = min(nbseq_sample, u_int64_t (500000));
-        	//TruncateIterator<Sequence>* it = new TruncateIterator<Sequence> (*(itBanks[i]), nbseq_sample_);
+        	//Truncateseq_iterator_ptr it = new TruncateIterator<Sequence> (*(itBanks[i]), nbseq_sample_);
         	//LOCAL(it);
     	    //serialDispatcher.iterate (it, sampleRepart);
-        	//Iterator<Sequence>* bankit = itBanks[i];
+        	//seq_iterator_ptr bankit = itBanks[i];
         	//LOCAL(bankit);
-            CancellableIterator<Sequence>* cancellable_it = new CancellableIterator<Sequence> (*itBanks[i]);
+            Cancellableseq_iterator_ptr cancellable_it = new CancellableIterator<Sequence> (*itBanks[i]);
             LOCAL(cancellable_it);
 
         	//cout << nbseq_sample << endl;
     		/** We create a sequence iterator and give it a progress message */
-    		//Iterator<Sequence>* it_all_reads = createIterator<Sequence> (
+    		//seq_iterator_ptr it_all_reads = createIterator<Sequence> (
             //		cancellable_it,
             //		_bank->getNbItems(),
             //		Stringify::format (progressFormat0, bankShortName.c_str()).c_str()
@@ -492,8 +492,8 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
     }
     else{
 
-        Iterator<Sequence>* it = _bank->iterator();      LOCAL (it);
-        CancellableIterator<Sequence>* cancellable_it = new CancellableIterator<Sequence> (*(it));
+        seq_iterator_ptr it = _bank->iterator();      LOCAL (it);
+        Cancellableseq_iterator_ptr cancellable_it = new CancellableIterator<Sequence> (*(it));
         LOCAL(cancellable_it);
 
 
@@ -502,7 +502,7 @@ void RepartitorAlgorithm<span>::computeRepartition (Repartitor& repartitor)
 
     	//cout << nbseq_sample << endl;
 		/** We create a sequence iterator and give it a progress message */
-		Iterator<Sequence>* it_all_reads = createIterator<Sequence> (
+		seq_iterator_ptr it_all_reads = createIterator<Sequence> (
 				cancellable_it,
 				_bank->getNbItems(),
 				Stringify::format (progressFormat0, bankShortName.c_str()).c_str()

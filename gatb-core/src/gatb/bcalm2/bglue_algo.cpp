@@ -562,7 +562,7 @@ void prepare_uf(std::string prefix, IBank *in, const int nb_threads, int& kmerSi
         {
             if (_currentThreadIndex < 0)
             {
-                std::pair<IThread*,size_t> info;
+                std::pair<IThread::sptr,size_t> info;
                 if (ThreadGroup::findThreadInfo (System::thread().getThreadSelf(), info) == true)
                 {
                     _currentThreadIndex = info.second;
@@ -615,8 +615,9 @@ void prepare_uf(std::string prefix, IBank *in, const int nb_threads, int& kmerSi
     
     
     // a single-threaded merge and write to file before they're loaded again in bglue
-    BagFile<uint64_t> * bagf = new BagFile<uint64_t>( prefix+".glue.hashes."+ to_string(pass)); LOCAL(bagf); 
-	Bag<uint64_t> * currentbag =  new BagCache<uint64_t> (  bagf, 10000 ); LOCAL(currentbag);// really? we have to through these hoops to do a simple binary file in gatb? gotta change this.
+	auto currentbag =  std::make_shared< BagCache<uint64_t> > (
+                std::make_shared< BagFile<uint64_t> > (prefix+".glue.hashes."+ to_string(pass)),
+                1000 ); // really? we have to through these hoops to do a simple binary file in gatb? gotta change this.
     uint64_t nb_elts_pass = 0;
 
     priority_queue<std::tuple<uint64_t,int>, std::vector<std::tuple<uint64_t,int>>, std::greater<std::tuple<uint64_t,int>> > pq; // http://stackoverflow.com/questions/2439283/how-can-i-create-min-stl-priority-queue
@@ -711,8 +712,7 @@ void bglue(Storage *storage,
         return;
     }
 
-    IBank *in = Bank::open (prefix + ".glue");
-    LOCAL(in);
+    IBank::sptr in = Bank::open (prefix + ".glue");
     
     uint64_t nb_glue_sequences = 0;
     
@@ -743,7 +743,7 @@ void bglue(Storage *storage,
     uf_hashes.reserve(nb_elts);
     for (int pass = 0; pass < nb_prepare_passes; pass++)
     {
-        IteratorFile<uint64_t> file(prefix+".glue.hashes." + to_string(pass));
+        IteratorFile<uint64_t> file{prefix+".glue.hashes." + to_string(pass)};
         for (file.first(); !file.isDone(); file.next())
             uf_hashes.push_back(file.item());
     }

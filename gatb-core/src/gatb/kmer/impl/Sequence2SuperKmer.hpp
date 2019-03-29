@@ -164,7 +164,7 @@ public:
         size_t                       nbPasses,
         size_t                       currentPass,
         size_t                       nbPartitions,
-        tools::dp::IteratorListener* progress,
+        tools::dp::IteratorListener::sptr progress,
         BankStats&                   bankStats
     )
     : _model(model), _pass(currentPass), _nbPass(nbPasses), _nbPartitions(nbPartitions),
@@ -191,7 +191,7 @@ protected:
     size_t           _nbPartitions;
     size_t           _kmersize;
     size_t           _miniSize;
-    tools::dp::IteratorListener* _progress;
+    tools::dp::IteratorListener::sptr _progress;
     size_t           _nbWrittenKmers;
     size_t           _nbSuperKmers;
     BankStats&       _bankStatsGlobal;

@@ -40,13 +40,13 @@ namespace gatb {  namespace core { namespace tools {  namespace misc {  namespac
 class InsertionVisitor : public IPropertiesVisitor
 {
 public:
-    InsertionVisitor (size_t depth, IProperties* ref, set<string> keys) : _depth(depth), _ref(ref), _keys (keys) {}
+    InsertionVisitor (size_t depth, IProperties::sptr ref, set<string> keys) : _depth(depth), _ref(ref), _keys (keys) {}
     virtual ~InsertionVisitor() {}
 
     void visitBegin () {}
     void visitEnd   () {}
 
-    void visitProperty (IProperty* prop)
+    void visitProperty (Property* prop)
     {
         if (_ref &&  prop)
         {
@@ -59,7 +59,7 @@ public:
     }
 private:
     size_t       _depth;
-    IProperties* _ref;
+    IProperties::sptr _ref;
     set<string>  _keys;
 };
 
@@ -87,7 +87,7 @@ Properties::Properties (const std::string& rootname)
 *********************************************************************/
 Properties::Properties (const Properties& p)
 {
-    for (std::list<IProperty*>::const_iterator it = p._properties.begin(); it != p._properties.end(); it++)
+    for (std::list<Property*>::const_iterator it = p._properties.begin(); it != p._properties.end(); it++)
     {
         this->add ((*it)->depth, (*it)->key, (*it)->value);
     }
@@ -103,7 +103,7 @@ Properties::Properties (const Properties& p)
 *********************************************************************/
 Properties::~Properties ()
 {
-    for (std::list<IProperty*>::iterator it = _properties.begin(); it != _properties.end(); it++)
+    for (std::list<Property*>::iterator it = _properties.begin(); it != _properties.end(); it++)
     {
         delete *it;
     }
@@ -121,7 +121,7 @@ Properties& Properties::operator= (const Properties& p)
 {
     if (this != &p)
     {
-        for (std::list<IProperty*>::const_iterator it = p._properties.begin(); it != p._properties.end(); it++)
+        for (std::list<Property*>::const_iterator it = p._properties.begin(); it != p._properties.end(); it++)
         {
             this->add ((*it)->depth, (*it)->key, (*it)->value);
         }
@@ -137,11 +137,11 @@ Properties& Properties::operator= (const Properties& p)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* Properties::clone ()
+IProperties::sptr Properties::clone ()
 {
-    IProperties* result = new Properties ();
+    IProperties::sptr result = new Properties ();
 
-    for (std::list<IProperty*>::iterator it = _properties.begin(); it != _properties.end(); it++)
+    for (std::list<Property*>::iterator it = _properties.begin(); it != _properties.end(); it++)
     {
         result->add ((*it)->depth, (*it)->key, (*it)->value);
     }
@@ -161,7 +161,7 @@ void Properties::accept (IPropertiesVisitor* visitor)
 {
     visitor->visitBegin ();
 
-    for (std::list<IProperty*>::iterator it = _properties.begin(); it != _properties.end(); it++)
+    for (std::list<Property*>::iterator it = _properties.begin(); it != _properties.end(); it++)
     {
         visitor->visitProperty (*it);
     }
@@ -177,9 +177,9 @@ void Properties::accept (IPropertiesVisitor* visitor)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperty* Properties::add (size_t depth, const std::string& aKey, const char* format, ...)
+Property* Properties::add (size_t depth, const std::string& aKey, const char* format, ...)
 {
-    IProperty* result = 0;
+    Property* result = 0;
 
     if (format != 0)
     {
@@ -189,12 +189,12 @@ IProperty* Properties::add (size_t depth, const std::string& aKey, const char* f
         vsnprintf (buffer, sizeof(buffer), format, ap);
         va_end (ap);
 
-        result = new IProperty (depth, aKey, buffer);
+        result = new Property (depth, aKey, buffer);
         _properties.push_back (result);
     }
     else
     {
-        result = new IProperty (depth, aKey, "");
+        result = new Property (depth, aKey, "");
         _properties.push_back (result);
     }
 
@@ -209,9 +209,9 @@ IProperty* Properties::add (size_t depth, const std::string& aKey, const char* f
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperty* Properties::add (size_t depth, const std::string& aKey, const std::string& aValue)
+Property* Properties::add (size_t depth, const std::string& aKey, const std::string& aValue)
 {
-    IProperty* result = new IProperty (depth, aKey, aValue);
+    Property* result = new Property (depth, aKey, aValue);
     _properties.push_back (result);
     return result;
 }
@@ -224,7 +224,7 @@ IProperty* Properties::add (size_t depth, const std::string& aKey, const std::st
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void Properties::add (size_t depth, IProperties* properties)
+void Properties::add (size_t depth, IProperties::sptr properties)
 {
     if (properties)
     {
@@ -261,14 +261,14 @@ void Properties::add (size_t depth, const IProperties& properties)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void Properties::add (IProperty* prop, va_list args)
+void Properties::add (Property* prop, va_list args)
 {
     if (prop != 0)
     {
         LOCAL (prop);
         this->add (0, prop->key, prop->value);
 
-        for (IProperty* p = 0;  (p = va_arg(args, IProperty*)) != 0; )
+        for (Property* p = 0;  (p = va_arg(args, Property*)) != 0; )
         {
             LOCAL (p);
             this->add (0, p->key, p->value);
@@ -284,7 +284,7 @@ void Properties::add (IProperty* prop, va_list args)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void Properties::merge (IProperties* properties)
+void Properties::merge (IProperties::sptr properties)
 {
     if (properties)
     {
@@ -305,7 +305,7 @@ void Properties::merge (IProperties* properties)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperty* Properties::operator[] (const std::string& key)
+Property* Properties::operator[] (const std::string& key)
 {
     return get (key);
 }
@@ -318,11 +318,11 @@ IProperty* Properties::operator[] (const std::string& key)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperty* Properties::get (const std::string& key) const
+Property* Properties::get (const std::string& key) const
 {
-    IProperty* result = 0;
+    Property* result = 0;
 
-    list<IProperty*>::const_iterator it = _properties.begin();
+    list<Property*>::const_iterator it = _properties.begin();
 
     TokenizerIterator token (key.c_str(), ".");
     for (token.first(); !token.isDone(); token.next())
@@ -342,9 +342,9 @@ IProperty* Properties::get (const std::string& key) const
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperty* Properties::getRecursive (const std::string& key, std::list<IProperty*>::const_iterator& it) const
+Property* Properties::getRecursive (const std::string& key, std::list<Property*>::const_iterator& it) const
 {
-    IProperty* result = 0;
+    Property* result = 0;
     for (; !result  &&  it != _properties.end(); it++)
     {
         if (key.compare ((*it)->key)==0)    { result = *it; }
@@ -362,7 +362,7 @@ IProperty* Properties::getRecursive (const std::string& key, std::list<IProperty
 *********************************************************************/
 std::string Properties::getStr (const std::string& key) const
 {
-    IProperty* prop = get (key);
+    Property* prop = get (key);
 
     if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
 
@@ -379,7 +379,7 @@ std::string Properties::getStr (const std::string& key) const
 *********************************************************************/
 int64_t Properties::getInt (const std::string& key) const
 {
-    IProperty* prop = get (key);
+    Property* prop = get (key);
 
     if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
 
@@ -396,7 +396,7 @@ int64_t Properties::getInt (const std::string& key) const
 *********************************************************************/
 double Properties::getDouble (const std::string& key) const
 {
-    IProperty* prop = get (key);
+    Property* prop = get (key);
 
     if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
 
@@ -413,7 +413,7 @@ double Properties::getDouble (const std::string& key) const
 *********************************************************************/
 void Properties::setStr (const std::string& key, const std::string& value)
 {
-    IProperty* prop = get (key);
+    Property* prop = get (key);
 
     if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
 
@@ -430,7 +430,7 @@ void Properties::setStr (const std::string& key, const std::string& value)
 *********************************************************************/
 void Properties::setInt (const std::string& key, const int64_t& value)
 {
-    IProperty* prop = get (key);
+    Property* prop = get (key);
 
     if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
 
@@ -450,7 +450,7 @@ void Properties::setInt (const std::string& key, const int64_t& value)
 *********************************************************************/
 void Properties::setDouble (const std::string& key, const double& value)
 {
-    IProperty* prop = get (key);
+    Property* prop = get (key);
 
     if (prop == 0)  {  throw Exception ("Empty property '%s'", key.c_str());  }
 
@@ -473,7 +473,7 @@ void Properties::readFile (const string& filename)
     /** We first check that the file exists. */
     if (System::file().doesExist(filename) == true)
     {
-        IFile* file = System::file().newFile (filename, "r");
+        std::unique_ptr<IFile> file = System::file().newFile (filename, "r");
         if (file != 0)
         {
             char buffer[256];
@@ -580,11 +580,11 @@ void Properties::readXML (std::istream& stream)
         string      _name;
         string      _txt;
         int         _depth;
-        IProperty*  _currentProperty;
+        Property*  _currentProperty;
     };
 
     /** We remove all existing properties. */
-    for (std::list<IProperty*>::iterator it = _properties.begin(); it != _properties.end(); it++)  {  delete *it;  }
+    for (std::list<Property*>::iterator it = _properties.begin(); it != _properties.end(); it++)  {  delete *it;  }
     _properties.clear ();
 
     /** We attach this kind of observer to the reader. */
@@ -603,9 +603,9 @@ void Properties::readXML (std::istream& stream)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-std::list<IProperties*> Properties::map (const char* separator)
+std::list<IProperties::sptr> Properties::map (const char* separator)
 {
-    list<IProperties*> result;
+    list<IProperties::sptr> result;
 #if 0
     list <Iterator<char*>* > itList;
 
@@ -621,7 +621,7 @@ std::list<IProperties*> Properties::map (const char* separator)
     {
         list<char*>& current = p.currentItem();
 
-        IProperties* dup = this->clone();
+        IProperties::sptr dup = this->clone();
         result.push_back (dup);
 
         list<char*>::iterator      itStr;
@@ -662,7 +662,7 @@ set<string> Properties::getKeys ()
 {
     set<string> result;
 
-    for (list<IProperty*>::iterator it = _properties.begin(); it != _properties.end(); it++)
+    for (list<Property*>::iterator it = _properties.begin(); it != _properties.end(); it++)
     {
         result.insert (result.end(), (*it)->key);
     }
@@ -680,7 +680,7 @@ set<string> Properties::getKeys ()
 *********************************************************************/
 void Properties::setToFront (const std::string& key)
 {
-    for (list<IProperty*>::iterator it = _properties.begin(); it != _properties.end(); it++)
+    for (list<Property*>::iterator it = _properties.begin(); it != _properties.end(); it++)
     {
         if (key.compare ((*it)->key)==0)
         {
@@ -862,7 +862,7 @@ void XmlDumpPropertiesVisitor::visitEnd ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void XmlDumpPropertiesVisitor::visitProperty (IProperty* prop)
+void XmlDumpPropertiesVisitor::visitProperty (Property* prop)
 {
     if (prop != 0)
     {
@@ -998,7 +998,7 @@ RawDumpPropertiesVisitor::~RawDumpPropertiesVisitor ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void RawDumpPropertiesVisitor::visitProperty (IProperty* prop)
+void RawDumpPropertiesVisitor::visitProperty (Property* prop)
 {
     int width = _width;
 

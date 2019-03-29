@@ -87,13 +87,13 @@ public:
     /*************************************************************/
 
     /** \copydoc IOptionsParser::parse */
-    misc::IProperties* parse (int argc, char** argv);
+    misc::IProperties::sptr parse (int argc, char** argv);
 
     /** \copydoc IOptionsParser::parseString */
-    misc::IProperties* parseString (const std::string& s);
+    misc::IProperties::sptr parseString (const std::string& s);
 
     /** \copydoc IOptionsParser::getProperties */
-    misc::IProperties* getProperties ()  { return _properties; }
+    misc::IProperties::sptr getProperties ()  { return _properties; }
 
     /** \copydoc IOptionsParser::saw */
     bool saw (const std::string& name) const;
@@ -103,23 +103,23 @@ public:
     /*************************************************************/
 
     /** \copydoc IOptionsParser::push_back */
-    void push_back (IOptionsParser* parser, size_t expandDepth=0, bool visibility=true);
+    void push_back (IOptionsParser::sptr parser, size_t expandDepth=0, bool visibility=true);
 
     /** \copydoc IOptionsParser::push_front */
-    void push_front (IOptionsParser* parser, size_t expandDepth=0, bool visibility=true);
+    void push_front (IOptionsParser::sptr parser, size_t expandDepth=0, bool visibility=true);
 
     /** \copydoc IOptionsParser::getParser */
-    IOptionsParser* getParser (const std::string& name);
+    IOptionsParser::sptr getParser (const std::string& name);
 
     /** \copydoc IOptionsParser::getParsers */
-    std::list<IOptionsParser*>& getParsers ()  { return _parsers; }
+    std::list<IOptionsParser::sptr>& getParsers ()  { return _parsers; }
 
     /*************************************************************/
     /*********************   Miscellaneous   *********************/
     /*************************************************************/
 
     /** \copydoc IOptionsParser::getDefaultProperties */
-    misc::IProperties* getDefaultProperties ();
+    misc::IProperties::sptr getDefaultProperties ();
 
     /** \copydoc IOptionsParser::accept */
     void accept (IOptionsParserVisitor& visitor, size_t depth=0)  { visitor.visitOptionsParser(*this, depth); }
@@ -130,10 +130,9 @@ protected:
     bool        _visible;
     std::string _help;
 
-    std::list<IOptionsParser*> _parsers;
+    std::list<IOptionsParser::sptr> _parsers;
 
-    misc::IProperties* _properties;
-    void setProperties (misc::IProperties* properties)  { SP_SETATTR(properties); }
+    misc::IProperties::sptr _properties;
 
     std::ostream& indent (std::ostream& os, size_t level)  const { for (size_t i=0; i<level; i++)  { os << "   "; }  return os; }
 };
@@ -186,7 +185,7 @@ public:
     bool isMandatory () const { return _mandatory; }
 
     /** \copydoc IOptionsParser::getParser */
-    IOptionsParser* getParser (const std::string& name) { return name==getName() ? this : 0; }
+    IOptionsParser::sptr getParser (const std::string& name) { return name==getName() ? as_shared_ptr(this) : 0; }
 
     /** \copydoc IOptionsParser::accept */
     void accept (IOptionsParserVisitor& visitor, size_t depth=0)  { visitor.visitOption(*this, depth); }
@@ -346,12 +345,12 @@ public:
     /** Constructor.
      * \param[in] parser : the parser that threw the exception.
      * \param[in] result : information gathered during the parsing. */
-    OptionFailure (IOptionsParser* parser, IOptionsParser::Result result) :_parser(parser), _result(result)  {}
+    OptionFailure (IOptionsParser::sptr parser, IOptionsParser::Result result) :_parser(parser), _result(result)  {}
 
     /** Constructor.
      * \param[in] parser : the parser that threw the exception.
      * \param[in] msg : message to be displayed */
-    OptionFailure (IOptionsParser* parser, const std::string& msg) :_parser(parser), _msg(msg)  {}
+    OptionFailure (IOptionsParser::sptr parser, const std::string& msg) :_parser(parser), _msg(msg)  {}
 
     /** Display information about the failure on the provided output stream
      * \param[out] os : output stream to be used
@@ -359,7 +358,7 @@ public:
     int displayErrors (std::ostream& os) const;
 
 protected:
-    IOptionsParser*        _parser;
+    IOptionsParser::sptr        _parser;
     IOptionsParser::Result _result;
     std::string            _msg;
 };
@@ -370,7 +369,7 @@ class ExceptionHelp
 	{
 	public:
 
-		ExceptionHelp(IOptionsParser* parser) :_parser(parser) {}
+		ExceptionHelp(IOptionsParser::sptr parser) :_parser(parser) {}
 		
 		int displayDefaultHelp (std::ostream& os) const
 		{
@@ -379,7 +378,7 @@ class ExceptionHelp
 			return EXIT_FAILURE;
 		}
 	protected:
-		IOptionsParser*        _parser;
+		IOptionsParser::sptr        _parser;
 	};
 	
 class ExceptionVersion

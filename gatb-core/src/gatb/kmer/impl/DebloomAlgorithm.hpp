@@ -114,21 +114,21 @@ public:
 
     /** Get an option parser for bloom/debloom parameters. Dynamic allocation, so must be released when no more used.
      * \return an instance of IOptionsParser. */
-    static tools::misc::IOptionsParser* getOptionsParser ();
+    static tools::misc::IOptionsParser::sptr getOptionsParser ();
 
     /** Execute the debloom algorithm. */
     void execute ();
 
     /** Get the collection for the computed critical FP kmers.
      * \return the cFP  kmers collection. */
-    tools::collections::Collection<Type>* getCriticalKmers ()
+    tools::collections::ICollection<Type>* getCriticalKmers ()
     {
         return & _groupDebloom.getCollection <Type> ("cfp");
     }
 
     /** Get the bloom/cFP container.
      * \return the container. */
-    debruijn::IContainerNode<Type>* getContainerNode ()  { return _container; }
+    debruijn::IContainerNode<Type>& getContainerNode ()  { return *_container; }
 
     /** Get the number of bits per kmer
      * \param[in] kmerSize : kmer size
@@ -144,8 +144,8 @@ protected:
 
     /** */
     virtual void execute_aux (
-        tools::misc::IProperties* bloomProps,
-        tools::misc::IProperties* cfpProps,
+        tools::misc::IProperties::sptr bloomProps,
+        tools::misc::IProperties::sptr cfpProps,
         u_int64_t& totalSizeBloom,
         u_int64_t& totalSizeCFP
     );
@@ -153,7 +153,7 @@ protected:
     /** */
     virtual gatb::core::tools::collections::impl::IBloom<Type>* createBloom (
         tools::collections::Iterable<Count>* solidIterable,
-        tools::misc::IProperties* props,
+        tools::misc::IProperties::sptr props,
         u_int64_t& totalSizeBloom
     );
 
@@ -189,8 +189,8 @@ protected:
     void setDebloomStructures (debruijn::IContainerNode<Type>* container)  { SP_SETATTR(container); }
 
     void createCFP (
-        gatb::core::tools::collections::Collection<Type>*  criticalCollection,
-        tools::misc::IProperties* props,
+        gatb::core::tools::collections::ICollection<Type>*  criticalCollection,
+        tools::misc::IProperties::sptr props,
         u_int64_t& totalSize
     );
 

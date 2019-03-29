@@ -58,11 +58,11 @@ public:
 
     /** */
     RepartitorAlgorithm (
-        gatb::core::bank::IBank*        bank,
+        gatb::core::bank::IBank::sptr        bank,
         tools::storage::impl::Group&    group,
         const Configuration&            config,
         unsigned int                    nb_cores = 0,
-        tools::misc::IProperties*   options    = 0
+        tools::misc::IProperties::sptr   options    = 0
     );
 
     /** */
@@ -78,7 +78,7 @@ private:
 
     Configuration _config;
 
-    gatb::core::bank::IBank*      _bank;
+    gatb::core::bank::IBank::sptr      _bank;
     tools::storage::impl::Group&  _group;
 
     uint32_t* _freq_order;

@@ -51,7 +51,7 @@ namespace misc      {
  *
  *  \see IProperties
  */
-class IProperty : public system::SmartPointer
+class Property : public system::SharedObject<Property>
 {
 public:
     /** Constructor.
@@ -59,14 +59,14 @@ public:
      * \param[in] aKey   : the key
      * \param[in] aValue : the value
      */
-    IProperty (size_t aDepth, const std::string& aKey, const std::string& aValue)
+    Property (size_t aDepth, const std::string& aKey, const std::string& aValue)
         : depth(aDepth), key(aKey), value(aValue)  {}
 
     /** Constructor.
      * \param[in] aKey   : the key
      * \param[in] aValue : the value
      */
-    IProperty (const std::string& aKey="", const std::string& aValue="")
+    Property (const std::string& aKey="", const std::string& aValue="")
         : depth(0), key(aKey), value(aValue)  {}
 
     /** Depth of the property. 0 should mean root property. */
@@ -99,9 +99,6 @@ public:
     const char*         getString ()  { return value.c_str();        }
 };
 
-/** An alias here... In the future, we should replace IProperty by Property. */
-typedef IProperty  Property;
-
 /********************************************************************************/
 
 /** Visitor for a IProperty instance.
@@ -116,8 +113,7 @@ typedef IProperty  Property;
  *
  *  It is defined as a SmartPointer for easing instance life cycle management.
  */
-class IPropertiesVisitor : public system::SmartPointer
-{
+class IPropertiesVisitor : public system::SharedObject<IPropertiesVisitor> {
 public:
 
     /** Called before the true visit of the IProperty instance. */
@@ -126,7 +122,7 @@ public:
     /** Visit of the IProperty instance.
      * \param[in] prop : the instance to be visited.
      */
-    virtual void visitProperty (IProperty* prop) = 0;
+    virtual void visitProperty (Property* prop) = 0;
 
     /** Called after the true visit of the IProperty instance. */
     virtual void visitEnd      () = 0;
@@ -151,10 +147,9 @@ public:
  *  \see IProperty
  *  \see IPropertiesVisitor
  */
-class IProperties : public system::SmartPointer
+class IProperties : public system::SharedObject<IProperties>
 {
 public:
-
     /** Accept a visitor (should loop over all IProperty instances).
      * \param[in] visitor : visitor to be accepted
      */
@@ -167,7 +162,7 @@ public:
      * \return a IProperty instance is created and returned as result of the method.
      *
      */
-    virtual IProperty* add (size_t depth, const std::string& aKey, const char* format=0, ...) = 0;
+    virtual Property* add (size_t depth, const std::string& aKey, const char* format=0, ...) = 0;
 
     /** Add a IProperty instance given a depth, a key and a value.
      * \param[in] depth  : depth of the property to be added
@@ -175,14 +170,14 @@ public:
      * \param[in] aValue : value (as a string) of the property to be added
      * \return a IProperty instance is created and returned as result of the method.
      */
-    virtual IProperty* add (size_t depth, const std::string& aKey, const std::string& aValue) = 0;
+    virtual Property* add (size_t depth, const std::string& aKey, const std::string& aValue) = 0;
 
     /** Add all the IProperty instances contained in the provided IProperties instance. Note that a depth is provided
      *  and is added to the depth of each added IProperty instance.
      * \param[in] depth : depth to be added to each depth of added instances.
      * \param[in] prop  : instance holding IProperty instances to be added
      */
-    virtual void       add (size_t depth, IProperties* prop) = 0;
+    virtual void       add (size_t depth, IProperties::sptr prop) = 0;
 
     /** Add all the IProperty instances contained in the provided IProperties instance. Note that a depth is provided
      *  and is added to the depth of each added IProperty instance.
@@ -192,24 +187,24 @@ public:
     virtual void       add (size_t depth, const IProperties& prop) = 0;
 
     /** */
-    virtual void add (IProperty* prop, va_list args) = 0;
+    virtual void add (Property* prop, va_list args) = 0;
 
     /** Merge the IProperty instances contained in the provided IProperties instance.
      * \param[in] prop  : instance holding IProperty instances to be added
      */
-    virtual void  merge (IProperties* prop) = 0;
+    virtual void  merge (IProperties::sptr prop) = 0;
 
     /** Returns the IProperty instance given a key.
      * \param[in] key : the key
      * \return the IProperty instance if found, 0 otherwise.
      */
-    virtual IProperty* operator[] (const std::string& key) = 0;
+    virtual Property* operator[] (const std::string& key) = 0;
 
     /** Returns the IProperty instance given a key.
      * \param[in] key : the key
      * \return the IProperty instance if found, 0 otherwise.
      */
-    virtual IProperty* get (const std::string& key) const = 0;
+    virtual Property* get (const std::string& key) const = 0;
 
     /** Get the value of a property given its key.
      * \param[in] key : the key of the property
@@ -250,12 +245,12 @@ public:
     /** Clone the instance
      * \return the cloned instance.
      */
-    virtual IProperties* clone () = 0;
+    virtual IProperties::sptr clone () = 0;
 
     /** Distribute arguments that are comma separated list.
      * \return the list of distributed IProperties instances.
      */
-    virtual std::list<IProperties*> map (const char* separator) = 0;
+    virtual std::list<IProperties::sptr> map (const char* separator) = 0;
 
     /** Get the known keys.
      * \return the set of keys

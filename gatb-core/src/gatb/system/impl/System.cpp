@@ -23,7 +23,7 @@
 namespace gatb { namespace core { namespace system { namespace impl {
 /********************************************************************************/
 	
-std::list<ThreadGroup*> ThreadGroup::_groups;
+std::list<IThreadGroup::sptr> ThreadGroup::_groups;
 
 static pthread_mutex_t groupsMutex;
 static int mutex_inited = 0;
@@ -61,7 +61,7 @@ ThreadGroup::~ThreadGroup()
     if (_startSynchro)  { delete _startSynchro; }
 
     /** We delete each thread. */
-    for (std::vector<system::IThread*>::iterator it = _threads.begin(); it != _threads.end(); it++)
+    for (std::vector<system::IThread::sptr>::iterator it = _threads.begin(); it != _threads.end(); it++)
     {
         delete (*it);
     }
@@ -77,7 +77,7 @@ ThreadGroup::~ThreadGroup()
 *********************************************************************/
 void ThreadGroup::add (void* (*mainloop) (void*), void* data)
 {
-    IThread* thr = System::thread().newThread (mainloop, data);
+    IThread::sptr thr = System::thread().newThread (mainloop, data);
 
     _threads.push_back (thr);
 }
@@ -96,7 +96,7 @@ void ThreadGroup::start ()
     if (_startSynchro)  { _startSynchro->unlock(); }
 
     /** We join each thread. */
-    for (std::vector<system::IThread*>::iterator it = _threads.begin(); it != _threads.end(); it++)
+    for (std::vector<system::IThread::sptr>::iterator it = _threads.begin(); it != _threads.end(); it++)
     {
         (*it)->join ();
     }
@@ -131,13 +131,13 @@ void ThreadGroup::init_mutex_if_needed()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IThreadGroup* ThreadGroup::create ()
+IThreadGroup::sptr ThreadGroup::create ()
 {
 	init_mutex_if_needed();
 
     LOCK();
 
-    ThreadGroup* tg = new ThreadGroup;
+    IThreadGroup::sptr tg = new ThreadGroup;
 
     _groups.push_back(tg);
 
@@ -154,14 +154,14 @@ IThreadGroup* ThreadGroup::create ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-void ThreadGroup::destroy (IThreadGroup* thr)
+void ThreadGroup::destroy (IThreadGroup::sptr thr)
 {
 	init_mutex_if_needed();
 	
     LOCK();
 
     /** We look for the provided thread group. */
-    for (std::list<ThreadGroup*>::iterator it = _groups.begin(); it != _groups.end(); it++)
+    for (std::list<IThreadGroup::sptr>::iterator it = _groups.begin(); it != _groups.end(); it++)
     {
         if (*it == thr)
         {
@@ -182,18 +182,18 @@ void ThreadGroup::destroy (IThreadGroup* thr)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IThreadGroup* ThreadGroup::find (IThread::Id id)
+IThreadGroup::sptr ThreadGroup::find (IThread::Id id)
 {
 	init_mutex_if_needed();
 
 	LOCK();
 
     /** We look for the provided thread group. */
-    for (std::list<ThreadGroup*>::iterator it = _groups.begin(); it != _groups.end(); it++)
+    for (std::list<IThreadGroup::sptr>::iterator it = _groups.begin(); it != _groups.end(); it++)
     {
-        ThreadGroup* group = *it;
+        IThreadGroup::sptr group = *it;
 
-        for (std::vector<IThread*>::iterator itThread = group->_threads.begin();  itThread != group->_threads.end(); itThread++)
+        for (std::vector<IThread::sptr>::iterator itThread = group->_threads.begin();  itThread != group->_threads.end(); itThread++)
         {
             if ((*itThread)->getId() == id)  {  UNLOCK();  return group;   }
         }
@@ -212,19 +212,19 @@ IThreadGroup* ThreadGroup::find (IThread::Id id)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-bool ThreadGroup::findThreadInfo (IThread::Id id, std::pair<IThread*,size_t>& info)
+bool ThreadGroup::findThreadInfo (IThread::Id id, std::pair<IThread::sptr,size_t>& info)
 {
 	init_mutex_if_needed();
 
 	LOCK();
 
     /** We look for the provided thread group. */
-    for (std::list<ThreadGroup*>::iterator it = _groups.begin(); it != _groups.end(); it++)
+    for (std::list<IThreadGroup::sptr>::iterator it = _groups.begin(); it != _groups.end(); it++)
     {
-        ThreadGroup* group = *it;
+        IThreadGroup::sptr group = *it;
 
     	size_t idx=0;
-        for (std::vector<IThread*>::iterator itThread = group->_threads.begin();  itThread != group->_threads.end(); itThread++, idx++)
+        for (std::vector<IThread::sptr>::iterator itThread = group->_threads.begin();  itThread != group->_threads.end(); itThread++, idx++)
         {
             if ((*itThread)->getId() == id)
             {

@@ -43,7 +43,7 @@ namespace storage   {
  * This interface defines a few methods for hierarchical management of entities
  * that can be stored (likely in file system).
  */
-class ICell : public virtual system::ISmartPointer
+class ICell : public system::SharedObject<ICell>
 {
 public:
 
@@ -52,7 +52,7 @@ public:
 
     /** Get the parent node (if any).
      * \return the parent node. */
-    virtual ICell* getParent () const = 0;
+    virtual ICell::sptr getParent () const = 0;
 
     /** Return the identifier of the node.
      * \return the id of the node. */
@@ -69,9 +69,9 @@ public:
     /** Get the root of the given cell
      * \param[in] cell : the cell we want to get the root
      * \return the root of the given cell  */
-    static ICell* getRoot (ICell* cell)
+    static ICell::sptr getRoot (ICell::sptr cell)
     {
-        ICell* loop=0;  for (loop=cell ; loop && loop->getParent() != 0;  loop=loop->getParent())  {}
+        ICell::sptr loop=0;  for (loop=cell ; loop && loop->getParent() != 0;  loop=loop->getParent())  {}
         return loop;
     }
 

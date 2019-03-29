@@ -62,7 +62,7 @@ UnitigsConstructionAlgorithm<span>::UnitigsConstructionAlgorithm (
     tools::storage::impl::Storage& storage,
     std::string                 unitigs_filename,
     size_t                      nb_cores,
-    tools::misc::IProperties*   options,
+    tools::misc::IProperties::sptr   options,
     bool do_bcalm,
     bool do_bglue,
     bool do_links

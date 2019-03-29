@@ -130,7 +130,7 @@ template<size_t span, typename Node, typename Edge, typename Graph>
 void IterativeExtensions<span, Node, Edge, Graph>::construct_linear_seqs (
     const string& L,
     const string& R,
-    IBank*        outputBank,
+    IBank::sptr        outputBank,
     bool          swf
 )
 {

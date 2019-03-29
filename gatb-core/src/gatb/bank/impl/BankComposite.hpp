@@ -53,7 +53,7 @@ namespace impl      {
  *
  * A BankComposite can be created with a vector of IBank instances to be referred.
  */
-class BankComposite : public AbstractBank
+class BankComposite : public virtual AbstractBank
 {
 public:
 
@@ -66,16 +66,13 @@ public:
     /** Constructor.
      * \param[in] banks : list of banks to be associated to the album.
      */
-    BankComposite (const std::vector<IBank*>& banks) : _nbItems(0), _size(0)
+    BankComposite (const IBank::vector& banks) : _nbItems(0), _size(0)
     {
         for (size_t i=0; i<banks.size(); i++)  {  this->addBank (banks[i]); }
     }
 
     /** Destructor. */
-    virtual ~BankComposite ()
-    {
-        for (size_t i=0; i<_banks.size(); i++)  { _banks[i]->forget(); }
-    }
+    virtual ~BankComposite () {}
 
     /** \copydoc IBank::getId. */
     std::string getId ()
@@ -106,14 +103,14 @@ public:
 	
     /** Add a bank into the composite
      * \param[in] bank : the bank to be added. */
-    void addBank (IBank* bank)  { bank->use();  _banks.push_back(bank); }
+    void addBank (IBank::sptr bank)  { _banks.emplace_back(std::move(bank)); }
 
     /** \copydoc IBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()
+    seq_iterator_ptr iterator ()
     {
-        std::vector <tools::dp::Iterator<Sequence>*>  iterators;
+        tools::dp::iterator_vector<Sequence>  iterators;
         for (size_t i=0; i<_banks.size(); i++)  { iterators.push_back (_banks[i]->iterator()); }
-        return new tools::dp::impl::CompositeIterator<Sequence> (iterators);
+        return std::make_shared<tools::dp::impl::CompositeIterator<Sequence>>(std::move(iterators));
     }
 
     /** \copydoc IBank::getNbItems */
@@ -157,7 +154,7 @@ public:
 
     /** Return the vector of IBank objects.
      * \return the IBank objects. */
-    const std::vector<IBank*> getBanks() const { return _banks; }
+    const IBank::vector getBanks() const { return _banks; }
 
     /** Get the number of referred banks.
      * \return the number of referred banks */
@@ -169,7 +166,7 @@ public:
 
     /** Returns an iterator on the IBank objects (heap allocation)
      * \return the IBank iterator. */
-    tools::dp::Iterator<IBank*>* iteratorBanks ()  { return new tools::dp::impl::VectorIterator<IBank*> (_banks); }
+    tools::dp::Iterator<IBank::sptr>* iteratorBanks ()  { return new tools::dp::impl::VectorIterator<IBank::sptr> (_banks); }
 
     /** \copydoc IBank::remove. */
     void remove ()  {  for (size_t i=0; i<_banks.size(); i++)  { _banks[i]->remove(); } }
@@ -177,7 +174,7 @@ public:
 protected:
 
     /** List of the banks. */
-    std::vector<IBank*> _banks;
+    IBank::vector _banks;
 
     u_int64_t _nbItems;
     u_int64_t _size;

@@ -69,7 +69,7 @@ namespace impl      {
  }
  * \endcode
   */
-class TimeInfo : public system::SmartPointer
+class TimeInfo : public system::SharedObject<TimeInfo>
 {
 public:
 
@@ -122,14 +122,14 @@ public:
      * \param[in] root : root name of the properties to be returned.
      * \return the created IProperties instance.
      */
-    virtual tools::misc::IProperties* getProperties (const std::string& root);
+    virtual tools::misc::IProperties::sptr getProperties (const std::string& root);
 
 private:
 
     system::ITime&  _time;
     std::map <std::string, u_int32_t>  _entriesT0;
     std::map <std::string, u_int32_t>  _entries;
-	gatb::core::system::ISynchronizer* _synchro;
+	system::ISynchronizer::sptr _synchro;
 };
 
 /********************************************************************************/

@@ -51,23 +51,22 @@ public:
      */
     static IProperties& getInfo()
     {
-        static system::SmartObject singleton;
+        static std::unique_ptr<IProperties> singleton;
 
-        if (singleton.hasRef() == false)
+        if (singleton)
         {
-            IProperties* props = new Properties();
+            singleton = std::make_unique<Properties>();
 
-            props->add (0, "host");
-            props->add (1, "name",             "%s",   system::impl::System::info().getHostName().c_str());
-            props->add (1, "nb_cores",         "%d",   system::impl::System::info().getNbCores());
-            props->add (1, "memory",           "%.1f", (double)system::impl::System::info().getMemoryPhysicalTotal() / (double)system::GBYTE);
-            props->add (1, "disk_current_dir", "%.1f", (double)system::impl::System::file().getAvailableSpace(system::impl::System::file().getCurrentDirectory()) / (double)system::MBYTE);
-            props->add (1, "max_file_nb",      "%lld", system::impl::System::file().getMaxFilesNumber());
-            props->add (1, "pid",              "%d",   system::impl::System::thread().getProcess());
+            singleton->add (0, "host");
+            singleton->add (1, "name",             "%s",   system::impl::System::info().getHostName().c_str());
+            singleton->add (1, "nb_cores",         "%d",   system::impl::System::info().getNbCores());
+            singleton->add (1, "memory",           "%.1f", (double)system::impl::System::info().getMemoryPhysicalTotal() / (double)system::GBYTE);
+            singleton->add (1, "disk_current_dir", "%.1f", (double)system::impl::System::file().getAvailableSpace(system::impl::System::file().getCurrentDirectory()) / (double)system::MBYTE);
+            singleton->add (1, "max_file_nb",      "%lld", system::impl::System::file().getMaxFilesNumber());
+            singleton->add (1, "pid",              "%d",   system::impl::System::thread().getProcess());
 
-            singleton.setRef (props);
         }
-        return * (dynamic_cast<IProperties*>(singleton.getRef()));
+        return *singleton;
     }
 };
 

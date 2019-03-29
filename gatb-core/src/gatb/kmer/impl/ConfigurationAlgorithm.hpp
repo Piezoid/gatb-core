@@ -43,7 +43,7 @@ class ConfigurationAlgorithm : public gatb::core::tools::misc::impl::Algorithm
 public:
 
     /** */
-    ConfigurationAlgorithm (bank::IBank* bank, tools::misc::IProperties* input);
+    ConfigurationAlgorithm (bank::IBank& bank, tools::misc::IProperties& input);
 
     /** */
     ~ConfigurationAlgorithm ();
@@ -56,20 +56,18 @@ public:
 
 private:
     /** */
-    static std::vector<tools::misc::CountRange> getSolidityThresholds (tools::misc::IProperties* params);
+    static std::vector<tools::misc::CountRange> getSolidityThresholds (tools::misc::IProperties::sptr params);
 
-	static std::vector<bool> getSolidityCustomVector (tools::misc::IProperties* params);
+	static std::vector<bool> getSolidityCustomVector (tools::misc::IProperties::sptr params);
 
     /** Shortcut. */
     typedef typename Kmer<span>::Type Type;
 
     Configuration _config;
 
-    bank::IBank* _bank;
-    void setBank (bank::IBank* bank) { SP_SETATTR(bank); }
+    bank::IBank::sptr _bank;
 
-    tools::misc::IProperties* _input;
-    void setInput (tools::misc::IProperties* input)  { SP_SETATTR(input); }
+    tools::misc::IProperties::sptr _input;
 };
 
 /********************************************************************************/

@@ -64,9 +64,9 @@ public:
      * \param[in] name : name of the collection saved in the group
      * \param[in] collection : Collection instance to be saved.
      */
-    template<typename T>  void saveContainer (Group& group, const std::string& name, collections::Collection<T>* collection)
+    template<typename T>  void saveContainer (Group& group, const std::string& name, collections::ICollection<T>* collection)
     {
-        collections::Collection<T>* storageCollection = & group.getCollection<T> (name);
+        collections::ICollection<T>* storageCollection = & group.getCollection<T> (name);
 
         tools::dp::Iterator<T>* it = collection->iterator();   LOCAL(it);
         for (it->first(); !it->isDone(); it->next())  {  storageCollection->insert (it->item());  }
@@ -78,9 +78,9 @@ public:
      * \param[in] name : name of the collection the group
      * \return a Collection instance, loaded from the group
      */
-    template<typename T>  collections::Container<T>*  loadContainer (Group& group, const std::string& name)
+    template<typename T>  collections::ISet<T>*  loadContainer (Group& group, const std::string& name)
     {
-        collections::Collection<T>*  storageCollection = & group.getCollection<T> (name);
+        collections::ICollection<T>*  storageCollection = & group.getCollection<T> (name);
         return new collections::impl::ContainerSet<T> (storageCollection->iterator());
     }
 
@@ -92,7 +92,7 @@ public:
      */
     template<typename T>  void saveBloom (Group& group, const std::string& name, collections::impl::IBloom<T>* bloom, size_t kmerSize)
     {
-        collections::Collection<math::NativeInt8>* bloomCollection = & group.getCollection<math::NativeInt8> (name);
+        collections::ICollection<math::NativeInt8>* bloomCollection = & group.getCollection<math::NativeInt8> (name);
 
         if (bloomMode == 0)
         {
@@ -129,7 +129,7 @@ public:
     template<typename T>  collections::impl::IBloom<T>*  loadBloom (Group& group, const std::string& name)
     {
         /** We retrieve the raw data buffer for the Bloom filter. */
-        tools::collections::Collection<tools::math::NativeInt8>* bloomArray = & group.getCollection<tools::math::NativeInt8> (name);
+        tools::collections::ICollection<tools::math::NativeInt8>* bloomArray = & group.getCollection<tools::math::NativeInt8> (name);
 
         /** We create the Bloom fiter. */
         tools::collections::impl::IBloom<T>* bloom = tools::collections::impl::BloomFactory::singleton().createBloom<T> (

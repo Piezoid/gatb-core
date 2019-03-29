@@ -100,7 +100,7 @@ BloomAlgorithm<span>::BloomAlgorithm (
     float               nbitsPerKmer,
     size_t              nb_cores,
     BloomKind  bloomKind,
-    IProperties*        options
+    IProperties::sptr        options
 )
     :  Algorithm("bloom", nb_cores, options),
        _kmerSize(kmerSize), _nbitsPerKmer(nbitsPerKmer), _bloomKind(bloomKind), _storage(storage), _solidIterable(0)

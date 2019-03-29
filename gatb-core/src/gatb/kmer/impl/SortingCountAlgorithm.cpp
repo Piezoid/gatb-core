@@ -92,7 +92,7 @@ static const char* progressFormat4 = "DSK: nb solid kmers found : %-9ld  ";
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-SortingCountAlgorithm<span>::SortingCountAlgorithm (IProperties* params)
+SortingCountAlgorithm<span>::SortingCountAlgorithm (IProperties::sptr params)
   : Algorithm("dsk", -1, params),
     _bank(0), _repartitor(0),
     _progress (0), _tmpPartitionsStorage(0), _tmpPartitions(0), _storage(0),_superKstorage(0)
@@ -108,7 +108,7 @@ SortingCountAlgorithm<span>::SortingCountAlgorithm (IProperties* params)
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-SortingCountAlgorithm<span>::SortingCountAlgorithm (IBank* bank, IProperties* params)
+SortingCountAlgorithm<span>::SortingCountAlgorithm (IBank::sptr bank, IProperties::sptr params)
   : Algorithm("dsk", -1, params),
     _bank(0), _repartitor(0),
     _progress (0),_tmpPartitionsStorage(0), _tmpPartitions(0), _storage(0),_superKstorage(0)
@@ -126,11 +126,11 @@ SortingCountAlgorithm<span>::SortingCountAlgorithm (IBank* bank, IProperties* pa
 *********************************************************************/
 template<size_t span>
 SortingCountAlgorithm<span>::SortingCountAlgorithm (
-    IBank*                  bank,
+    IBank::sptr                  bank,
     const Configuration&    config,
     Repartitor*             repartitor,
     vector<CountProcessor*> processors,
-	tools::misc::IProperties* params
+	tools::misc::IProperties::sptr params
 
 )
   : Algorithm("dsk", config._nbCores, params),
@@ -199,9 +199,9 @@ SortingCountAlgorithm<span>& SortingCountAlgorithm<span>::operator= (const Sorti
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-IOptionsParser* SortingCountAlgorithm<span>::getOptionsParser (bool mandatory)
+IOptionsParser::sptr SortingCountAlgorithm<span>::getOptionsParser (bool mandatory)
 {
-    IOptionsParser* parser = new OptionsParser ("kmer count");
+    IOptionsParser::sptr parser = new OptionsParser ("kmer count");
 
     string abundanceMax = Stringify::format("%ld", std::numeric_limits<CountNumber>::max());
 
@@ -224,7 +224,7 @@ IOptionsParser* SortingCountAlgorithm<span>::getOptionsParser (bool mandatory)
 	parser->push_back (new OptionOneParam (STR_HISTO2D,"compute the 2D histogram (with first file = genome, remaining files = reads)",false,"0"));
 	parser->push_back (new OptionOneParam (STR_HISTO,"output the kmer abundance histogram",false,"0"));
 
-    IOptionsParser* devParser = new OptionsParser ("kmer count, advanced performance tweaks");
+    IOptionsParser::sptr devParser = new OptionsParser ("kmer count, advanced performance tweaks");
 
     devParser->push_back (new OptionOneParam (STR_MINIMIZER_TYPE,    "minimizer type (0=lexi, 1=freq)",                false, "0"));
     devParser->push_back (new OptionOneParam (STR_MINIMIZER_SIZE,    "size of a minimizer",                            false, "10"));
@@ -243,9 +243,9 @@ IOptionsParser* SortingCountAlgorithm<span>::getOptionsParser (bool mandatory)
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-IProperties* SortingCountAlgorithm<span>::getDefaultProperties ()
+IProperties::sptr SortingCountAlgorithm<span>::getDefaultProperties ()
 {
-    IOptionsParser* parser = getOptionsParser (true);
+    IOptionsParser::sptr parser = getOptionsParser (true);
     LOCAL (parser);
     return parser->getDefaultProperties();
 }
@@ -260,9 +260,9 @@ IProperties* SortingCountAlgorithm<span>::getDefaultProperties ()
 *********************************************************************/
 template<size_t span>
 ICountProcessor<span>* SortingCountAlgorithm<span>::getDefaultProcessor (
-    tools::misc::IProperties*       params,
-    tools::storage::impl::Storage*  dskStorage,
-    tools::storage::impl::Storage*  otherStorage
+    tools::misc::IProperties::sptr       params,
+    tools::storage::impl::Storage::sptr  dskStorage,
+    tools::storage::impl::Storage::sptr  otherStorage
 )
 {
 	
@@ -418,9 +418,9 @@ class CountProcessorCustomProxy : public CountProcessorProxy<span>
 template<size_t span>
 vector<ICountProcessor<span>*> SortingCountAlgorithm<span>::getDefaultProcessorVector (
     Configuration&  config,
-    IProperties*    params,
-    Storage*        dskStorage,
-    Storage*        otherStorage
+    IProperties::sptr    params,
+    Storage::sptr        dskStorage,
+    Storage::sptr        otherStorage
 )
 {
 
@@ -496,7 +496,7 @@ void SortingCountAlgorithm<span>::configure ()
     if (_bank == 0)    {  setBank (Bank::open (getInput()->getStr(STR_URI_INPUT)));  }
 
     /** We may have to create a default storage. */
-    Storage* storage = 0;
+    Storage::sptr storage = 0;
     if (_repartitor==0 || _processors.size() == 0)
     {
         string output = getInput()->get(STR_URI_OUTPUT) ?
@@ -607,7 +607,7 @@ void SortingCountAlgorithm<span>::execute ()
     configure ();
 
     /** We create the sequences iterator. */
-    Iterator<Sequence>* itSeq = _bank->iterator();
+    seq_iterator_ptr itSeq = _bank->iterator();
     LOCAL (itSeq);
 
     /** We configure the progress bar. Note that we create a ProgressSynchro since this progress bar
@@ -848,7 +848,7 @@ public:
 					size_t             currentPass,
 					size_t             nbPartitions,
 					size_t             nbCacheItems,
-					IteratorListener*  progress,
+					IteratorListener::sptr  progress,
 					BankStats&         bankStats,
 					Partition<Type>*   partition,
 					Repartitor&        repartition,
@@ -988,7 +988,7 @@ public:
         size_t             currentPass,
         size_t             nbPartitions,
         size_t             nbCacheItems,
-        IteratorListener*  progress,
+        IteratorListener::sptr  progress,
         BankStats&         bankStats,
         Partition<Type>*   partition,
         Repartitor&        repartition,
@@ -1124,7 +1124,7 @@ private:
 						size_t             currentPass,
 						size_t             nbPartitions,
 						size_t             nbCacheItems,
-						IteratorListener*  progress,
+						IteratorListener::sptr  progress,
 						BankStats&         bankStats,
 						Partition<Type>*   partition,
 						Repartitor&        repartition,
@@ -1177,7 +1177,7 @@ private:
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-void SortingCountAlgorithm<span>::fillPartitions (size_t pass, Iterator<Sequence>* itSeq, PartiInfo<5>& pInfo)
+void SortingCountAlgorithm<span>::fillPartitions (size_t pass, seq_iterator_ptr itSeq, PartiInfo<5>& pInfo)
 	{
 		TIME_INFO (getTimeInfo(), "fill_partitions");
 		
@@ -1227,7 +1227,7 @@ void SortingCountAlgorithm<span>::fillPartitions (size_t pass, Iterator<Sequence
 		_progress->init();
 		
 		/** We may have several input banks instead of a single one. */
-		std::vector<Iterator<Sequence>*> itBanks =  itSeq->getComposition();
+		iterator_vector<Sequence> itBanks =  itSeq->getComposition();
 		
 		/** We first reset the vector holding the kmers number for each partition and for each bank.
 		 * It can be seen as the following matrix:
@@ -1406,7 +1406,7 @@ void SortingCountAlgorithm<span>::fillSolidKmers_aux (ICountProcessor<span>* pro
         /** We build a list of 'currentNbCores' commands to be dispatched each one in one thread. */
         for (size_t j=0; j<currentNbCores; j++, p++)
         {
-            ISynchronizer* synchro = System::thread().newSynchronizer();
+            ISynchronizer::sptr synchro = System::thread().newSynchronizer();
             LOCAL (synchro);
 
             /** We clone the prototype count processor instance for the current 'p' kmers partition. */

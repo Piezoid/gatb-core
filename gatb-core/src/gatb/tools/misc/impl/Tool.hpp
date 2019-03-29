@@ -76,7 +76,7 @@ namespace impl      {
  *
  * \see Algorithm
  */
-class Tool : public system::SmartPointer
+class Tool : public system::SharedObject<Tool>
 {
 public:
 
@@ -95,14 +95,14 @@ public:
      * \param[in] input : input parameters
      * \return the parsed options as a IProperties instance
      */
-    virtual IProperties* run (IProperties* input);
+    virtual IProperties::sptr run (IProperties::sptr input);
 
     /** Run the tool with input parameters provided as a couple [argc,argv]
      * \param[in] argc : number of arguments
      * \param[in] argv : array of arguments
      * \return the parsed options as a IProperties instance
      */
-    virtual IProperties* run (int argc, char* argv[]);
+    virtual IProperties::sptr run (int argc, char* argv[]);
 
     /** Subclasses must implement this method; this is where the actual job of
      * the tool has to be done.
@@ -112,28 +112,28 @@ public:
     /** Get the parsed options as a properties instance
      * \return the parsed options.
      */
-    virtual IProperties*            getInput      ()  { return _input;      }
+    virtual IProperties::sptr            getInput      ()  { return _input;      }
 
     /** Get output results as a properties instance
      * \return the output results
      */
-    virtual IProperties*            getOutput     ()  { return _output;     }
+    virtual IProperties::sptr            getOutput     ()  { return _output;     }
 
     /** Get statistics information about the execution of the tool
      * \return the statistics
      */
-    virtual IProperties*            getInfo       ()  { return _info;       }
+    virtual IProperties::sptr            getInfo       ()  { return _info;       }
 
     /** Get an option parser configured with recognized options for the tool
      * \return the options parser instance
      */
-    virtual IOptionsParser*         getParser     ()  { return _parser;     }
+    virtual IOptionsParser::sptr         getParser     ()  { return _parser;     }
 
     /** Get a dispatched that can be used for parallelization. The option "-nb-cores" can
      * be used, and thus the provided number is used for configuring the dispatcher.
      * \return the dispatcher for the tool
      */
-    virtual dp::IDispatcher*        getDispatcher ()  { return _dispatcher; }
+    virtual dp::IDispatcher::sptr        getDispatcher ()  { return _dispatcher; }
 
     /** Get a TimeInfo instance for the tool. This object can be used for gathering
      * execution times of some parts of the \ref execute method.
@@ -181,7 +181,7 @@ public:
      * \param[in] message : progression message
      * \return an iterator listener.
      */
-    virtual dp::IteratorListener* createIteratorListener (size_t nbIterations, const char* message);
+    virtual dp::IteratorListener::sptr createIteratorListener (size_t nbIterations, const char* message);
 
     /** Displays information about the GATB library
      * \param[in] os : output stream used for dumping library information
@@ -214,11 +214,11 @@ protected:
     std::string getUri (const std::string& str)  { return getInput()->getStr(STR_PREFIX) + str; }
 
     /** Setters. */
-    void setInput      (IProperties*            input)       { SP_SETATTR (input);      }
-    void setOutput     (IProperties*            output)      { SP_SETATTR (output);     }
-    void setInfo       (IProperties*            info)        { SP_SETATTR (info);       }
-    void setParser     (IOptionsParser*         parser)      { SP_SETATTR (parser);     }
-    void setDispatcher (dp::IDispatcher*        dispatcher)  { SP_SETATTR (dispatcher); }
+    void setInput      (IProperties::sptr            input)       { SP_SETATTR (input);      }
+    void setOutput     (IProperties::sptr            output)      { SP_SETATTR (output);     }
+    void setInfo       (IProperties::sptr            info)        { SP_SETATTR (info);       }
+    void setParser     (IOptionsParser::sptr         parser)      { SP_SETATTR (parser);     }
+    void setDispatcher (dp::IDispatcher::sptr        dispatcher)  { SP_SETATTR (dispatcher); }
 
 protected:
 
@@ -235,15 +235,15 @@ protected:
     /** Name of the tool (set at construction). */
     std::string _name;
 
-    IProperties* _input;
+    IProperties::sptr _input;
 
-    IProperties* _output;
+    IProperties::sptr _output;
 
-    IProperties* _info;
+    IProperties::sptr _info;
 
-    IOptionsParser* _parser;
+    IOptionsParser::sptr _parser;
 
-    dp::IDispatcher* _dispatcher;
+    dp::IDispatcher::sptr _dispatcher;
 
     /** */
     TimeInfo _timeInfo;
@@ -266,7 +266,7 @@ public:
     ~ToolComposite ();
 
     /** */
-    IProperties* run (int argc, char* argv[]);
+    IProperties::sptr run (int argc, char* argv[]);
 
     /** */
     void add (Tool* tool);
@@ -292,15 +292,15 @@ public:
     ToolProxy (Tool* ref) : Tool("proxy"), _ref (ref)  {}
 
     /** */
-    virtual IOptionsParser* getParser ()  {  return _ref->getParser();  }
+    virtual IOptionsParser::sptr getParser ()  {  return _ref->getParser();  }
 
     /** */
-    virtual IProperties* getInput  ()  { return _ref->getInput();     }
-    virtual IProperties* getOutput ()  { return _ref->getOutput();    }
-    virtual IProperties* getInfo   ()  { return _ref->getInfo();      }
+    virtual IProperties::sptr getInput  ()  { return _ref->getInput();     }
+    virtual IProperties::sptr getOutput ()  { return _ref->getOutput();    }
+    virtual IProperties::sptr getInfo   ()  { return _ref->getInfo();      }
 
     /** */
-    virtual dp::IDispatcher*    getDispatcher ()   { return _ref->getDispatcher(); }
+    virtual dp::IDispatcher::sptr    getDispatcher ()   { return _ref->getDispatcher(); }
 
     /** */
     virtual TimeInfo&    getTimeInfo ()   { return _ref->getTimeInfo (); }

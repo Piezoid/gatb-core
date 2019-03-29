@@ -102,7 +102,7 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 
 // we don't provide an option parser. use Graph::getOptionsParser
 //template<size_t span>
-//IOptionsParser* GraphUnitigsTemplate<span>::getOptionsParser (bool includeMandatory)
+//IOptionsParser::sptr GraphUnitigsTemplate<span>::getOptionsParser (bool includeMandatory)
 
 /*********************************************************************
 ** METHOD  :
@@ -113,9 +113,9 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (bank::IBank* bank, const char* fmt, ...)
+GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (bank::IBank::sptr bank, const char* fmt, ...)
 {
-    IOptionsParser* parser = BaseGraph::getOptionsParser (false);   LOCAL(parser);
+    IOptionsParser::sptr parser = BaseGraph::getOptionsParser (false);   LOCAL(parser);
     
     /** We build the command line from the format and the ellipsis. */
     va_list args;
@@ -146,7 +146,7 @@ GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (bank::IBank* ban
 template<size_t span>
 GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (const char* fmt, ...)
 {
-    IOptionsParser* parser = BaseGraph::getOptionsParser (true);   LOCAL (parser);
+    IOptionsParser::sptr parser = BaseGraph::getOptionsParser (true);   LOCAL (parser);
     
     /** We build the command line from the format and the ellipsis. */
     va_list args;
@@ -156,7 +156,7 @@ GraphUnitigsTemplate<span>  GraphUnitigsTemplate<span>::create (const char* fmt,
 
     try
     {
-        return  GraphUnitigsTemplate (parser->parseString(commandLine), true); /* will call the GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* params, bool load_unitigs_after) constructor */
+        return  GraphUnitigsTemplate (parser->parseString(commandLine), true); /* will call the GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties::sptr params, bool load_unitigs_after) constructor */
     }
     catch (OptionFailure& e)
     {
@@ -204,7 +204,7 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (const std::string& uri)
 ** REMARKS :  quick hack,  not supposed to be used outside of tests
 *********************************************************************/
 template<size_t span>
-GraphUnitigsTemplate<span>::GraphUnitigsTemplate (bank::IBank* bank, tools::misc::IProperties* params)
+GraphUnitigsTemplate<span>::GraphUnitigsTemplate (bank::IBank::sptr bank, tools::misc::IProperties::sptr params)
 {
     
     /** We get the kmer size from the user parameters. */
@@ -245,7 +245,7 @@ static string revcomp (const string &s) {
 }
 
 template<size_t span>
-void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_filename, tools::misc::IProperties* props)
+void GraphUnitigsTemplate<span>::build_unitigs_postsolid(std::string unitigs_filename, tools::misc::IProperties::sptr props)
 {
     /** We may have to stop just after configuration. I don't know if that happens in GraphU though. */
     if (props->get(STR_CONFIG_ONLY))  { std::cout << "GraphU Config_only! does that happen?" << std::endl; return; }
@@ -520,7 +520,7 @@ void GraphUnitigsTemplate<span>::load_unitigs(string unitigs_filename)
         std::cout << "loading unitigs from disk to memory" << std::endl;
 
     BankFasta inputBank (unitigs_filename);
-    //bank::IBank* inputBank = Bank::open (unitigs_filename);
+    //bank::IBank::sptr inputBank = Bank::open (unitigs_filename);
     //LOCAL (inputBank);
     //ProgressIterator<bank::Sequence> itSeq (*inputBank, "loading unitigs");
     BankFasta::Iterator itSeq (inputBank);
@@ -802,7 +802,7 @@ SETS: the following variables are set:
     BaseGraph::_state 
 *********************************************************************/
 template<size_t span>
-GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* params, bool load_unitigs_after) 
+GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties::sptr params, bool load_unitigs_after) 
 //    : BaseGraph() // call base () constructor // seems to do nothing, maybe it's always called by default
 {
 
@@ -903,7 +903,7 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
         
         /** We get library information in the root of the storage. */
         string xmlString = BaseGraph::getGroup().getProperty ("xml");
-        stringstream ss; ss << xmlString;   IProperties* props = new Properties(); LOCAL(props);
+        stringstream ss; ss << xmlString;   IProperties::sptr props = new Properties(); LOCAL(props);
         props->readXML (ss);  BaseGraph::getInfo().add (1, props);
         
         /** We configure the data variant according to the provided kmer size. */
@@ -931,7 +931,7 @@ GraphUnitigsTemplate<span>::GraphUnitigsTemplate (tools::misc::IProperties* para
         BaseGraph::setVariant (BaseGraph::_variant, BaseGraph::_kmerSize, integerPrecision);
 
         /** We build a Bank instance for the provided reads uri. */
-        bank::IBank* bank = Bank::open (params->getStr(STR_URI_INPUT));
+        bank::IBank::sptr bank = Bank::open (params->getStr(STR_URI_INPUT));
 
         /** We build the graph according to the wanted precision. */
         boost::apply_visitor ( build_visitor_solid<NodeFast<span>,EdgeFast<span>,GraphDataVariantFast<span>>(*this, bank,params),  *(GraphDataVariantFast<span>*)BaseGraph::_variant);
@@ -1291,7 +1291,7 @@ GraphIterator<NodeGU> GraphUnitigsTemplate<span>::getNodes () const
 {
     /* emulates iteration of nodes à la original GATB Graph */
     /* except that here, we only iterate the extremities of unitigs */
-    class NodeIterator : public tools::dp::ISmartIterator<NodeGU>
+    class NodeIterator : public tools::dp::ISizedIterator<NodeGU>
     {
         public:
             NodeIterator (const /*dag::dag_vector*/ std::vector<uint32_t>& unitigs_sizes, const std::vector<bool>& unitigs_deleted, unsigned int k, unsigned int nb_unitigs_extremities) 
@@ -1395,7 +1395,7 @@ void GraphUnitigsTemplate<span>::cacheNonSimpleNodes(unsigned int nbCores, bool 
 }
  
 template<size_t span>
-void GraphUnitigsTemplate<span>::deleteNodesByIndex(vector<bool> &bitmap, int nbCores, gatb::core::system::ISynchronizer* synchro) const
+void GraphUnitigsTemplate<span>::deleteNodesByIndex(vector<bool> &bitmap, int nbCores, gatb::core::system::ISynchronizer::sptr synchro) const
 {
     std::cout << "deleteNodesByIndex called, shouldn't be." << std::endl; 
     exit(1);

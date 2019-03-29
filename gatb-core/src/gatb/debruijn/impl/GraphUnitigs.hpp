@@ -160,7 +160,7 @@ public:
      * \param[in] fmt : printf-like format for the command line string
      * \return the created graph.
      */
-    static GraphUnitigsTemplate  create (bank::IBank* bank, const char* fmt, ...);
+    static GraphUnitigsTemplate  create (bank::IBank::sptr bank, const char* fmt, ...);
 
     /** Build a graph from user options.
      * \param[in] fmt: printf-like format
@@ -170,7 +170,7 @@ public:
 
     /** so, hm, what's the point of a create() function that just calls a constructor? I really don't get the factory pattern yet
      */
-    static GraphUnitigsTemplate  create (tools::misc::IProperties* options, bool load_unitigs_after = true /* will be set to false by BCALM 2*/)  {  return  GraphUnitigsTemplate (options, load_unitigs_after);  }
+    static GraphUnitigsTemplate  create (tools::misc::IProperties::sptr options, bool load_unitigs_after = true /* will be set to false by BCALM 2*/)  {  return  GraphUnitigsTemplate (options, load_unitigs_after);  }
 
     /** Load a graph from some URI.
      * \param[in] uri : the uri to get the graph from
@@ -179,7 +179,7 @@ public:
     static GraphUnitigsTemplate  load (const std::string& uri)  {  return  GraphUnitigsTemplate (uri);  }
     
     // we don't provide an option parser. use Graph's one
-    //static tools::misc::IOptionsParser* getOptionsParser (bool includeMandatory=true);
+    //static tools::misc::IOptionsParser::sptr getOptionsParser (bool includeMandatory=true);
 
     /********************************************************************************/
     /*                               CONSTRUCTORS                                   */
@@ -317,7 +317,7 @@ public:
     void setNodeState (const NodeGU& node, int state) const;
     void resetNodeState () const ;
     void disableNodeState () const ;
-    void deleteNodesByIndex(std::vector<bool> &bitmap, int nbCores = 1, gatb::core::system::ISynchronizer* synchro=NULL) const;
+    void deleteNodesByIndex(std::vector<bool> &bitmap, int nbCores = 1, gatb::core::system::ISynchronizer::sptr synchro=NULL) const;
     unsigned long nodeMPHFIndex(const NodeGU& node) const;
     void cacheNonSimpleNodes(unsigned int nbCores, bool verbose); 
 
@@ -363,9 +363,9 @@ public:
     /** Constructor for empty graph.*/
     GraphUnitigsTemplate (size_t kmerSize);
 
-    GraphUnitigsTemplate (bank::IBank* bank, tools::misc::IProperties* params);
+    GraphUnitigsTemplate (bank::IBank::sptr bank, tools::misc::IProperties::sptr params);
 
-    GraphUnitigsTemplate (tools::misc::IProperties* params, bool load_unitigs_after);
+    GraphUnitigsTemplate (tools::misc::IProperties::sptr params, bool load_unitigs_after);
 
     /** Constructor. Use for reading from filesystem. */
     GraphUnitigsTemplate (const std::string& uri);
@@ -395,7 +395,7 @@ public: // was private: before, but had many compilation errors during the chang
     
     typedef typename gatb::core::kmer::impl::Kmer<span>::Type           Type;
 
-    void build_unitigs_postsolid(std::string unitigs_filename, tools::misc::IProperties* props);
+    void build_unitigs_postsolid(std::string unitigs_filename, tools::misc::IProperties::sptr props);
     void load_unitigs(std::string unitigs_filename);
 
     void load_unitigs_from_gfa(std::string gfa_filename, unsigned int& kmerSize);

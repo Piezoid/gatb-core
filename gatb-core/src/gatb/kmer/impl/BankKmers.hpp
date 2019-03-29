@@ -43,7 +43,7 @@ namespace impl      {
  *
  * For instance, for a kmer size of 3, the bank will iterate the 3^4 possible kmers.
  */
-class BankKmers : public bank::impl::AbstractBank
+class BankKmers : public virtual bank::impl::AbstractBank
 {
 public:
 
@@ -145,7 +145,7 @@ public:
     };
 
     /** \copydoc tools::collections::Iterable::iterator */
-    tools::dp::Iterator<bank::Sequence>* iterator ()  { return new Iterator (*this); }
+    bank::seq_iterator_ptr iterator ()  { return std::make_shared<Iterator>(*this); }
 
 private:
     Kmer<>::ModelCanonical _model;

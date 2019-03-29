@@ -321,7 +321,7 @@ private:
  * Note: this class could be renamed in the future to emphasize it essentially provides a
  * hash function service.
  */
-class Repartitor : public system::SmartPointer
+class Repartitor : public system::SharedObject<Repartitor>
 {
 public:
 

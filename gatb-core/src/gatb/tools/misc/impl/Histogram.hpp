@@ -48,7 +48,7 @@ namespace impl      {
  *
  * This implementation is the one actually used by SortingCountAlgorithm.
  */
-class Histogram : public IHistogram, public system::SmartPointer
+class Histogram : public IHistogram
 {
 public:
 
@@ -151,7 +151,7 @@ private:
 
 /** \brief Null implementation of the IHistogram interface.
  */
-class HistogramNull : public IHistogram, public system::SmartPointer
+class HistogramNull : public IHistogram
 {
 public:
 
@@ -203,14 +203,14 @@ public:
  * by several threads at the same time. Actually, each thread has a local copy and at
  * the end, all the local copies are merged into the referred instance.
  * */
-class HistogramCache : public IHistogram, public system::SmartPointer
+class HistogramCache : public IHistogram
 {
 public:
 
     /** Constructor.
      * \param[in] ref : the referred instance.
      * \param[in] synchro : used for synchronization */
-    HistogramCache (IHistogram* ref, system::ISynchronizer* synchro=0)
+    HistogramCache (IHistogram* ref, system::ISynchronizer::sptr synchro=0)
         : _ref(0), _synchro(synchro), _localHisto(ref ? ref->getLength() : 0) {  setRef(ref); }
 
     /** Destructor. */
@@ -281,7 +281,7 @@ private:
     IHistogram* _ref;
     void setRef (IHistogram* ref)  { SP_SETATTR(ref); }
 
-    system::ISynchronizer* _synchro;
+    system::ISynchronizer::sptr _synchro;
     Histogram              _localHisto;
 };
 

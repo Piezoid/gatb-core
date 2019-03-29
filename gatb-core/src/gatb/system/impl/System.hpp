@@ -167,26 +167,26 @@ class System
 /** \brief Implementation of IThreadGroup
  *
  */
-class ThreadGroup : public IThreadGroup, public system::SmartPointer
+class ThreadGroup : public IThreadGroup
 {
 public:
 
 	/** Create a IThreadGroup instance
 	 * \return the IThreadGroup instance */
-    static IThreadGroup* create ();
+    static IThreadGroup::sptr create ();
 	
 	/** Destroy a IThreadGroup */
-    static void destroy (IThreadGroup* thr);
+    static void destroy (IThreadGroup::sptr thr);
 
     /** Get a thread of the group from one id
      * \param[in] id : the thread id
      * \return the IThreadGroup instance if found, NULL otherwise */
-    static IThreadGroup* find (IThread::Id id);
+    static IThreadGroup::sptr find (IThread::Id id);
 
     /** Get thread information (IThread and index within the group);
      * \param[in] id : the thread id
      * \return true if found */
-    static bool findThreadInfo (IThread::Id id, std::pair<IThread*,size_t>& info);
+    static bool findThreadInfo (IThread::Id id, std::pair<IThread::sptr,size_t>& info);
 
     /** \copydoc IThreadGroup::add */
     void add (void* (*mainloop) (void*), void* data);
@@ -195,13 +195,13 @@ public:
     void start ();
 
     /** \copydoc IThreadGroup::getSynchro */
-    ISynchronizer* getSynchro()  { return _startSynchro; }
+    ISynchronizer::sptr getSynchro()  { return _startSynchro; }
 
     /** \copydoc IThreadGroup::size */
     size_t size() const { return _threads.size(); }
 
     /** \copydoc IThreadGroup::operator[] */
-    IThread* operator[] (size_t idx)  { return _threads[idx]; }
+    IThread::sptr operator[] (size_t idx)  { return _threads[idx]; }
 
     /** \copydoc IThreadGroup::addException */
     void addException (system::Exception e)
@@ -224,10 +224,10 @@ private:
     /** Initialize a synchronizer at first call. */
 	static void init_mutex_if_needed ();
 
-    std::vector<IThread*>  _threads;
-    system::ISynchronizer* _startSynchro;
+    std::vector<IThread::sptr>  _threads;
+    system::ISynchronizer::sptr _startSynchro;
 
-    static std::list<ThreadGroup*> _groups;
+    static std::list<IThreadGroup::sptr> _groups;
 
     std::list<system::Exception> _exceptions;
 };
@@ -291,13 +291,13 @@ public:
             if (_isInit == false)
             {
                 /** We look for the TreadGroup if any. */
-                IThreadGroup* group = ThreadGroup::find (System::thread().getThreadSelf());
+                IThreadGroup::sptr group = ThreadGroup::find (System::thread().getThreadSelf());
 
                 if (group)
                 {
                     for (size_t i=0; i<group->size(); i++)
                     {
-                        IThread* thread = (*group)[i];
+                        IThread::sptr thread = (*group)[i];
                         T* newObject = new T(this->_object);
                         this->_map[thread->getId()] = newObject;
                         this->_vec.push_back(newObject);
@@ -344,7 +344,7 @@ private:
     std::vector<T*> _vec;
 
     bool _isInit;
-    system::ISynchronizer* _synchro;
+    system::ISynchronizer::sptr _synchro;
 };
 
 /********************************************************************************/

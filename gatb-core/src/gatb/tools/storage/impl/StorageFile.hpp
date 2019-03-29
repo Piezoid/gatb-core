@@ -49,7 +49,7 @@ namespace impl      {
     class GroupFile : public Group
     {
         public:
-            GroupFile (Storage* storage, ICell* parent, const std::string& name)
+            GroupFile (Storage::sptr storage, ICell::sptr parent, const std::string& name)
                 : Group(storage->getFactory(),parent,name), filename("")
             {
 
@@ -167,7 +167,7 @@ public:
      * \param[in] autoRemove : auto delete the storage from file system during Storage destructor.
      * \return the created Storage instance
      */
-    static Storage* createStorage (const std::string& name, bool deleteIfExist, bool autoRemove)
+    static Storage::sptr createStorage (const std::string& name, bool deleteIfExist, bool autoRemove)
     {
         DEBUG_STORAGE (("StorageFileFactory::createStorage  name='%s'\n", name.c_str()));
         return new Storage (STORAGE_FILE, name, autoRemove);
@@ -187,12 +187,12 @@ public:
      * \param[in] name : name of the group to be created
      * \return the created Group instance.
      */
-    static Group* createGroup (ICell* parent, const std::string& name)
+    static Group::sptr createGroup (ICell::sptr parent, const std::string& name)
     {
         DEBUG_STORAGE (("StorageFileFactory::createGroup  name='%s'\n", name.c_str()));
 
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
 
         return new GroupFile (storage, parent, name);
@@ -205,12 +205,12 @@ public:
      * \return the created Partition instance.
      */
     template<typename Type>
-    static Partition<Type>* createPartition (ICell* parent, const std::string& name, size_t nb)
+    static Partition<Type>* createPartition (ICell::sptr parent, const std::string& name, size_t nb)
     {
         DEBUG_STORAGE (("StorageFileFactory::createPartition  name='%s'\n", name.c_str()));
 
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
 
         // get the partitions folder and prefix
@@ -268,10 +268,10 @@ public:
      * \return the created Collection instance.
      */
     template<typename Type>
-    static CollectionNode<Type>* createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
+    static CollectionNode<Type>* createCollection (ICell::sptr parent, const std::string& name, system::ISynchronizer::sptr synchro)
     {
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
 
         std::string storage_prefix = storage->getName();
@@ -304,7 +304,7 @@ class StorageGzFileFactory
 public:
     
     /** */
-    static Storage* createStorage (const std::string& name, bool deleteIfExist, bool autoRemove)
+    static Storage::sptr createStorage (const std::string& name, bool deleteIfExist, bool autoRemove)
     {
         return new Storage (STORAGE_GZFILE, name, autoRemove);
     }
@@ -316,10 +316,10 @@ public:
     }
 
     /** */
-    static Group* createGroup (ICell* parent, const std::string& name)
+    static Group::sptr createGroup (ICell::sptr parent, const std::string& name)
     {
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
         
         return new Group (storage->getFactory(), parent, name);
@@ -327,10 +327,10 @@ public:
     
     /** */
     template<typename Type>
-    static Partition<Type>* createPartition (ICell* parent, const std::string& name, size_t nb)
+    static Partition<Type>* createPartition (ICell::sptr parent, const std::string& name, size_t nb)
     {
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
         
         Partition<Type>* result = new Partition<Type> (storage->getFactory(), parent, name, nb);
@@ -339,13 +339,13 @@ public:
     
     /** */
     template<typename Type>
-    static CollectionNode<Type>* createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
+    static CollectionNode<Type>* createCollection (ICell::sptr parent, const std::string& name, system::ISynchronizer::sptr synchro)
     {
         /** We define the full qualified id of the current collection to be created. */
         std::string actualName = std::string("tmp.") + name;
         
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
         
         return new CollectionNode<Type> (storage->getFactory(), parent, name, new CollectionGzFile<Type>(actualName));
@@ -359,7 +359,7 @@ class StorageSortedFactory
 public:
     
     /** */
-    static Storage* createStorage (const std::string& name, bool deleteIfExist, bool autoRemove)
+    static Storage::sptr createStorage (const std::string& name, bool deleteIfExist, bool autoRemove)
     {
         return new Storage (STORAGE_COMPRESSED_FILE, name, autoRemove);
     }
@@ -371,10 +371,10 @@ public:
     }
 
     /** */
-    static Group* createGroup (ICell* parent, const std::string& name)
+    static Group::sptr createGroup (ICell::sptr parent, const std::string& name)
     {
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
         
         return new Group (storage->getFactory(), parent, name);
@@ -382,10 +382,10 @@ public:
     
     /** */
     template<typename Type>
-    static Partition<Type>* createPartition (ICell* parent, const std::string& name, size_t nb)
+    static Partition<Type>* createPartition (ICell::sptr parent, const std::string& name, size_t nb)
     {
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
         
         Partition<Type>* result = new Partition<Type> (storage->getFactory(), parent, name, nb);
@@ -394,13 +394,13 @@ public:
     
     /** */
     template<typename Type>
-    static CollectionNode<Type>* createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
+    static CollectionNode<Type>* createCollection (ICell::sptr parent, const std::string& name, system::ISynchronizer::sptr synchro)
     {
         /** We define the full qualified id of the current collection to be created. */
         std::string actualName = std::string("tmp.") + name;
         
-        ICell* root = ICell::getRoot (parent);
-        Storage* storage = dynamic_cast<Storage*> (root);
+        ICell::sptr root = ICell::getRoot (parent);
+        Storage::sptr storage = dynamic_cast<Storage::sptr> (root);
         assert (storage != 0);
         
         return new CollectionNode<Type> (storage->getFactory(), parent, name, new CollectionCountFile<Type>(actualName));

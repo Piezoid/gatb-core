@@ -39,7 +39,7 @@ namespace impl          {
 /********************************************************************************/
 
 /* EXPERIMENTAL (not documented). */
-template <typename Item, size_t prec=1> class BloomGroupOld : public system::SmartPointer
+template <typename Item, size_t prec=1> class BloomGroupOld
 {
 public:
 
@@ -88,7 +88,7 @@ public:
     /** */
     void save (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "wb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "wb+");
         if (file != 0)
         {
             /** We write the nb of hash functions. */
@@ -118,7 +118,7 @@ for (size_t i=0; i<10; i++)
     /** */
     void load (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "rb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "rb+");
         if (file != 0)
         {
             /** We read the nb of hash functions. */
@@ -175,7 +175,7 @@ private:
 /********************************************************************************/
 
 /* EXPERIMENTAL (not documented). */
-template <typename Item, size_t prec=1> class BloomGroup : public system::SmartPointer
+template <typename Item, size_t prec=1> class BloomGroup
 {
 public:
 
@@ -240,7 +240,7 @@ public:
     /** */
     void save (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "wb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "wb+");
         if (file != 0)
         {
             /** We write the nb of hash functions. */
@@ -259,7 +259,7 @@ public:
     /** */
     void load (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "rb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "rb+");
         if (file != 0)
         {
             /** We read the nb of hash functions. */
@@ -342,7 +342,7 @@ private:
 /********************************************************************************/
 
 /* EXPERIMENTAL (not documented). */
-template <typename Item, size_t prec=1> class BloomGroupCacheCoherent : public system::SmartPointer
+template <typename Item, size_t prec=1> class BloomGroupCacheCoherent
 {
 public:
 
@@ -383,7 +383,7 @@ public:
     /** */
     void save (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "wb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "wb+");
         if (file != 0)
         {
             /** We write the nb of hash functions. */
@@ -405,7 +405,7 @@ public:
     /** */
     void load (const std::string& uri)
     {
-        system::IFile* file = system::impl::System::file().newFile (uri, "rb+");
+        std::unique_ptr<system::IFile> file = system::impl::System::file().newFile (uri, "rb+");
         if (file != 0)
         {
             /** We read the nb of hash functions. */

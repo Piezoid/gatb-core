@@ -62,7 +62,7 @@ namespace impl      {
  * Sample of use (note however that it is better to use Bank::open for opening a bank):
  * \snippet bank1.cpp  snippet1_bank
  */
-class BankFasta : public AbstractBank
+class BankFasta : public virtual AbstractBank
 {
 public:
 
@@ -83,7 +83,7 @@ public:
     std::string getId ()  { return _filenames[0]; }
 
     /** \copydoc IBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()  { return new Iterator (*this); }
+    seq_iterator_ptr iterator ()  { return std::make_shared<Iterator>(*this); }
 
     /** \copydoc IBank::getNbItems */
     int64_t getNbItems () { return -1; }
@@ -241,7 +241,7 @@ class BankFastaFactory : public IBankFactory
 public:
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri);
+    IBank::sptr createBank (const std::string& uri);
 };
 
 /********************************************************************************/

@@ -238,7 +238,7 @@ public:
 	 */
 	//dp::Iterator < std::pair<Item,value_type> >* iterator (bool sorted=false)
 	//just get the underlying pool iterator which is simply iteration over multiple arrays, no need to traverse linked list
-	dp::Iterator < cell >* iterator (bool sorted=false)
+	typename dp::Iterator< cell >::sptr iterator (bool sorted=false)
 	{
 		if(sorted)
 		{

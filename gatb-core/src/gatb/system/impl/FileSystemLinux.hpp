@@ -54,10 +54,10 @@ public:
     ssize_t setAttribute (const Path& filename, const char* key, const char* fmt, ...);
 
     /** \copydoc IFileSystem::newFile */
-    IFile* newFile (const Path& path, const char* mode);
+    std::unique_ptr<IFile> newFile (const Path& path, const char* mode);
 
     /** \copydoc IFileSystem::newFile(const Path&, const Path&, const char*) */
-    IFile* newFile (const Path& dirpath, const Path& filename, const char* mode);
+    std::unique_ptr<IFile> newFile (const Path& dirpath, const Path& filename, const char* mode);
 
     /** \copydoc IFileSystem::clearCache */
     int clearCache ();

@@ -92,7 +92,7 @@ private:
 template<typename Item> class BagCachePartition
 {
 public:
-    BagCachePartition (BagFilePartition<Item>& partition, system::ISynchronizer* synchro)
+    BagCachePartition (BagFilePartition<Item>& partition, system::ISynchronizer::sptr synchro)
         : _ref(partition), cache(partition.size()), _synchro(synchro), _cacheNbItems(1<<12)
     {
         /** We create the partition files. */
@@ -131,7 +131,7 @@ public:
 
 private:
 
-    virtual BagCache<Item>* createBag (Bag<Item>*& b, size_t cacheSize, system::ISynchronizer* synchro)
+    virtual BagCache<Item>* createBag (Bag<Item>*& b, size_t cacheSize, system::ISynchronizer::sptr synchro)
     {
         return new BagCache<Item> (b, cacheSize, synchro);
         //return new BagCacheSorted<Item> (b, cacheSize, synchro);  // don't use when using OAHash for DSK solid kmers filling.
@@ -139,7 +139,7 @@ private:
 
     BagFilePartition<Item>&  _ref;
     std::vector <Bag<Item>*>  cache;
-    system::ISynchronizer*   _synchro;
+    system::ISynchronizer::sptr   _synchro;
     size_t                   _cacheNbItems;
 };
 

@@ -110,7 +110,10 @@ bool Bank::_unregisterFactory_ (const std::string& name)
 {
     for (list<Entry>::iterator it = _factories.begin(); it != _factories.end(); it++)
     {
-        if (it->name == name)  { if (it->factory)  { it->factory->forget(); }  _factories.erase(it);  return true; }
+        if (it->name == name)  {
+            _factories.erase(it);
+            return true;
+        }
     }
     return false;
 }
@@ -140,11 +143,11 @@ IBankFactory* Bank::_getFactory_ (const std::string& name)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* Bank::_open_ (const std::string& uri)
+IBank::sptr Bank::_open_ (const std::string& uri)
 {
     DEBUG (("Bank::open : %s  nbFactories=%ld \n", uri.c_str(), _factories.size()));
 
-    IBank* result = 0;
+    IBank::sptr result = 0;
     for (list<Entry>::iterator it = _factories.begin(); result==0 && it != _factories.end(); it++)
     {
         result = it->factory->createBank(uri);
@@ -174,14 +177,14 @@ std::string Bank::_getType_ (const std::string& uri)
     /** We try to create the bank; if a bank is valid, then we have the factory name. */
     for (list<Entry>::iterator it = _factories.begin(); it != _factories.end(); it++)
     {
-        IBank* bank = it->factory->createBank(uri);
+        IBank::sptr bank = it->factory->createBank(uri);
         if (bank != 0)
         {
             result = it->name;
 			if(!result.compare("fasta"))
 			{
 				//distinguish fasta and fastq
-				tools::dp::Iterator<Sequence>* its = bank->iterator(); LOCAL(its);
+				seq_iterator_ptr its = bank->iterator();
 				its->first();
 				if(!its->isDone())
 				{
@@ -192,8 +195,6 @@ std::string Bank::_getType_ (const std::string& uri)
 					}
 				}
 			}
-			
-            delete bank;
             break;
         }
     }

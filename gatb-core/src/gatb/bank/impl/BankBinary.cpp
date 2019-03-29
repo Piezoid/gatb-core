@@ -381,8 +381,6 @@ BankBinary::Iterator::Iterator (BankBinary& ref)
 BankBinary::Iterator::~Iterator ()
 {
     if (binary_read_file != 0)  {  fclose (binary_read_file);  }
-
-    setBufferData(0);
 }
 
 /*********************************************************************
@@ -448,7 +446,7 @@ void BankBinary::Iterator::next ()
         }
 
         /** We are about to read another chunk of data from the disk. We need */
-        setBufferData (new Data (block_size));
+        _bufferData = std::make_shared<Data>(block_size);
 
         fread (_bufferData->getBuffer(), sizeof( char),block_size, binary_read_file); // read a block of reads into the buffer
 
@@ -504,7 +502,7 @@ void  BankBinary::Iterator::estimate (u_int64_t& number, u_int64_t& totalSize, u
     {
         if (checkMagic(file)==false)  {  throw gatb::core::system::ExceptionErrno (STR_BANK_unable_open_file, _ref._filename.c_str());  }
 
-        vector<char> buffer;
+        std::vector<char> buffer;
 
         while (feof (file) == false)
         {

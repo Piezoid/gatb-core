@@ -92,7 +92,7 @@ public:
  * A functor must be provided in order to convert one item of T1 into T2.
  */
 template <class T1, class T2, class Adaptor>
-class IterableAdaptor : public Iterable<T2>, public system::SmartPointer
+class IterableAdaptor : public Iterable<T2>
 {
 public:
     /** */

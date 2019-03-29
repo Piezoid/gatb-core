@@ -86,7 +86,7 @@ MPHFAlgorithm<span,Abundance_t,NodeState_t>::MPHFAlgorithm (
     Iterable<Type>*     solidKmers,
     unsigned int        nbCores,
     bool                buildOrLoad,
-    IProperties*        options
+    IProperties::sptr        options
 )
     :  Algorithm("mphf", nbCores, options), _group(group), _name(name), _buildOrLoad(buildOrLoad),
        _dataSize(0), _nb_abundances_above_precision(0), _solidCounts(0), _solidKmers(0), _abundanceMap(0), _nodeStateMap(0), _adjacencyMap(0), _progress(0)
@@ -153,7 +153,7 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::execute ()
     if (_buildOrLoad == true)
     {
         /** We need a progress object. */
-        tools::dp::IteratorListener* delegate = createIteratorListener(0,"");  LOCAL (delegate);
+        tools::dp::IteratorListener::sptr delegate = createIteratorListener(0,"");  LOCAL (delegate);
         setProgress (new ProgressCustom(delegate));
 
 		
@@ -224,7 +224,7 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::populate ()
     _nb_abundances_above_precision = 0;
 
     /** We need a progress object. */
-    tools::dp::IteratorListener* delegate = createIteratorListener(_solidCounts->getNbItems(),messages[3]);  LOCAL (delegate);
+    tools::dp::IteratorListener::sptr delegate = createIteratorListener(_solidCounts->getNbItems(),messages[3]);  LOCAL (delegate);
     setProgress (new ProgressCustom(delegate));
 
     SubjectIterator<Count>* itKmers = new SubjectIterator<Count> (_solidCounts->iterator(), _solidCounts->getNbItems()/100);
@@ -338,7 +338,7 @@ void MPHFAlgorithm<span,Abundance_t,NodeState_t>::check ()
 ** REMARKS :
 *********************************************************************/
 template<size_t span,typename Abundance_t, typename NodeState_t>
-MPHFAlgorithm<span,Abundance_t,NodeState_t>::ProgressCustom::ProgressCustom (tools::dp::IteratorListener* ref)
+MPHFAlgorithm<span,Abundance_t,NodeState_t>::ProgressCustom::ProgressCustom (tools::dp::IteratorListener::sptr ref)
   : tools::misc::impl::ProgressProxy (ref), nbReset(0)
 {
 }

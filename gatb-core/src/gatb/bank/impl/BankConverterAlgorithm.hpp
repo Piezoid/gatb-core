@@ -58,7 +58,7 @@ public:
      * \param[in] bank : bank to be converted (likely in FASTA format)
      * \param[in] kmerSize : kmer size
      * \param[in] outputUri : uri of the output binary bank. */
-    BankConverterAlgorithm (IBank* bank, size_t kmerSize, const std::string& outputUri);
+    BankConverterAlgorithm (IBank::sptr bank, size_t kmerSize, const std::string& outputUri);
 
     /** Constructor. Used only to retrieved statistics/information gathered during
      * a previous execution of a BankConverterAlgorithm instance
@@ -73,22 +73,19 @@ public:
 
     /** Return the output binary bank
      * \return the IBank instance */
-    IBank* getResult ()  { return _bankOutput; }
+    IBank::sptr getResult ()  { return _bankOutput; }
 
 private:
 
     tools::misc::BankConvertKind _kind;
 
-    IBank*      _bankInput;
-    void setBankInput (IBank* bankInput)  { SP_SETATTR(bankInput); }
-
-    IBank*      _bankOutput;
-    void setBankOutput (IBank* bankOutput)  { SP_SETATTR(bankOutput); }
+    IBank::sptr      _bankInput;
+    IBank::sptr      _bankOutput;
 
     std::string _outputUri;
 
-    bank::IBank* createBank (
-        tools::dp::Iterator<bank::Sequence>* inputSequences,
+    IBank::sptr createBank (
+        seq_iterator_ptr inputSequences,
         size_t nbInputSequences,
         const std::string& outputName,
         u_int64_t& nbSeq,

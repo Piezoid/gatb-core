@@ -54,7 +54,7 @@ namespace impl      {
  * void sample ()
  * {
  *      // we create a IProperties instance.
- *      IProperties* props = new Properties ();
+ *      IProperties::sptr props = new Properties ();
  *
  *      // we add some entries. Note the different depth used: we have a root property having 3 children properties.
  *      props->add (0, "root", "");
@@ -92,28 +92,28 @@ public:
     void accept (IPropertiesVisitor* visitor);
 
     /** \copydoc IProperties::add */
-    IProperty* add (size_t depth, const std::string& aKey, const char* format=0, ...);
+    Property* add (size_t depth, const std::string& aKey, const char* format=0, ...);
 
     /** \copydoc IProperties::add(size_t,const std::string&,const std::string&)  */
-    IProperty* add (size_t depth, const std::string& aKey, const std::string& aValue);
+    Property* add (size_t depth, const std::string& aKey, const std::string& aValue);
 
-    /** \copydoc IProperties::add(size_t,IProperties*)  */
-    void add (size_t depth, IProperties* prop);
+    /** \copydoc IProperties::add(size_t,IProperties::sptr)  */
+    void add (size_t depth, IProperties::sptr prop);
 
-    /** \copydoc IProperties::add(size_t,IProperties*)  */
+    /** \copydoc IProperties::add(size_t,IProperties::sptr)  */
     void  add (size_t depth, const IProperties& prop);
 
     /**  */
-    void add (IProperty* p, va_list args);
+    void add (Property* p, va_list args);
 
     /** \copydoc IProperties::merge  */
-    void  merge (IProperties* prop);
+    void  merge (IProperties::sptr prop);
 
     /** \copydoc IProperties::operator[]  */
-    IProperty* operator[] (const std::string& key);
+    Property* operator[] (const std::string& key);
 
     /** \copydoc IProperties::get */
-    IProperty* get (const std::string& key) const ;
+    Property* get (const std::string& key) const ;
 
     /** \copydoc IProperties::getStr */
     std::string getStr    (const std::string& key) const ;
@@ -134,10 +134,10 @@ public:
     void setDouble (const std::string& key, const double& value);
 
     /** \copydoc IProperties::clone  */
-    IProperties* clone ();
+    IProperties::sptr clone ();
 
     /** \copydoc IProperties::map  */
-    std::list<IProperties*> map (const char* separator);
+    std::list<IProperties::sptr> map (const char* separator);
 
     /** \copydoc IProperties::getKeys  */
     std::set<std::string> getKeys ();
@@ -167,10 +167,10 @@ public:
 private:
 
     /** List of IProperty instances. */
-    std::list<IProperty*> _properties;
+    std::list<Property*> _properties;
 
     /* */
-    IProperty* getRecursive (const std::string& key, std::list<IProperty*>::const_iterator& it) const ;
+    Property* getRecursive (const std::string& key, std::list<Property*>::const_iterator& it) const ;
 };
 
 /** Overload output stream operator. */
@@ -230,7 +230,7 @@ public:
     void visitEnd   ();
 
     /** \copydoc IPropertiesVisitor::visitProperty */
-    void visitProperty (IProperty* prop);
+    void visitProperty (Property* prop);
 
 private:
 
@@ -284,7 +284,7 @@ public:
     void visitEnd   () {}
 
     /** \copydoc IPropertiesVisitor::visitProperty */
-    void visitProperty (IProperty* prop);
+    void visitProperty (Property* prop);
 
 private:
     std::ostream& _os;

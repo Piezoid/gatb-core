@@ -53,7 +53,7 @@ namespace impl          {
  * All the methods are delegated to one of these two instances.
  */
 template <class Item>
-class CollectionAbstract : public Collection<Item>
+class CollectionAbstract : public virtual ICollection<Item>
 {
 public:
 
@@ -61,19 +61,13 @@ public:
      * \param bag      : reference on the bag delegate.
      * \param iterable : reference on the iterable delegate
      */
-    CollectionAbstract (Bag<Item>* bag, Iterable<Item>* iterable)
-        : _bag(0), _iterable(0)
-    {
-        setBag      (bag);
-        setIterable (iterable);
-    }
+    CollectionAbstract (Bag<Item>& bag, Iterable<Item>& iterable)
+        : _bag(bag.share()), _iterable(iterable.share())
+    {}
 
     /** Destructor. */
     virtual ~CollectionAbstract()
-    {
-        setBag      (0);
-        setIterable (0);
-    }
+    {}
 
     /** \copydoc Collection::bag */
     Bag<Item>* bag() { return _bag; }
@@ -82,7 +76,7 @@ public:
     Iterable<Item>* iterable()  { return _iterable; }
 
     /** \copydoc Iterable::iterator */
-    dp::Iterator<Item>* iterator ()  { return _iterable->iterator(); }
+    typename dp::Iterator<Item>::sptr iterator ()  { return _iterable->iterator(); }
 
     /** \copydoc Iterable::getNbItems */
     int64_t getNbItems ()  { return _iterable->getNbItems(); }
@@ -131,11 +125,9 @@ public:
 
 protected:
 
-    Bag<Item>* _bag;
-    void setBag (Bag<Item>* bag)  { SP_SETATTR(bag); }
+    typename Bag<Item>::sptr _bag;
+    typename Iterable<Item>::sptr _iterable;
 
-    Iterable<Item>* _iterable;
-    void setIterable (Iterable<Item>* iterable)  { SP_SETATTR(iterable); }
 };
 
 /********************************************************************************/

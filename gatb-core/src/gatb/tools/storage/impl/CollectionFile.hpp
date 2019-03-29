@@ -53,7 +53,7 @@ namespace impl      {
  *
  * This implementation reads/writes Item objects in a file.
  */
-template <class Item> class CollectionFile : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionFile : public collections::impl::CollectionAbstract<Item>
 {
 public:
 

@@ -75,9 +75,20 @@ namespace bank      {
  * \see IBankFactory
  * \see impl::Bank
  */
-class IBank : public tools::collections::Iterable<Sequence>, public tools::collections::Bag<Sequence>
+class IBank :
+        public tools::collections::Iterable<Sequence>,
+        public tools::collections::Bag<Sequence>,
+        public system::SharedObject<IBank>
 {
+    using SO = system::SharedObject<IBank>;
 public:
+    using SO::sptr;
+    using SO::csptr;
+    using SO::uptr;
+    using SO::cuptr;
+    using SO::share;
+
+    using vector = std::vector<SO::sptr>;
 
     /** Get an unique identifier for the bank (could be the URI of a FASTA file for instance).
      * \return the identifier */
@@ -94,10 +105,10 @@ public:
 	
 	/** Return the vector of  sub IBank objects (in case of bank composite), or a vector containing only the bank itself
 	 * \return the IBank objects. */
-	virtual const std::vector<IBank*> getBanks() const  = 0;
+	virtual const vector getBanks() const  = 0;
 	
     /** \copydoc tools::collections::Iterable::iterator */
-    virtual tools::dp::Iterator<Sequence>* iterator () = 0;
+    virtual tools::dp::Iterator<Sequence>::sptr iterator () = 0;
 
     /** \copydoc tools::collections::Bag::insert */
     virtual void insert (const Sequence& item) = 0;
@@ -149,7 +160,7 @@ public:
 
 /** \brief Factory for IBank.
  *
- * This interface provides a factory method that builds a IBank* instance given some
+ * This interface provides a factory method that builds a IBank::sptr instance given some
  * identifier.
  *
  * Such an identifier can be an uri (FASTA banks for instance), or any mechanism allowing
@@ -158,14 +169,14 @@ public:
  * Actually, the gatb::core::bank::impl::Bank class relies on a list of registered IBankFactory
  * instances.
  */
-class IBankFactory : public system::SmartPointer
+class IBankFactory : public system::SharedObject<IBankFactory>
 {
 public:
 
     /** Create an instance of IBank for a given uri.
      * \param[in] uri : the uri used for create the bank
      * \return the IBank instance. */
-    virtual IBank* createBank (const std::string& uri) = 0;
+    virtual IBank::sptr createBank (const std::string& uri) = 0;
 };
 
 /********************************************************************************/

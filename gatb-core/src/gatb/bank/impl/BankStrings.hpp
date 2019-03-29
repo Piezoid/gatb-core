@@ -50,7 +50,7 @@ namespace impl      {
  *
  * This class is mainly used for tests.
  */
-class BankStrings : public AbstractBank
+class BankStrings : public virtual AbstractBank
 {
 public:
 
@@ -83,7 +83,7 @@ public:
     }
 
     /** \copydoc IBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()  { return new tools::dp::impl::VectorIterator2<Sequence> (_sequences); }
+    seq_iterator_ptr iterator ()  { return std::make_shared<tools::dp::impl::VectorIterator2<Sequence>>(_sequences); }
 
     /** \copydoc IBank::getNbItems */
     int64_t getNbItems () { return _sequences.size(); }

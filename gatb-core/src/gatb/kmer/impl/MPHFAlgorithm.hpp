@@ -111,7 +111,7 @@ public:
         tools::collections::Iterable<Type>*   solidKmers,
         unsigned int                          nbCores,
         bool                                  buildOrLoad,
-        tools::misc::IProperties*   options    = 0
+        tools::misc::IProperties::sptr   options    = 0
     );
 
     /** Destructor. */
@@ -124,7 +124,7 @@ public:
      * \return the number of bits per kmer. */
     float getNbBitsPerKmer () const;
 
-    /** Accessor to the map. Note : if clients get this map and use it (as a SmartPointer),
+    /** Accessor to the map. Note : if clients get this map and use it (as a shared_ptr),
      * the map instance will be still alive (ie. not deleted) even if the MPHFAlgorithm
      * instance that built it is deleted first.
      * \return the map instance. */
@@ -149,12 +149,9 @@ private:
     void setSolidKmers (tools::collections::Iterable<Type>* solidKmers)  {  SP_SETATTR(solidKmers); }
 
     /** Hash table instance. */
-    AbundanceMap* _abundanceMap;
-    NodeStateMap* _nodeStateMap;
-    AdjacencyMap* _adjacencyMap;
-    void setAbundanceMap (AbundanceMap* abundanceMap)  { SP_SETATTR(abundanceMap); }
-    void setNodeStateMap (NodeStateMap* nodeStateMap)  { SP_SETATTR(nodeStateMap); }
-    void setAdjacencyMap (AdjacencyMap* adjacencyMap)  { SP_SETATTR(adjacencyMap); }
+    AbundanceMap::sptr _abundanceMap;
+    NodeStateMap::sptr _nodeStateMap;
+    AdjacencyMap::sptr _adjacencyMap;
 
     /** Set the abundance for each entry in the hash table. */
     void populate ();
@@ -171,14 +168,14 @@ private:
     class ProgressCustom : public tools::misc::impl::ProgressProxy
     {
     public:
-        ProgressCustom (tools::dp::IteratorListener* ref);  void reset (u_int64_t ntasks);
+        ProgressCustom (tools::dp::IteratorListener::sptr ref);  void reset (u_int64_t ntasks);
     private:
         size_t nbReset;
     };
 
     /** Progress instance. */
-    tools::dp::IteratorListener* _progress;
-    void setProgress (tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
+    tools::dp::IteratorListener::sptr _progress;
+    void setProgress (tools::dp::IteratorListener::sptr progress)  { SP_SETATTR(progress); }
 	
 };
 

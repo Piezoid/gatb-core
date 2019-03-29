@@ -47,7 +47,7 @@ namespace impl      {
  *
  *  In the ContainerNode implementation, this object is actually just the Bloom filter + the set of False positives.
  */
-template <typename Item> class ContainerNode : public IContainerNode<Item>, public system::SmartPointer
+template <typename Item> class ContainerNode : public IContainerNode<Item>
 {
 public:
 
@@ -55,31 +55,22 @@ public:
      * \param[in] bloom : the Bloom filter.
      * \param[in] falsePositives : the cFP container. */
     ContainerNode (
-        tools::collections::Container<Item>* bloom,
-        tools::collections::Container<Item>* falsePositives
-	) : _bloom(0), _falsePositives(0)
+        tools::collections::ISet<Item>* bloom,
+        tools::collections::ISet<Item>* falsePositives
+	) : _bloom(bloom->share()), _falsePositives(falsePositives->share())
     {
 		setBloom(bloom);
 		setFalsePositives(falsePositives);
     }
 
 	/** Destructor. */
-	~ContainerNode ()
-	{
-		setBloom(0);
-		setFalsePositives(0);
-	}
+    virtual ~ContainerNode () {}
 
     /** \copydoc IContainerNode::contains */
     bool contains (const Item& item)  {  return (_bloom->contains(item) && !_falsePositives->contains(item));  }
 
 protected:
-
-    tools::collections::Container<Item>* _bloom;
-	void setBloom (tools::collections::Container<Item>* bloom)  { SP_SETATTR(bloom); }
-
-	tools::collections::Container<Item>* _falsePositives;
-	void setFalsePositives (tools::collections::Container<Item>* falsePositives)  { SP_SETATTR(falsePositives); }
+    typename tools::collections::ISet<Item>::sptr _bloom, _falsePositives;
 };
 
 /********************************************************************************/
@@ -95,7 +86,7 @@ public:
 
     /** Constructor
      * \param[in] bloom : the Bloom filter. */
-    ContainerNodeNoCFP (tools::collections::Container<Item>* bloom) : ContainerNode<Item>(bloom, NULL) {}
+    ContainerNodeNoCFP (tools::collections::ISet<Item>* bloom) : ContainerNode<Item>(bloom, NULL) {}
 
     /** \copydoc IContainerNode::contains */
     bool contains (const Item& item)  {  return (this->_bloom)->contains(item);  }
@@ -106,7 +97,7 @@ public:
  *
  * This implementation uses cascading Bloom filters for coding the cFP set.
  */
-template <typename Item> class ContainerNodeCascading : public IContainerNode<Item>, public system::SmartPointer
+template <typename Item> class ContainerNodeCascading : public IContainerNode<Item>
 {
 public:
 
@@ -118,12 +109,16 @@ public:
      * \param[in] falsePositives : false positives container
      */
     ContainerNodeCascading (
-        tools::collections::Container<Item>* bloom,
-        tools::collections::Container<Item>* bloom2,
-        tools::collections::Container<Item>* bloom3,
-        tools::collections::Container<Item>* bloom4,
-        tools::collections::Container<Item>* falsePositives
-	) : _bloom(0), _bloom2(0), _bloom3(0), _bloom4(0), _falsePositives(0), _cfpArray(4)
+        tools::collections::ISet<Item>* bloom,
+        tools::collections::ISet<Item>* bloom2,
+        tools::collections::ISet<Item>* bloom3,
+        tools::collections::ISet<Item>* bloom4,
+        tools::collections::ISet<Item>* falsePositives
+	) : _bloom(bloom->share()),
+        _bloom2(bloom2->share()),
+        _bloom3(bloom3->share()),
+        _bloom4(bloom4->share()),
+        _falsePositives(falsePositives->share()), _cfpArray(4)
     {
 		setBloom          (bloom);
         setBloom2         (bloom2);
@@ -138,36 +133,16 @@ public:
     }
 
 	/** Destructor */
-	~ContainerNodeCascading ()
-	{
-        setBloom          (0);
-		setBloom2         (0);
-		setBloom3         (0);
-		setBloom4         (0);
-		setFalsePositives (0);
-	}
+	virtual ~ContainerNodeCascading () {}
 
     /** \copydoc IContainerNode::contains */
     bool contains (const Item& item)  {  return (_bloom->contains(item) && ! containsCFP(item));  }
 
 private:
 
-    tools::collections::Container<Item>* _bloom;
-    void setBloom (tools::collections::Container<Item>* bloom)  { SP_SETATTR(bloom); }
-
-    tools::collections::Container<Item>* _bloom2;
-	void setBloom2 (tools::collections::Container<Item>* bloom2)  { SP_SETATTR(bloom2); }
-
-	tools::collections::Container<Item>* _bloom3;
-	void setBloom3 (tools::collections::Container<Item>* bloom3)  { SP_SETATTR(bloom3); }
-
-	tools::collections::Container<Item>* _bloom4;
-	void setBloom4 (tools::collections::Container<Item>* bloom4)  { SP_SETATTR(bloom4); }
-
-	tools::collections::Container<Item>* _falsePositives;
-	void setFalsePositives (tools::collections::Container<Item>* falsePositives)  { SP_SETATTR(falsePositives); }
-
-    std::vector<tools::collections::Container<Item>*> _cfpArray;
+    typename tools::collections::ISet<Item>::sptr
+        _bloom, _bloom1, _bloom2, _bloom3, _bloom4, _falsePositives;
+    std::vector<tools::collections::ISet<Item>*> _cfpArray;
 
     /** */
     bool containsCFP (const Item& item)

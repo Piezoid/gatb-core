@@ -34,7 +34,7 @@ namespace gatb {  namespace core {  namespace debruijn {  namespace impl {
 
 /** */
 template<typename GraphType, typename Node, typename Edge>
-class Simplifications : public system::SmartPointer
+class Simplifications : public system::SharedObject< Simplifications<GraphType, Node, Edge> >
 {
 public:
 

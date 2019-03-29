@@ -75,7 +75,7 @@ namespace dp    {
  *
  * \see IDispatcher
  */
-class ICommand : virtual public system::ISmartPointer
+class ICommand : public system::SharedObject<ICommand>
 {
 public:
     /** Method that executes some job. */
@@ -103,7 +103,7 @@ public:
  *  Sample of use:
  *  \code
  *  // We define a command class
- *  class MyCommand : public ICommand, public SmartPointer
+ *  class MyCommand : public ICommand
  *  {
  *  public:
  *      MyCommand (int i) : _i(i) {}
@@ -121,7 +121,7 @@ public:
  *      commands.push_back (new MyCommand(3));
  *
  *      // We create a commands dispatcher that parallelizes the execution of the commands.
- *      IDispatcher* dispatcher = new Dispatcher ();
+ *      IDispatcher::sptr dispatcher = new Dispatcher ();
  *
  *      // We launch the 3 commands.
  *      dispatcher->dispatchCommands (commands, 0);
@@ -134,7 +134,7 @@ public:
  *
  *  \see ICommand
  */
-class IDispatcher : public system::SmartPointer
+class IDispatcher : public system::SharedObject<IDispatcher>
 {
 public:
 
@@ -152,7 +152,7 @@ public:
      * \param[in] postTreatment : command to be executed after all the commands are done
      * \return time elapsed in msec
      */
-    virtual size_t dispatchCommands (std::vector<ICommand*>& commands, ICommand* postTreatment=0) = 0;
+    virtual size_t dispatchCommands (std::vector<ICommand::uptr>& commands, ICommand::uptr postTreatment=0) = 0;
 
     /** Returns the number of execution units for this dispatcher.
      *  For instance, it could be the number of cores in a multi cores architecture.
@@ -175,7 +175,7 @@ public:
      *  \param[in] deleteSynchro : if false, destructor of functors are called in each thread; if true, destructor of functors are called synchronously
      */
     template <typename Item, typename Functor>
-    Status iterate (Iterator<Item>* iterator, const Functor& functor, size_t groupSize = 1000, bool deleteSynchro = false)
+    Status iterate (Iterator<Item> iterator, const Functor& functor, size_t groupSize = 1000, bool deleteSynchro = false)
     {
         bool localIterator=true;
 
@@ -234,7 +234,7 @@ protected:
 
     /** Factory method for synchronizer instantiation.
      * \return the created synchronizer. */
-    virtual system::ISynchronizer* newSynchro () = 0;
+    virtual system::ISynchronizer::sptr newSynchro () = 0;
 
     /** Iterate a provided Iterator instance; each iterated items are processed through some functors.
      *  According to the dispatcher implementation, we can hence iterate in a parallel way on several cores.
@@ -247,7 +247,7 @@ protected:
      *  \param[in] deleteSynchro : if false, destructor of functors are called in each thread; if true, destructor of functors are called synchronously
      */
     template <typename Item, typename Functor> Status iterate (
-        Iterator<Item>*         iterator,
+        Iterator<Item>&    iterator,
         std::vector<Functor*>&  functors,
         size_t                  groupSize = 1000,
         bool                    deleteSynchro = false
@@ -259,36 +259,39 @@ protected:
         Status status;
 
         /** We create a common synchronizer. */
-        system::ISynchronizer* synchro = newSynchro();
+        system::ISynchronizer::sptr synchro = newSynchro();
 
         /** We create N IteratorCommand instances. */
-        std::vector<ICommand*> commands;
+        std::vector<ICommand::uptr> commands;
         for (typename std::vector<Functor*>::iterator it = functors.begin(); it != functors.end(); it++)
         {
-            commands.push_back (new IteratorCommand<Item,Functor> (iterator, *it, *synchro, groupSize, deleteSynchro));
+            commands.push_back(
+                        std::make_unique<IteratorCommand<Item,Functor>>
+                        (iterator, *it, *synchro, groupSize, deleteSynchro)
+                        );
         }
-
-        /** We dispatch the commands. */
-        status.time = dispatchCommands (commands);
-
-        /** We reset the iterator (in case it would be used again). */
-        iterator->reset();
-
-        /** We get rid of the synchronizer. */
-        delete synchro;
 
         /** We set the status. */
         status.nbCores = commands.size();
 
         /** We set the group size. */
         status.groupSize = groupSize;
+
+        /** We dispatch the commands. */
+        status.time = dispatchCommands (commands);
+
+        /** We reset the iterator (in case it would be used again). */
+        iterator.reset();
+
+        /** We get rid of the synchronizer. */
+        delete synchro;
         
         /** We return the status. */
         return status;
     }
 
     /* We need some inner class for iterate some iterator in one thread. */
-    template <typename Item, typename Functor> class IteratorCommand : public ICommand, public system::SmartPointer
+    template <typename Item, typename Functor> class IteratorCommand : public virtual ICommand
     {
     public:
         /** Constructor.

@@ -54,7 +54,7 @@ namespace gatb        {
 					 * Note that such an implementation can't afford to add items into the map (it's static).
 					 */
 					template <class Key, class Value, class Adaptator=AdaptatorDefault<Key> >
-					class MapMPHF : public system::SmartPointer
+					class MapMPHF : public system::SharedObject< MapMPHF<Key, Value, Adaptator> >
 					{
 					public:
 						
@@ -68,7 +68,7 @@ namespace gatb        {
 						 * \param[in] keys : iterable over the keys of the hash table
 						 * \param[in] progress : listener called during the building of the MPHF
 						 */
-						void build (tools::collections::Iterable<Key>& keys, int nbThreads = 1, tools::dp::IteratorListener* progress=0)
+						void build (tools::collections::Iterable<Key>& keys, int nbThreads = 1, tools::dp::IteratorListener::sptr progress=0)
 						{
 							/** We build the hash function. */
 							hash.build (&keys, nbThreads, progress);

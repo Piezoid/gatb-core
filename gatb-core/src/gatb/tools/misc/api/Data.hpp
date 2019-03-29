@@ -43,6 +43,9 @@ namespace tools     {
 namespace misc      {
 /********************************************************************************/
 
+class Data;
+using data_ptr = std::shared_ptr<Data>;
+
 /** \brief Definition of a data chunk
  *
  * A data is defined by:
@@ -118,7 +121,7 @@ public:
      * \param[in] offset : position to be used in the referred data
      * \param[in] length : length of the data
      */
-    void setRef (Data* ref, size_t offset, size_t length)
+    void setRef (data_ptr ref, size_t offset, size_t length)
     {
         /** We call the parent method. */
         Vector<char>::setRef (ref, offset, length);
@@ -195,6 +198,8 @@ private:
      * print(codes)
      */
 };
+
+
 
 /********************************************************************************/
 } } } } /* end of namespaces. */

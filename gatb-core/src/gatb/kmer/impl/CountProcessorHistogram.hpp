@@ -56,7 +56,7 @@ public:
 
     /** Constructor. */
     CountProcessorHistogram (
-        tools::storage::impl::Group* group = 0,
+        tools::storage::impl::Group::sptr group = 0,
         size_t histoMax                    = 10000,
         size_t min_auto_threshold          = 3,
 		bool   histo2Dmode                 = false,
@@ -74,7 +74,7 @@ public:
 
     /** Constructor. */
     CountProcessorHistogram (
-        tools::storage::impl::Group* group,
+        tools::storage::impl::Group::sptr group,
         tools::misc::IHistogram* histogram,
         size_t min_auto_threshold = 3,
 		bool   histo2Dmode = false,
@@ -148,11 +148,11 @@ public:
             _histogram->save (*_group);
 
             /** store auto cutoff and corresponding number of solid kmers **/
-            tools::collections::Collection<NativeInt64>& storecutoff = _group->getCollection<NativeInt64>("cutoff") ;
+            tools::collections::ICollection<NativeInt64>& storecutoff = _group->getCollection<NativeInt64>("cutoff") ;
             storecutoff.insert(_histogram->get_solid_cutoff());
             storecutoff.flush();
 
-            tools::collections::Collection<NativeInt64>& storesolids = _group->getCollection<NativeInt64>("nbsolidsforcutoff") ;
+            tools::collections::ICollection<NativeInt64>& storesolids = _group->getCollection<NativeInt64>("nbsolidsforcutoff") ;
             storesolids.insert(_histogram->get_nbsolids_auto());
             storesolids.flush();
         }
@@ -213,10 +213,9 @@ public:
 
 private:
 
-
+    tools::storage::impl::Group::sptr _group;
 	system::ISynchronizer* _synchro;
 
-    tools::storage::impl::Group* _group;
 
     gatb::core::tools::misc::IHistogram* _histogram;
     void setHistogram (gatb::core::tools::misc::IHistogram* histogram)  { SP_SETATTR(histogram); }

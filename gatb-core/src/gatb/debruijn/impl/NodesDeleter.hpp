@@ -49,7 +49,7 @@ class NodesDeleter
         bool _verbose;
         bool useList, onlyListMethod;
         unsigned long explicitLimit;
-        system::ISynchronizer* synchro;
+        system::ISynchronizer::sptr synchro;
 
     NodesDeleter(Graph&  graph, uint64_t nbNodes, int nbCores, bool verbose=true) : nbNodes(nbNodes), _graph(graph), _nbCores(nbCores), _verbose(verbose)
     {

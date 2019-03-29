@@ -144,7 +144,7 @@ public:
 
 private:
     std::string     _filename;
-    system::IFile*  _file;
+    std::unique_ptr<system::IFile>  _file;
     Item*           _buffer;
     int             _cpt_buffer;
     int             _idx;
@@ -159,7 +159,7 @@ private:
  * This implementation uses a file as the source of the items that can be iterated.
  *
  */
-template <class Item> class IterableFile : public tools::collections::Iterable<Item>, public virtual system::SmartPointer
+template <class Item> class IterableFile : public tools::collections::Iterable<Item>
 {
 public:
 
@@ -223,7 +223,7 @@ public:
 private:
     std::string     _filename;
     size_t          _cacheItemsNb;
-    system::IFile*  _file;
+    std::unique_ptr<system::IFile>  _file;
 };
     
 /********************************************************************************/
@@ -440,7 +440,7 @@ public:
     
 private:
     std::string     _filename;
-    system::IFile*  _file;
+    std::unique_ptr<system::IFile>  _file;
     u_int8_t*       _buffer;
     size_t             _cpt_buffer; // how many unread bytes are remaining in the buffer
     size_t             _idx; // where we should read the next elem in the buffer
@@ -476,7 +476,7 @@ private:
 
 /********************************************************************************/
 /* EXPERIMENTAL (not documented). */
-template <class Item> class IterableGzFile : public tools::collections::Iterable<Item>, public virtual system::SmartPointer
+template <class Item> class IterableGzFile : public tools::collections::Iterable<Item>
 {
 public:
     
@@ -502,7 +502,7 @@ private:
 
 /********************************************************************************/
 /* EXPERIMENTAL (not documented). */
-template <class Item> class IterableCountCompressedFile : public tools::collections::Iterable<Item>, public virtual system::SmartPointer
+template <class Item> class IterableCountCompressedFile : public tools::collections::Iterable<Item>
 {
 public:
     

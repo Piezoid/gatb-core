@@ -45,14 +45,13 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 ** REMARKS :
 *********************************************************************/
 BankSplitter::BankSplitter (
-    IBank*   reference,
+    IBank::sptr reference,
     size_t   readMeanSize,
     size_t   overlap,
     u_int8_t coverage
 )
-    : _reference (0), _readMeanSize(readMeanSize), _coverage(coverage), _overlap(overlap)
+    : _reference (std::move(reference)), _readMeanSize(readMeanSize), _coverage(coverage), _overlap(overlap)
 {
-    setReference (reference);
 }
 
 /*********************************************************************
@@ -64,9 +63,7 @@ BankSplitter::BankSplitter (
 ** REMARKS :
 *********************************************************************/
 BankSplitter::~BankSplitter ()
-{
-    setReference (0);
-}
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -78,8 +75,7 @@ BankSplitter::~BankSplitter ()
 *********************************************************************/
 void BankSplitter::estimate (u_int64_t& number, u_int64_t& totalSize, u_int64_t& maxSize)
 {
-    gatb::core::tools::dp::Iterator<gatb::core::bank::Sequence>* itSeq = _reference->iterator();
-    LOCAL (itSeq);
+    seq_iterator_ptr itSeq = _reference->iterator();
 
     itSeq->first();
     assert (itSeq->isDone() == false);
@@ -111,13 +107,13 @@ BankSplitter::Iterator::Iterator(const BankSplitter& bank)
     assert (bank._readMeanSize > bank._overlap);
 
     /** We get the first sequence of the referred bank. */
-    setItRef (bank._reference->iterator());
+    _itRef = bank._reference->iterator();
     _itRef->first();
     assert (_itRef->isDone() == false);
 
     /** We create the reference Data object (that references the provided string).
      * NOTE : we force the encoding to be the same as the referred bank. */
-    setDataRef (new Data (_itRef->item().getDataEncoding()));
+    _dataRef = std::make_shared<Data>(_itRef->item().getDataEncoding());
     *_dataRef = (*_itRef)->getData();
 
     _offsetMax = _dataRef->size() - _readMeanSize;
@@ -151,10 +147,7 @@ BankSplitter::Iterator::Iterator(const BankSplitter& bank)
 ** REMARKS :
 *********************************************************************/
 BankSplitter::Iterator::~Iterator()
-{
-    setDataRef(0);
-    setItRef(0);
-}
+{}
 
 /*********************************************************************
 ** METHOD  :

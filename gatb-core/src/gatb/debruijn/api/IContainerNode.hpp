@@ -45,7 +45,7 @@ namespace debruijn  {
  *
  * This interface is mainly used by the impl::Graph class
  */
-template <class Item> class IContainerNode : public tools::collections::Container<Item>
+template <class Item> class IContainerNode : public tools::collections::ISet<Item>
 {
 public:
 

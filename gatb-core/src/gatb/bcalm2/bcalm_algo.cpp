@@ -227,7 +227,7 @@ namespace gatb { namespace core { namespace debruijn { namespace impl  {
         {
             if (_currentThreadIndex < 0)
             {
-                std::pair<IThread*,size_t> info;
+                std::pair<IThread::sptr,size_t> info;
                 if (ThreadGroup::findThreadInfo (System::thread().getThreadSelf(), info) == true)
                 {
                     _currentThreadIndex = info.second;
@@ -378,17 +378,16 @@ void bcalm2(Storage *storage,
 
     // copied from createIterator in Algorithm.hpp
     //  We create some listener to be notified every 1000 iterations and attach it to the iterator.
-    IteratorListener* listener;
+    IteratorListener::sptr listener;
     if (verbose)
         listener = new ProgressTimer(nb_partitions, "Iterating DSK partitions");
     else
         listener = new IteratorListener ();
 
     auto it_parts = new tools::dp::impl::SubjectIterator<int> (
-                new Range<int>::Iterator (0,nb_partitions-1), 
+                std::make_shared<Range<int>::Iterator>(0,nb_partitions-1),
                 nb_partitions/100);
     it_parts->addObserver (listener);
-    LOCAL(it_parts);
     
     bcalm_logging = verbose;
     logging("prior to queues allocation");
@@ -430,8 +429,7 @@ void bcalm2(Storage *storage,
         {
             /** We retrieve an iterator on the Count objects of the pth partition in pass pass_index */
             unsigned long interm_partition_index = p + pass_index * nb_partitions;
-            Iterator<Count>* it_kmers = partition[interm_partition_index].iterator();
-            LOCAL (it_kmers);
+            Iterator<Count>::sptr it_kmers = partition[interm_partition_index].iterator();
 
             if (pass_index == 0) // the first time, 
                 for (int i = 0; i < nb_threads; i++) // resize approximately the bucket queues
@@ -486,7 +484,7 @@ void bcalm2(Storage *storage,
                 {
                     if (_currentThreadIndex < 0)
                     {
-                        std::pair<IThread*,size_t> info;
+                        std::pair<IThread::sptr,size_t> info;
                         if (ThreadGroup::findThreadInfo (System::thread().getThreadSelf(), info) == true)
                             _currentThreadIndex = info.second;
                         else

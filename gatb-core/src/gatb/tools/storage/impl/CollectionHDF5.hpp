@@ -54,7 +54,7 @@ namespace impl      {
  *
  * This implementation writes Item objects in a HDF5 file.
  */
-template <class Item> class BagHDF5 : public collections::Bag<Item>, public system::SmartPointer
+template <class Item> class BagHDF5 : public collections::Bag<Item>
 {
 public:
 
@@ -64,7 +64,7 @@ public:
      * \param[in] nbItems : number of items
      * \param[in] synchro : used to serialize concurrent read/write HDF5 operations.
      */
-    BagHDF5 (hid_t datasetId, hid_t typeId, u_int64_t& nbItems, system::ISynchronizer* synchro)
+    BagHDF5 (hid_t datasetId, hid_t typeId, u_int64_t& nbItems, system::ISynchronizer::sptr synchro)
         : _datasetId(datasetId), _typeId(typeId), _nbInserted(0), _nbItems(nbItems), _synchro(synchro)
     {
     }
@@ -125,7 +125,7 @@ private:
     hid_t     _typeId;
     u_int64_t _nbInserted;
     u_int64_t& _nbItems;
-    system::ISynchronizer* _synchro;
+    system::ISynchronizer::sptr _synchro;
 
 };
 
@@ -133,12 +133,12 @@ private:
 
 template<typename Item> class HDF5Iterator;
 
-template <class Item> class IterableHDF5 : public collections::Iterable<Item>, public system::SmartPointer
+template <class Item> class IterableHDF5 : public collections::Iterable<Item>
 {
 public:
 
     /** */
-    IterableHDF5 (hid_t datasetId, hid_t typeId, u_int64_t& nbItems,     system::ISynchronizer* synchro)
+    IterableHDF5 (hid_t datasetId, hid_t typeId, u_int64_t& nbItems,     system::ISynchronizer::sptr synchro)
         :  _datasetId(datasetId), _typeId(typeId), _nbItems(nbItems), _synchro(synchro)  {}
 
     /** */
@@ -177,7 +177,7 @@ private:
     hid_t _datasetId;
     hid_t _typeId;
     u_int64_t& _nbItems;
-    system::ISynchronizer* _synchro;
+    system::ISynchronizer::sptr _synchro;
 
 
     /** */
@@ -338,12 +338,12 @@ private:
 
 /** \brief Collection interface
  */
-template <class Item> class CollectionHDF5 : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionHDF5 : public collections::impl::CollectionAbstract<Item>
 {
 public:
 
     /** Constructor. */
-    CollectionHDF5 (hid_t fileId, const std::string& filename, system::ISynchronizer* synchro)
+    CollectionHDF5 (hid_t fileId, const std::string& filename, system::ISynchronizer::sptr synchro)
         : collections::impl::CollectionAbstract<Item> (0,0), _datasetId(0), _typeId(0), _nbItems(0)
     {
         herr_t status;

@@ -34,11 +34,11 @@ namespace impl  {
 /********************************************************************************/
 
 /** */
-class CommandStartSynchro : public ICommand, public system::SmartPointer
+class CommandStartSynchro : public ICommand
 {
 public:
 
-    CommandStartSynchro (ICommand* ref, system::ISynchronizer* synchro) : _ref(0), _synchro(synchro)  { setRef(ref); }
+    CommandStartSynchro (ICommand* ref, system::ISynchronizer::sptr synchro) : _ref(0), _synchro(synchro)  { setRef(ref); }
     ~CommandStartSynchro ()  { setRef(0); }
 
     void execute ()
@@ -57,11 +57,11 @@ private:
     ICommand* _ref;
     void setRef (ICommand* ref)  { SP_SETATTR(ref); }
 
-    system::ISynchronizer* _synchro;
+    system::ISynchronizer::sptr _synchro;
 };
 
 /********************************************************************************/
-class SynchronizerNull : public system::ISynchronizer, public system::SmartPointer
+class SynchronizerNull : public system::ISynchronizer
 {
 public:
     void   lock ()  {}
@@ -101,7 +101,7 @@ size_t SerialDispatcher::dispatchCommands (std::vector<ICommand*>& commands, ICo
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-system::ISynchronizer* SerialDispatcher::newSynchro ()
+system::ISynchronizer::sptr SerialDispatcher::newSynchro ()
 {
     return new SynchronizerNull();
 }
@@ -131,7 +131,7 @@ size_t Dispatcher::dispatchCommands (std::vector<ICommand*>& commands, ICommand*
 {
     TIME_START (ti, "compute");
 
-    system::IThreadGroup* threadGroup = system::impl::ThreadGroup::create ();
+    system::IThreadGroup::sptr threadGroup = system::impl::ThreadGroup::create ();
 
     size_t idx = 0;
 
@@ -174,7 +174,7 @@ size_t Dispatcher::dispatchCommands (std::vector<ICommand*>& commands, ICommand*
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-system::ISynchronizer* Dispatcher::newSynchro ()
+system::ISynchronizer::sptr Dispatcher::newSynchro ()
 {
     return system::impl::System::thread().newSynchronizer();
 }
@@ -187,7 +187,7 @@ system::ISynchronizer* Dispatcher::newSynchro ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-system::IThread* Dispatcher::newThread (ICommand* command)
+system::IThread::sptr Dispatcher::newThread (ICommand* command)
 {
     return system::impl::System::thread().newThread (mainloop, command);
 }
@@ -205,7 +205,7 @@ void* Dispatcher::mainloop (void* data)
     IThreadGroup::Info* info = (IThreadGroup::Info*) data;
     LOCAL (info);
 
-    IThreadGroup* threadGroup = info->group;
+    IThreadGroup::sptr threadGroup = info->group;
     ICommand*    cmd          = (ICommand*) info->data;
 
     assert (threadGroup != 0);

@@ -44,7 +44,7 @@ void Histogram::save (tools::storage::impl::Group& group)
 {
     DEBUG (("Histogram::save  size=%ld\n", _length+1));
 
-    tools::collections::Collection<Entry>& collection = group.getCollection<Entry> ("histogram");
+    tools::collections::ICollection<Entry>& collection = group.getCollection<Entry> ("histogram");
 
     size_t offset = 1;
     collection.insert (_histogram + offset, (_length+1) - offset);

@@ -51,7 +51,7 @@ namespace impl      {
  */
 
 template <typename Node, typename Edge, typename Graph>
-class TerminatorTemplate : public system::SmartPointer
+class TerminatorTemplate : public system::SharedObject< TerminatorTemplate<Node, Edge, Graph >
 {
 public:
 

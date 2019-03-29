@@ -52,25 +52,24 @@ public:
      */
     static IProperties& getInfo()
     {
-        static system::SmartObject singleton;
+        static std::unique_ptr<IProperties> singleton;
 
-        if (singleton.hasRef() == false)
+        if (singleton)
         {
-            IProperties* props = new Properties();
+            singleton = std::make_unique<Properties>();
 
-            props->add (0, "gatb-core-library", "");
-            props->add (1, "version",        "%s", system::impl::System::info().getVersion().c_str());
-            props->add (1, "git_sha1",       "%s", STR_GIT_SHA1);
-            props->add (1, "build_date",     "%s", system::impl::System::info().getBuildDate().c_str());
-            props->add (1, "build_system",   "%s", system::impl::System::info().getBuildSystem().c_str());
-            props->add (1, "build_compiler", "%s", system::impl::System::info().getBuildCompiler().c_str());
+            singleton->add (0, "gatb-core-library", "");
+            singleton->add (1, "version",        "%s", system::impl::System::info().getVersion().c_str());
+            singleton->add (1, "git_sha1",       "%s", STR_GIT_SHA1);
+            singleton->add (1, "build_date",     "%s", system::impl::System::info().getBuildDate().c_str());
+            singleton->add (1, "build_system",   "%s", system::impl::System::info().getBuildSystem().c_str());
+            singleton->add (1, "build_compiler", "%s", system::impl::System::info().getBuildCompiler().c_str());
             //props->add (1, "build_options",  "%s", system::impl::System::info().getBuildOptions().c_str());
-            props->add (1, "build_kmer_size", "%s", KSIZE_STRING);
+            singleton->add (1, "build_kmer_size", "%s", KSIZE_STRING);
             //props->add (1, "custom_memalloc", "%d", CUSTOM_MEM_ALLOC);
 
-            singleton.setRef (props);
         }
-        return * (dynamic_cast<IProperties*>(singleton.getRef()));
+        return *singleton;
     }
 
     /** Display information about the GATB-CORE library

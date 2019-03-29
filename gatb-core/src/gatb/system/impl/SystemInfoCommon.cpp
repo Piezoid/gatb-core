@@ -93,7 +93,7 @@ private:
 };
 
 /** */
-ISystemInfo::CpuInfo* SystemInfoCommon::createCpuInfo ()  {  return new CpuInfoCommon (); }
+ISystemInfo::std::shared_ptr<CpuInfo> SystemInfoCommon::createCpuInfo ()  {  return new CpuInfoCommon (); }
 
 std::string SystemInfoCommon::getVersion () const  { return STR_LIBRARY_VERSION; }
 

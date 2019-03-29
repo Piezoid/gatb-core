@@ -218,7 +218,7 @@ class Leon : public misc::impl::Tool
     int _read_per_block;
 
 	//hdf5 stuff
-	Storage* _storageH5file;
+	Storage::sptr _storageH5file;
 
 	
 	tools::storage::impl::Group *  _groupLeon;
@@ -228,14 +228,14 @@ class Leon : public misc::impl::Tool
 	tools::storage::impl::Group * _subgroupQual;
 	tools::storage::impl::Group * _subgroupHeader;
 
-	collections::Collection<math::NativeInt8>* _subgroupInfoCollection;
+	collections::ICollection<math::NativeInt8>* _subgroupInfoCollection;
 
 		u_int64_t _lastAnchorValue;
 		
 		 struct timeval _tim;
 		double _wdebut_leon, _wfin_leon;
 		//static const char* STR_GZ;
-		IFile* _outputFile;
+		std::unique_ptr<IFile> _outputFile;
 	
 	
 	
@@ -253,7 +253,7 @@ class Leon : public misc::impl::Tool
 
 	//quals
 	//string _FileQualname;
-	//IFile* _FileQual;
+	//std::unique_ptr<IFile> _FileQual;
 	//tools::storage::impl::Storage::ostream * _Qual_outstream ;
 
 	string _qualOutputFilename; //temp file
@@ -267,8 +267,7 @@ class Leon : public misc::impl::Tool
 		vector<u_int64_t> _headerBlockSizes;
 		vector<u_int64_t> _dnaBlockSizes;
 
-		IBank* _inputBank;
-		void setInputBank (IBank* inputBank) { SP_SETATTR(inputBank); }
+		IBank::sptr _inputBank;
 
 		//u_int64_t _bloomSize;
 		
@@ -340,7 +339,7 @@ class Leon : public misc::impl::Tool
 		//Global decompression
 		void endDecompression();
 		
-		//IFile* _outputFile;
+		//std::unique_ptr<IFile> _outputFile;
 	
 	void startDecompression_setup();
 	void decoders_setup();
@@ -425,7 +424,7 @@ class Leon : public misc::impl::Tool
 };
 
 
-class BankLeon : public AbstractBank
+class BankLeon : public virtual AbstractBank
 {
 public:
 	
@@ -444,7 +443,7 @@ public:
 	std::string getId ()  { return _fname; }
 	
 	/** \copydoc IBank::iterator */
-	tools::dp::Iterator<Sequence>* iterator ()  { return new Leon::LeonIterator (*_leon); }
+	seq_iterator_ptr iterator ()  { return std::make_shared<Leon::LeonIterator> (*_leon); }
 	
 	/** */
 	int64_t getNbItems () ;
@@ -480,7 +479,7 @@ class BankLeonFactory : public IBankFactory
 public:
 	
 	/** \copydoc IBankFactory::createBank */
-	IBank* createBank (const std::string& uri);
+	IBank::sptr createBank (const std::string& uri);
 };
 
 

@@ -73,7 +73,7 @@ public:
         tools::storage::impl::Storage& storage,
         tools::misc::BranchingKind  kind,
         size_t                      nb_cores = 0,
-        tools::misc::IProperties*   options  = 0
+        tools::misc::IProperties::sptr   options  = 0
     );
 
     /** Constructor.
@@ -87,7 +87,7 @@ public:
     /** Get an option parser for branching parameters. Dynamic allocation, so must be released when no more used.
      * \return an instance of IOptionsParser.
      */
-    static tools::misc::IOptionsParser* getOptionsParser ();
+    static tools::misc::IOptionsParser::sptr getOptionsParser ();
 
     /** \copydoc tools::misc::impl::Algorithm::execute */
     void execute ();
@@ -95,7 +95,7 @@ public:
     /** Get the branching nodes as a collection of Count objects, ie couples of [kmer,abundance]
      * \return the collection of Count object.
      */
-    tools::collections::Collection<Count>* getBranchingCollection() { return _branchingCollection; }
+    tools::collections::ICollection<Count>& getBranchingCollection() { return *_branchingCollection; }
 
 private:
 
@@ -105,8 +105,7 @@ private:
 
     tools::misc::BranchingKind  _kind;
 
-    tools::collections::Collection<Count>* _branchingCollection;
-    void setBranchingCollection (tools::collections::Collection<Count>* branchingCollection)  {  SP_SETATTR(branchingCollection); }
+    typename tools::collections::ICollection<Count>::sptr _branchingCollection;
 };
 
 /********************************************************************************/

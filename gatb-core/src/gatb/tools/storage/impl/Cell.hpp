@@ -40,22 +40,21 @@ namespace impl      {
  *
  * The 'remove' method is still abstract.
  */
-class Cell : public virtual ICell, public system::SmartPointer
+class Cell : public virtual ICell
 {
 public:
 
     /** Constructor. */
-    Cell (ICell* parent, const std::string& id)  : _parent(0), _id(id), _compressLevel(0)
+    Cell (ICell::sptr parent, const std::string& id)  : _parent(std::move(parent)), _id(id), _compressLevel(0)
 	{
-    	setParent(parent);
     	if (_parent != 0)  { _compressLevel = _parent->getCompressLevel(); }
 	}
 
     /** Destructor. */
-    ~Cell ()   {  setParent(0);  }
+    virtual ~Cell () {}
 
     /** \copydoc ICell::getParent  */
-    ICell* getParent () const { return _parent; }
+    ICell::sptr getParent () const { return _parent; }
 
     /** \copydoc ICell::getId  */
     const std::string& getId ()  const { return _id; }
@@ -75,13 +74,14 @@ public:
 
 private:
 
-    ICell* _parent;
-    void setParent (ICell* parent)  {  _parent = parent;  }
+    ICell::sptr _parent;
 
     std::string _id;
 
     int _compressLevel;
 };
+
+
 
 /********************************************************************************/
 } } } } } /* end of namespaces. */

@@ -101,13 +101,13 @@ void Tool::displayVersion(std::ostream& os){
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* Tool::run (int argc, char* argv[])
+IProperties::sptr Tool::run (int argc, char* argv[])
 {
     DEBUG (("Tool::run(argc,argv) => tool='%s'  \n", getName().c_str() ));
     try
     {
         /** We parse the user parameters. */
-        IProperties* props = getParser()->parse (argc, argv);
+        IProperties::sptr props = getParser()->parse (argc, argv);
 
         /** We run the tool. */
         return run (props);
@@ -148,7 +148,7 @@ IProperties* Tool::run (int argc, char* argv[])
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* Tool::run (IProperties* input)
+IProperties::sptr Tool::run (IProperties::sptr input)
 {
     /** We keep the input parameters. */
     setInput (input);
@@ -248,7 +248,7 @@ void Tool::postExecute ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-dp::IteratorListener* Tool::createIteratorListener (size_t nbIterations, const char* message)
+dp::IteratorListener::sptr Tool::createIteratorListener (size_t nbIterations, const char* message)
 {
     switch (getInput()->getInt(STR_VERBOSE))
     {
@@ -294,16 +294,16 @@ ToolComposite::~ToolComposite ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* ToolComposite::run (int argc, char* argv[])
+IProperties::sptr ToolComposite::run (int argc, char* argv[])
 {
-    vector<IProperties*> inputs;
+    vector<IProperties::sptr> inputs;
 
     /** We first parse the options for all tools. */
     for (list<Tool*>::iterator it = _tools.begin(); it != _tools.end(); it++)
     {
 #if 0
         /** We get the parameters from the current parser. */
-        IProperties* input = (*it)->getParser()->parse (argc, argv);
+        IProperties::sptr input = (*it)->getParser()->parse (argc, argv);
 
         /** We add the input into the vector that gather the tools inputs. */
         inputs.push_back (input);
@@ -315,13 +315,13 @@ IProperties* ToolComposite::run (int argc, char* argv[])
             (*it)->getParser()->parse (argc, argv);
 
 
-			IProperties* input =  (*it)->getParser()->getProperties() ;
+			IProperties::sptr input =  (*it)->getParser()->getProperties() ;
             /** We add the input into the vector that gather the tools inputs. */
             inputs.push_back (input);
         }
         catch (OptionFailure& e)
         {
-			IProperties* input =  (*it)->getParser()->getProperties() ;
+			IProperties::sptr input =  (*it)->getParser()->getProperties() ;
 
 			/** We add the input into the vector that gather the tools inputs. */
 			inputs.push_back (input);
@@ -333,18 +333,18 @@ IProperties* ToolComposite::run (int argc, char* argv[])
 #endif
     }
 
-    IProperties* output = 0;
+    IProperties::sptr output = 0;
     size_t idx = 0;
     for (list<Tool*>::iterator it = _tools.begin(); it != _tools.end(); it++, idx++)
     {
         /** We get the parameters from the current inputs entry. */
-        IProperties* input = inputs[idx];
+        IProperties::sptr input = inputs[idx];
 
         /** We may have to add the output of the previous tool to the input of the current tool.
          *  WARNING! The output of the previous tool should have a bigger priority than the
          *  user parameters of the current tool.
          */
-        IProperties* actualInput = 0;
+        IProperties::sptr actualInput = 0;
         if (output != 0)
         {
             actualInput = new Properties();

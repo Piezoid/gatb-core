@@ -197,13 +197,14 @@ public:
      * \param[in] it1 : first iterator.
      * \param[in] it2 : second iterator.
      */
-    PairedIterator (Iterator<T1>* it1, Iterator<T2>* it2)  : _it1(0), _it2(0), _isDone(true)
-    {
-        setIt1 (it1);   setIt2 (it2);
-    }
+    PairedIterator (Iterator<T1>& it1, Iterator<T2>& it2)  :
+        _it1(it1.share()),
+        _it2(it2.share()),
+        _isDone(true)
+    {}
 
     /** Destructor. */
-    virtual ~PairedIterator ()  {  setIt1 (0);   setIt2 (0);  }
+    virtual ~PairedIterator ()  {}
 
     /** \copydoc Iterator::first */
     void first()
@@ -254,12 +255,10 @@ public:
 private:
 
     /** First iterator. */
-    Iterator<T1>* _it1;
-    void setIt1 (Iterator<T1>* it1)  { SP_SETATTR(it1); }
+    typename Iterator<T1>::sptr _it1;
 
     /** Second iterator. */
-    Iterator<T2>* _it2;
-    void setIt2 (Iterator<T2>* it2)  { SP_SETATTR(it2); }
+    typename Iterator<T2>::sptr _it2;
 
     /** Finish status. */
     bool _isDone;
@@ -277,43 +276,31 @@ class AbstractSubjectIterator
 public:
 
     /** Constructor. */
-    AbstractSubjectIterator () : _hasListeners(false), _isStarted(false) {}
+    AbstractSubjectIterator () : _isStarted(false) {}
 
     /** Destructor. */
     ~AbstractSubjectIterator ()
-    {
-        /** We remove all observers. */
-        for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
-        {
-            (*it)->forget();
-        }
-    }
+    {}
 
     /** Add an observer to the iterator. Such an observer is provided as a functor.
      * \param[in] f : functor to be subscribed to the iterator notifications.
      */
-    void addObserver    (IteratorListener* f)
+    void addObserver    (IteratorListener::sptr f)
     {
-        if (f != 0)
-        {
-            f->use ();
+        if (f)
             _listeners.insert (f);
-            _hasListeners=true;
-        }
     }
 
     /** Remove an observer from the iterator. Such an observer is provided as a functor.
      * \param[in] f : functor to be unsubscribed from the iterator notifications.
      */
-    void removeObserver (IteratorListener* f)
+    void removeObserver (IteratorListener::sptr f)
     {
         /** We look whether the given functor is already known. */
-        std::set<IteratorListener*>::iterator lookup = _listeners.find (f);
+        auto lookup = _listeners.find (f);
         if (lookup != _listeners.end())
         {
-            (*lookup)->forget();
             _listeners.erase (lookup);
-            _hasListeners = _listeners.empty() == false;
         }
     }
 
@@ -321,10 +308,8 @@ public:
     void setMessage (const std::string& message)
     {
         /** We remove all observers. */
-        for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
-        {
-            (*it)->setMessage (message);
-        }
+        for (auto& listener : _listeners)
+            listener->setMessage (message);
     }
 
 protected:
@@ -333,51 +318,42 @@ protected:
      * \param[in] current : number of currently iterated items during the iteration. */
     void notifyInc (u_int64_t current)
     {
-        if (_isStarted == true)
+        if (_isStarted)
         {
             /** We call each subscribing functor. */
-            for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
-            {
-                /** Not very pretty syntax, but that works. */
-               (*it)->inc (current);
-            }
+            for (auto& list : _listeners)
+                list->inc(current);
         }
     }
 
     /** Notify all the subscribed functors about the start of the iteration. */
     void notifyInit ()
     {
-        if (_isStarted == false)
+        if (!_isStarted)
         {
             _isStarted = true;
 
             /** We call each subscribing functor. */
-            for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
-            {
-                (*it)->init ();
-            }
+            for (auto& list : _listeners)
+                list->init();
         }
     }
 
     /** Notify all the subscribed functors about the start of the iteration. */
     void notifyFinish ()
     {
-        if (_isStarted == true)
+        if (_isStarted)
         {
             _isStarted = false;
 
             /** We call each subscribing functor. */
-            for (std::set<IteratorListener*>::iterator it = _listeners.begin(); it != _listeners.end(); it++)
-            {
-                (*it)->finish ();
-            }
+            for (auto& list : _listeners)
+                list->finish();
         }
     }
 
 private:
-
-    std::set<IteratorListener*> _listeners;
-    bool                        _hasListeners;
+    std::set<IteratorListener::sptr> _listeners;
     bool                        _isStarted;
 };
 
@@ -402,22 +378,15 @@ public:
      * \param[in] modulo : notifies every 'modulo' time
      * \param[in] listener : default listener attached to this subject (default value is 0)
      */
-    SubjectIterator (Iterator<Item>* ref, u_int32_t modulo, IteratorListener* listener=0)
-        : _ref(0), _current(0), _modulo(modulo==0 ? 1 : modulo)
+    SubjectIterator (Iterator<Item>& ref, u_int32_t modulo, IteratorListener::sptr listener=0)
+        : _ref(ref.share()), _current(0), _modulo(modulo==0 ? 1 : modulo)
     {
-        /** We set the reference. */
-        setRef (ref);
-
         /** We may have a listener. */
         if (listener != 0)  { this->addObserver (listener); }
     }
 
     /** Destructor. */
-    ~SubjectIterator ()
-    {
-        /** We release the reference. */
-        setRef (0);
-    }
+    virtual ~SubjectIterator () {}
 
     /* \copydoc Iterator::first */
     void first ()
@@ -451,14 +420,11 @@ public:
     void reset ()  { _ref->reset(); }
 	
 	/* GR : this func was missing, previously caused subject iterator to return false composition*/
-	std::vector<Iterator<Item>*> getComposition()  { return _ref->getComposition(); }
-	
-
+	iterator_vector<Item> getComposition()  { return _ref->getComposition(); }
 
 private:
 
-    Iterator<Item>* _ref;
-    void setRef (Iterator<Item>* ref)  { SP_SETATTR(ref); }
+    typename Iterator<Item>::sptr _ref;
 
     u_int64_t _current;
     u_int64_t _modulo;
@@ -663,17 +629,20 @@ private:
  * Example:
  * \snippet iterators6.cpp  snippet1
  */
-template <class Item, typename Filter> class FilterIterator : public ISmartIterator<Item>
+template <class Item, typename Filter> class FilterIterator : public ISizedIterator<Item>
 {
 public:
 
     /** Constructor.
      * \param[in] ref : the referred iterator
      * \param[in] filter : the filter on items. Returns true if item is kept, false otherwise. */
-    FilterIterator (Iterator<Item>* ref, Filter filter) : _ref(0), _filter(filter), _rank(0)  { setRef(ref); }
+    FilterIterator (Iterator<Item>* ref, Filter filter) :
+        _ref(as_shared_ptr(ref)),
+        _filter(filter), _rank(0)
+    {}
 
     /** Destructor. */
-    ~FilterIterator ()  { setRef(0); }
+    virtual ~FilterIterator ()  { }
 
     /** \copydoc  Iterator::first */
     void first() { _rank=0; _ref->first(); while (!isDone() && _filter(item())==false) { _ref->next(); }  }
@@ -695,8 +664,7 @@ public:
 
 private:
 
-    Iterator<Item>* _ref;
-    void setRef (Iterator<Item>* ref)  { SP_SETATTR(ref); }
+    std::shared_ptr<Iterator<Item>> _ref;
 
     Filter      _filter;
     u_int64_t  _rank;
@@ -761,64 +729,6 @@ protected:
     std::vector<Item>& _items;
     int32_t            _idx;
     int32_t            _nb;
-};
-
-/********************************************************************************/
-
-template <template <class> class IteratorType , typename T1, typename T2=T1, typename T3=T2, typename T4=T3>
-class IteratorVariant : public IteratorType <boost::variant<T1,T2,T3,T4> >
-{
-private:
-
-    typedef boost::variant < IteratorType<T1>, IteratorType<T2>, IteratorType<T3>, IteratorType<T4> > Type;
-
-    Type var;
-
-    struct fct_first  : public boost::static_visitor<>     {  template<typename T>  void operator() (T& a) const { a.first();          }};
-    struct fct_next   : public boost::static_visitor<>     {  template<typename T>  void operator() (T& a) const { a.next ();          }};
-    struct fct_isDone : public boost::static_visitor<bool> {  template<typename T>  bool operator() (T& a) const { return a.isDone();  }};
-
-    struct fct_set : public boost::static_visitor<>
-    {
-        boost::variant<T1,T2,T3,T4>& val;
-        fct_set (boost::variant<T1,T2,T3,T4>& val) : val(val) {}
-        template<typename T>  void operator() (T& a) const { val = a.item();  }
-    };
-
-    bool _isDone;
-
-public:
-
-    virtual ~IteratorVariant() {}
-
-    template<typename T>
-    IteratorVariant& operator=(const T& t)  {  var = t;  return *this;  }
-
-    /**  */
-    void first()
-    {
-        boost::apply_visitor (fct_first(), var);
-        _isDone = boost::apply_visitor (fct_isDone(), var);
-        if (!_isDone)  {  boost::apply_visitor (fct_set(*(this->_item)), var);  }
-    }
-
-    /** */
-    void next()
-    {
-        boost::apply_visitor (fct_next(), var);
-        _isDone = boost::apply_visitor (fct_isDone(), var);
-        if (!_isDone)  {  boost::apply_visitor (fct_set(*(this->_item)), var);  }
-    }
-
-    /** */
-    bool isDone() { return _isDone; }
-
-    /** */
-    boost::variant<T1,T2,T3,T4>& item ()  {  return *(this->_item);  }
-
-    /** Get a reference on the object to be configured as the currently iterated item.
-     * \param[in] i : object to be referred. */
-    virtual void setItem (boost::variant<T1,T2,T3,T4>& i)  {  this->_item = &i;  }
 };
 
 /********************************************************************************/
@@ -919,23 +829,20 @@ template <class Item>
 class CompositeIterator : public Iterator <Item>
 {
 public:
+    using iterator_vector = std::vector<std::shared_ptr<Iterator<Item>>>;
 
     /** Constructor.
      * \param[in] iterators : the iterators vector
      */
-    CompositeIterator (std::vector <Iterator<Item>*>&  iterators)
-        : _iterators(iterators), _currentIdx(0), _currentIt(0), _isDone(true)
+    CompositeIterator (iterator_vector&& iterators)
+        : _iterators(std::move(iterators)), _currentIdx(0), _currentIt(0), _isDone(true)
     {
-        for (size_t i=0; i<_iterators.size(); i++)  { _iterators[i]->use(); }
-
-        _currentIt = _iterators[_currentIdx];
+        _currentIt = _iterators[_currentIdx].get();
     }
 
     /** Destructor. */
     virtual ~CompositeIterator ()
-    {
-        for (size_t i=0; i<_iterators.size(); i++)  { _iterators[i]->forget(); }
-    }
+    {}
 
     /** \copydoc Iterator::first */
     void first()
@@ -969,11 +876,11 @@ public:
     void setItem (Item& i)  {  _currentIt->setItem (i);  }
 
     /** Get a vector holding the composite structure of the iterator. */
-    virtual std::vector<Iterator<Item>*> getComposition() { return _iterators; }
+    virtual std::vector<std::shared_ptr<Iterator<Item>>> getComposition() { return _iterators; }
 
 private:
 
-    std::vector <Iterator<Item>*>  _iterators;
+    iterator_vector  _iterators;
 
     size_t          _currentIdx;
     Iterator<Item>* _currentIt;
@@ -991,7 +898,7 @@ private:
             Iterator<Item>* previous = _currentIt;
 
             /** We get the next iterator. */
-            _currentIt = _iterators[_currentIdx];
+            _currentIt = _iterators[_currentIdx].get();
             assert (_currentIt != 0);
 
             /** We have to take the reference of the previous iterator. */
@@ -1021,10 +928,10 @@ class IteratorAdaptor : public Iterator <T2>
 public:
 
     /** Constructor. */
-    IteratorAdaptor (Iterator<T1>* ref) : _ref(0) { setRef(ref); }
+    IteratorAdaptor (Iterator<T1>* ref) : _ref(as_shared_ptr(ref)) {}
 
     /** Destructor. */
-    ~IteratorAdaptor ()  { setRef(0); }
+    ~IteratorAdaptor ()  {}
 
     /** Method that initializes the iteration. */
     void first() {  _ref->first(); }
@@ -1043,9 +950,7 @@ public:
     T2& item ()  { return Adaptor() (_ref->item()); }
 
 private:
-
-    Iterator<T1>* _ref;
-    void setRef (Iterator<T1>* ref)  { SP_SETATTR(ref); }
+    std::shared_ptr<Iterator<T1>> _ref;
 };
 
 /********************************************************************************/

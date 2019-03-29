@@ -228,7 +228,7 @@ struct jenkins64_hasher {
  */
 
 template<typename Key,typename Adaptator=AdaptatorDefault<Key>, class Progress=tools::misc::impl::ProgressNone>
-class BooPHF : public system::SmartPointer
+class BooPHF : public system::SharedObject< BooPHF<Key, Adaptator, Progress> >
 {
 private:
 
@@ -270,7 +270,7 @@ public:
     /** Build the hash function from a set of items.
      * \param[in] iterable : keys iterator
      * \param[in] progress : object that listens to the event of the algorithm */
-    void build (tools::collections::Iterable<Key>* iterable, int nbThreads = 1, tools::dp::IteratorListener* progress=0)
+    void build (tools::collections::Iterable<Key>* iterable, int nbThreads = 1, tools::dp::IteratorListener::sptr progress=0)
     {
         if (isBuilt==true) { throw system::Exception ("MFHP: built already done"); }
 

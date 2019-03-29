@@ -89,10 +89,10 @@ namespace kmer      {
  * for the definition of the "DSK" count processor (histogram -> solidity -> dump)
  */
 template<size_t span>
-class ICountProcessor : public system::SmartPointer
+class ICountProcessor : public system::SharedObject< ICountProcessor<span> >
 {
 public:
-
+    using sptr = std::shared_ptr<ICountProcessor>;
     /** Shortcuts. */
     typedef typename kmer::impl::Kmer<span>::Type Type;
 
@@ -117,7 +117,7 @@ public:
     /** Clone the instance.
      * An instance can be cloned N times in order to use the cloned instance in one thread.
      * \return the cloned instance. */
-    virtual ICountProcessor* clone () = 0;
+    virtual sptr clone () = 0;
 
     /** Called when N partitions have been processed through N clones. This should be the last
      * time these clones are available before being deleted. It can be the opportunity to the
@@ -170,13 +170,13 @@ public:
 
     /** Get a vector of instances in case of the current object is a composite.
      * \return a vector of ICountProcessor instance. */
-    virtual std::vector<ICountProcessor*> getInstances () const = 0;
+    virtual std::vector<sptr> getInstances () const = 0;
 
     /** Try to get an instance of a specific type within the current object.
      * \return a T pointer to the instance if found, 0 otherwise. */
     template<typename T> T* get () const
     {
-        std::vector<ICountProcessor*> v = this->getInstances();
+        std::vector<sptr> v = this->getInstances();
         for (size_t i=0; i<v.size(); i++)  {  if (T* object = dynamic_cast<T*> (v[i]))  { return object; }  }
         return (T*)0;
     }

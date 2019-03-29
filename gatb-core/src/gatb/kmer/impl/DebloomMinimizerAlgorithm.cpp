@@ -58,8 +58,7 @@ namespace gatb  {  namespace core  {   namespace kmer  {   namespace impl {
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-DebloomMinimizerAlgorithm<span>::DebloomMinimizerAlgorithm (
-    Group&              bloomGroup,
+DebloomMinimizerAlgorithm<span>::DebloomMinimizerAlgorithm (Group&              bloomGroup,
     Group&              debloomGroup,
     Partition<Count>*    solidIterable,
     size_t              kmerSize,
@@ -69,11 +68,11 @@ DebloomMinimizerAlgorithm<span>::DebloomMinimizerAlgorithm (
     BloomKind           bloomKind,
     DebloomKind         cascadingKind,
     const std::string&  debloomUri,
-    IProperties*        options,
-    tools::storage::impl::Group* minimizersGroup
+    IProperties *options,
+    Group *minimizersGroup
 )
     :  DebloomAlgorithm<span>(bloomGroup, debloomGroup, solidIterable, kmerSize, miniSize, max_memory, nb_cores, bloomKind, cascadingKind, debloomUri, options),
-       _groupMinimizers(minimizersGroup)
+       _groupMinimizers(minimizersGroup->share())
 {
 }
 
@@ -162,7 +161,7 @@ struct FunctorKmersExtensionMinimizer
         {
         	if (_currentThreadIndex < 0)
         	{
-				std::pair<IThread*,size_t> info;
+				std::pair<IThread::sptr,size_t> info;
 				if (ThreadGroup::findThreadInfo (System::thread().getThreadSelf(), info) == true)
 				{
 					_currentThreadIndex = info.second;
@@ -214,7 +213,7 @@ struct FunctorKmersExtensionMinimizer
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-struct FinalizeCmd : public ICommand, public SmartPointer
+struct FinalizeCmd : public ICommand
 {
     typedef typename kmer::impl::Kmer<span>::Type   Type;
     typedef typename kmer::impl::Kmer<span>::Count  Count;
@@ -224,7 +223,7 @@ struct FinalizeCmd : public ICommand, public SmartPointer
     Iterable<Type>& cfp;
     BagCache<Type> result;
 
-    FinalizeCmd (size_t currentIdx, Collection<Count>& solids, Collection<Type>& cfp, Bag<Type>* bag, ISynchronizer* synchro)
+    FinalizeCmd (size_t currentIdx, ICollection<Count>& solids, ICollection<Type>& cfp, Bag<Type>* bag, ISynchronizer::sptr synchro)
         : currentIdx(currentIdx), solids(solids), cfp(cfp), result(bag,8*1024, synchro)
     {}
 
@@ -286,8 +285,8 @@ struct FinalizeCmd : public ICommand, public SmartPointer
 *********************************************************************/
 template<size_t span>
 void DebloomMinimizerAlgorithm<span>::execute_aux (
-    IProperties* bloomProps,
-    IProperties* cfpProps,
+    IProperties::sptr bloomProps,
+    IProperties::sptr cfpProps,
     u_int64_t&   totalSizeBloom,
     u_int64_t&   totalSizeCFP
 )
@@ -305,7 +304,7 @@ void DebloomMinimizerAlgorithm<span>::execute_aux (
 
     /** We create the collection that will hold the critical false positive kmers. */
     string cfpFilename = System::file().getTemporaryFilename("cfp");
-    Collection<Type>* criticalCollection = new CollectionFile<Type> (cfpFilename);
+    ICollection<Type>* criticalCollection = new CollectionFile<Type> (cfpFilename);
     LOCAL (criticalCollection);
 
     /***************************************************/
@@ -322,7 +321,7 @@ void DebloomMinimizerAlgorithm<span>::execute_aux (
 
     /** We use a temporary partition that will hold the neighbors extension of the solid kmers. */
     string partitionsFilename = System::file().getTemporaryFilename("debloom_partitions");
-    Storage* cfpPartitions = StorageFactory(STORAGE_HDF5).create (partitionsFilename, true, false);
+    Storage::sptr cfpPartitions = StorageFactory(STORAGE_HDF5).create (partitionsFilename, true, false);
     LOCAL (cfpPartitions);
     Partition<Type>* debloomParts = & (*cfpPartitions)().getPartition<Type> ("parts", nbPartitions);
 
@@ -396,7 +395,7 @@ void DebloomMinimizerAlgorithm<span>::execute_aux (
 
         DEBUG (("DebloomMinimizerAlgorithm<span>::execute_aux   finalize_debloom_file BEGIN \n"));
 
-        ISynchronizer* synchro = System::thread().newSynchronizer();  LOCAL (synchro);
+        ISynchronizer::sptr synchro = System::thread().newSynchronizer();  LOCAL (synchro);
 
         /** We create an iterator for progress information. */
         Iterator<int>* itParts = this->createIterator (new Range<int>::Iterator (0,nbPartitions-1), nbPartitions, DebloomAlgorithm<span>::progressFormat3());

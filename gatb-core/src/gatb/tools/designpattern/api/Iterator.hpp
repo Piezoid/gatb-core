@@ -45,6 +45,10 @@ namespace tools {
 namespace dp    {
 /********************************************************************************/
 
+
+template <class Item> class Iterator;
+template <class Item> using iterator_vector = std::vector<typename Iterator<Item>::sptr>;
+
 /** \brief  Definition of the Design Pattern Iterator interface.
  *
  *    The Iterator concept is here reified as a template class that knows how to iterate some set of objects.
@@ -114,7 +118,7 @@ namespace dp    {
  *
  *   it has the same benefits as the listed benefits of the Iterator class, IMHO
  */
-template <class Item> class Iterator : public system::SmartPointer
+template <class Item> class Iterator : public system::SharedObject<Iterator<Item>>
 {
 public:
 
@@ -190,11 +194,8 @@ public:
         _item      = &_default;
     }
 
-    /** Method that may be called when an iteration is done. Does nothing by default. */
-    virtual void finalize () {}
-
     /** Get a vector holding the composite structure of the iterator. */
-    virtual std::vector<Iterator<Item>*> getComposition()   {   std::vector<Iterator<Item>*> res;  res.push_back (this);  return res;    }
+    virtual iterator_vector<Item> getComposition()   { return { { as_shared_ptr(this) }, }; }
 
 protected:
     Item* _item;
@@ -209,10 +210,10 @@ private:
 /********************************************************************************/
 
 template<typename T>
-class ISmartIterator : public Iterator<T>
+class ISizedIterator : public Iterator<T>
 {
 public:
-    virtual ~ISmartIterator() {}
+    virtual ~ISizedIterator() {}
     virtual u_int64_t size () const = 0;
     virtual u_int64_t rank () const = 0;
 };
@@ -237,7 +238,7 @@ public:
  *
  * \see SubjectIterator
  */
-class IteratorListener : public system::SmartPointer
+class IteratorListener : public system::SharedObject<IteratorListener>
 {
 public:
 

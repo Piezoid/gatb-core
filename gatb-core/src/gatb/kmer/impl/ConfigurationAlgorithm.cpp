@@ -138,7 +138,7 @@ public:
         //if (nbCurProgressKmers > 500000)   {  _progress.inc (nbCurProgressKmers);  nbCurProgressKmers = 0;  }
     }
 
-    EstimateNbDistinctKmers (Model& model, u_int32_t max_memory, unsigned long nb_kmers_total, tools::dp::IteratorListener* progress)
+    EstimateNbDistinctKmers (Model& model, u_int32_t max_memory, unsigned long nb_kmers_total, tools::dp::IteratorListener::sptr progress)
         : model(model),  eval_every_N_reads(10000000),   nbKmersTotal(nb_kmers_total),
         nbProcessedKmers(0), nbCurProgressKmers(0), previous_nb_distinct_kmers(0), nbProcessedReads(0), abs_error(0)
         //, _progress  (progress,System::thread().newSynchronizer())
@@ -186,7 +186,7 @@ private:
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-ConfigurationAlgorithm<span>::ConfigurationAlgorithm (bank::IBank* bank, IProperties* input)
+ConfigurationAlgorithm<span>::ConfigurationAlgorithm (bank::IBank::sptr bank, IProperties::sptr input)
     : Algorithm("configuration", -1, input), _bank(0), _input (0)
 {
     setBank  (bank);
@@ -361,7 +361,7 @@ void ConfigurationAlgorithm<span>::execute ()
          * to compute it, we need a linear counter, let's call it now */
 
         TIME_INFO (getTimeInfo(), "estimate_distinct_kmers");
-        Iterator<Sequence>* itSeq = _bank->iterator();
+        seq_iterator_ptr itSeq = _bank->iterator();
         LOCAL (itSeq);
 
         //_progress->setMessage (progressFormat0); // not touching progress here anymore
@@ -465,7 +465,7 @@ void ConfigurationAlgorithm<span>::execute ()
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-vector<CountRange> ConfigurationAlgorithm<span>::getSolidityThresholds (IProperties* params)
+vector<CountRange> ConfigurationAlgorithm<span>::getSolidityThresholds (IProperties::sptr params)
 {
     vector<CountRange> thresholds;
 
@@ -498,7 +498,7 @@ vector<CountRange> ConfigurationAlgorithm<span>::getSolidityThresholds (IPropert
 	 *********************************************************************/
 	
 template<size_t span>
-	std::vector<bool> ConfigurationAlgorithm<span>::getSolidityCustomVector (IProperties* params)
+	std::vector<bool> ConfigurationAlgorithm<span>::getSolidityCustomVector (IProperties::sptr params)
 	{
 		std::vector<bool> solidVec;
 

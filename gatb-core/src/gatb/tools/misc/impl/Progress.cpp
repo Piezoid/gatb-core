@@ -311,9 +311,8 @@ void ProgressTimer::fillBuffer (double elapsed)
 ** REMARKS :
 *********************************************************************/
 ProgressTimerAndSystem::ProgressTimerAndSystem (u_int64_t ntasks, const char* msg, std::ostream& os)
-    : ProgressTimer (ntasks, msg, os), _cpuinfo(0), _memMax(0)
+    : ProgressTimer (ntasks, msg, os), _cpuinfo(System::info().createCpuInfo()), _memMax(0)
 {
-    setCpuInfo(System::info().createCpuInfo());
 }
 
 /*********************************************************************

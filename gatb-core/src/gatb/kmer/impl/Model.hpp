@@ -382,7 +382,7 @@ struct Kmer
      * specific type of ModelImpl
      */
     template <class ModelImpl, typename T>
-    class ModelAbstract : public system::SmartPointer
+    class ModelAbstract : public system::SharedObject< ModelAbstract<ModelImpl, T> >
     {
     public:
 

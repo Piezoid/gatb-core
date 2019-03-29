@@ -61,7 +61,7 @@ public:
         float                                nbitsPerKmer,
         size_t                               nb_cores = 0,
         tools::misc::BloomKind               bloomKind = tools::misc::BLOOM_DEFAULT,
-        tools::misc::IProperties*            options    = 0
+        tools::misc::IProperties::sptr            options    = 0
     );
 
     /** */

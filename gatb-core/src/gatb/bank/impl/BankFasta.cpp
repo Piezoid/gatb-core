@@ -639,7 +639,7 @@ void BankFasta::Iterator::init ()
     buffered_file = (void**) CALLOC (getMaxNbFiles(), sizeof(void*));
 
     /** Shortcut. */
-    vector<string>& fnames = _ref._filenames;
+    std::vector<string>& fnames = _ref._filenames;
 
     // open each file for reading
     for (size_t i=0; i<_ref.nb_files; i++)
@@ -778,7 +778,7 @@ void BankFasta::Iterator::estimate (u_int64_t& number, u_int64_t& totalSize, u_i
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankFastaFactory::createBank (const std::string& uri)
+IBank::sptr BankFastaFactory::createBank (const std::string& uri)
 {
     bool isFASTA = false;
 
@@ -814,7 +814,7 @@ IBank* BankFastaFactory::createBank (const std::string& uri)
         gzclose (file);
     }
 
-    return (isFASTA ? new BankFasta (uri) : NULL);
+    return (isFASTA ? std::make_shared<BankFasta>(uri) : NULL);
 }
 
 /********************************************************************************/

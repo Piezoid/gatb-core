@@ -110,7 +110,7 @@ private:
  * As expected, there is no Iterable interface here because it is not possible to enumerate the items
  * inserted in a Bloom filter only with the Bloom filter information.
  */
-template <typename Item> class IBloom : public Container<Item>, public Bag<Item>, public system::SmartPointer
+template <typename Item> class IBloom : public ISet<Item>, public Bag<Item>
 {
 public:
 

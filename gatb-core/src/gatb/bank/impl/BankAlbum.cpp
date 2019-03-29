@@ -48,7 +48,7 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 BankAlbum::BankAlbum (const std::string& name, bool deleteIfExists) : _name(name)
 {
     /** We get a handle on the file given its name. */
-    system::IFile* file = getFile (name, deleteIfExists ? "w+" : NULL);
+    std::unique_ptr<system::IFile> file = getFile (name, deleteIfExists ? "w+" : NULL);
 
     /** We check that the provided name exists in filesystem. */
     if (file != 0)
@@ -84,8 +84,6 @@ BankAlbum::BankAlbum (const std::string& name, bool deleteIfExists) : _name(name
                 _banksUri.push_back (bankUri);
             }
         }
-
-        delete file;
     }
     else
     {
@@ -103,13 +101,13 @@ BankAlbum::BankAlbum (const std::string& name, bool deleteIfExists) : _name(name
 *********************************************************************/
 BankAlbum::BankAlbum (const std::vector<std::string>& filenames)
 {
-    for (vector<string>::const_iterator it = filenames.begin(); it != filenames.end(); ++it)
+    for (const std::string& fname : filenames)
     {
         /** We add a new bank. */
-        BankComposite::addBank (Bank::open(*it));
+        BankComposite::addBank (Bank::open(fname));
 
         /** We memorize the uri of this bank. */
-        _banksUri.push_back (*it);
+        _banksUri.push_back (fname);
     }
 }
 
@@ -180,14 +178,14 @@ bool BankAlbum::isAlbumValid (const std::string& uri)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankAlbum::addBank (const std::string& bankUri)
+IBank::sptr BankAlbum::addBank (const std::string& bankUri)
 {
-    IBank* result = 0;
+    IBank::sptr result = 0;
 
     DEBUG (("BankAlbum::add '%s'\n", bankUri.c_str() ));
 
     /** We add the uri into the album file. */
-    system::IFile* file = getFile (_name);
+    std::unique_ptr<system::IFile> file = getFile (_name);
 
     if (file != 0)
     {
@@ -202,9 +200,6 @@ IBank* BankAlbum::addBank (const std::string& bankUri)
 
         /** We memorize the uri of this bank. */
         _banksUri.push_back (bankUri);
-
-        /** Cleanup. */
-        delete file;
     }
 
     return result;
@@ -218,14 +213,14 @@ IBank* BankAlbum::addBank (const std::string& bankUri)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankAlbum::addBank (const std::string& directory, const std::string& bankName, bool output_fastq, bool output_gz)
+IBank::sptr BankAlbum::addBank (const std::string& directory, const std::string& bankName, bool output_fastq, bool output_gz)
 {
-    IBank* result = 0;
+    IBank::sptr result;
 
     DEBUG (("BankAlbum::add '%s'\n", bankName.c_str() ));
 
     /** We add the uri into the album file. */
-    system::IFile* file = getFile (_name, "a+");
+    std::unique_ptr<system::IFile> file = getFile (_name, "a+");
 
     if (file != 0)
     {
@@ -236,16 +231,13 @@ IBank* BankAlbum::addBank (const std::string& directory, const std::string& bank
         file->print ("%s\n", bankName.c_str());
 
         /** We create a new FASTA bank. */
-        result = new BankFasta (bankUri, output_fastq, output_gz);
+        result = std::make_shared<BankFasta> (bankUri, output_fastq, output_gz);
 
         /** We put it into the album. */
         BankComposite::addBank (result);
 
         /** We memorize the uri of this bank. */
         _banksUri.push_back (bankUri);
-
-        /** Cleanup. */
-        delete file;
     }
 
     return result;
@@ -259,7 +251,7 @@ IBank* BankAlbum::addBank (const std::string& directory, const std::string& bank
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-system::IFile* BankAlbum::getFile (const std::string& name, const char* mode)
+std::unique_ptr<IFile> BankAlbum::getFile (const std::string& name, const char* mode)
 {
     /** We check whether the file already exists or not. */
     if (mode==NULL) { mode = System::file().doesExist(name) == true ? "r+" : "w+"; }
@@ -307,7 +299,7 @@ void BankAlbum::remove ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankAlbumFactory::createBank (const std::string& uri)
+IBank::sptr BankAlbumFactory::createBank (const std::string& uri)
 {
     /** We check whether the uri is a "multiple" bank, i.e. a list (comma separated) of FASTA banks URIs. */
     tools::misc::impl::TokenizerIterator it (uri.c_str(), ",");
@@ -321,7 +313,7 @@ IBank* BankAlbumFactory::createBank (const std::string& uri)
     {
         DEBUG (("BankAlbumFactory::createBank : count>1 (%d)\n", names.size()));
 
-        vector<IBank*> banks;
+        IBank::vector banks;
         for (size_t i=0; i<names.size(); i++)
         {
             DEBUG (("   %s\n", names[i].c_str()));
@@ -330,7 +322,7 @@ IBank* BankAlbumFactory::createBank (const std::string& uri)
             banks.push_back (Bank::open (names[i]));
         }
         /** We return a composite bank. */
-        return new BankComposite (banks);
+        return std::make_shared<BankComposite>(banks);
     }
 
     /** SECOND CASE : an album file. */
@@ -340,7 +332,7 @@ IBank* BankAlbumFactory::createBank (const std::string& uri)
 
         DEBUG (("BankAlbumFactory::createBank : count==1  isAlbumValid=%d\n", isAlbumValid));
 
-        if (isAlbumValid == true)  {  return new BankAlbum (uri);  }
+        if (isAlbumValid == true)  {  return std::make_shared<BankAlbum> (uri);  }
     }
 
     /** Nothing worked => return 0. */

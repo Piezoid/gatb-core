@@ -46,7 +46,7 @@ public:
 
     typedef typename kmer::impl::Kmer<span>::Count Count;
 
-    static DebloomAlgorithm<span>* create (
+    static std::unique_ptr<DebloomAlgorithm<span>> create (
         tools::misc::DebloomImpl impl,
         tools::storage::impl::Group&    bloomGroup,
         tools::storage::impl::Group&    debloomGroup,
@@ -58,14 +58,14 @@ public:
         tools::misc::BloomKind      bloomKind     = tools::misc::BLOOM_DEFAULT,
         tools::misc::DebloomKind    cascadingKind = tools::misc::DEBLOOM_DEFAULT,
         const std::string&          debloomUri = "debloom",
-        tools::misc::IProperties*   options    = 0,
-        tools::storage::impl::Group*    minimizersGroup = 0
+        tools::misc::IProperties::sptr   options    = 0,
+        tools::storage::impl::Group::sptr    minimizersGroup = 0
     )
     {
         switch (impl)
         {
             case tools::misc::DEBLOOM_IMPL_BASIC:
-                return new DebloomAlgorithm<span> (
+                return std::make_unique< DebloomAlgorithm<span> > (
                     bloomGroup, debloomGroup, solidIterable, kmerSize, miniSize, max_memory, nb_cores,
                     bloomKind, cascadingKind, debloomUri, options
                 );
@@ -73,7 +73,7 @@ public:
             case tools::misc::DEBLOOM_IMPL_MINIMIZER:
             case tools::misc::DEBLOOM_IMPL_DEFAULT:
             default:
-                return new DebloomMinimizerAlgorithm<span> (
+                return std::make_unique< DebloomMinimizerAlgorithm<span> >(
                     bloomGroup, debloomGroup, solidIterable, kmerSize, miniSize, max_memory, nb_cores,
                     bloomKind, cascadingKind, debloomUri, options, minimizersGroup
                 );

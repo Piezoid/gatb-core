@@ -82,15 +82,15 @@ public:
     /** Constructor. Can be used as default constructor in no parameters are provided
      * \param[in] params : parameters to be used for configuring the algorithm
      */
-    SortingCountAlgorithm (tools::misc::IProperties* params = 0);
+    SortingCountAlgorithm (tools::misc::IProperties::sptr params = 0);
 
     /** Constructor.
      * \param[in] bank : input bank from which solid kmers are counted
      * \param[in] params : parameters to be used for configuring the algorithm
      */
     SortingCountAlgorithm (
-        gatb::core::bank::IBank*  bank,
-        tools::misc::IProperties* params
+        gatb::core::bank::IBank::sptr  bank,
+        tools::misc::IProperties::sptr params
     );
 
     /** Constructor.
@@ -100,11 +100,11 @@ public:
      * \param[in] processor : object that processes counts
      */
     SortingCountAlgorithm (
-        gatb::core::bank::IBank*     bank,
+        gatb::core::bank::IBank::sptr     bank,
         const Configuration&         config,
         Repartitor*                  repartitor,
         std::vector<CountProcessor*> processors,
-		tools::misc::IProperties* params
+		tools::misc::IProperties::sptr params
 
     );
 
@@ -118,11 +118,11 @@ public:
     /** Get an option parser for kmers counting parameters. Dynamic allocation, so must be released when no more used.
      * \param[in] mandatory : tells whether an argument has to be mandatory
      * \return an instance of IOptionsParser. */
-    static tools::misc::IOptionsParser* getOptionsParser (bool mandatory=true);
+    static tools::misc::IOptionsParser::sptr getOptionsParser (bool mandatory=true);
 
     /** Get the default values defined in the default option parser.
      * \return default properties. */
-    static tools::misc::IProperties* getDefaultProperties ();
+    static tools::misc::IProperties::sptr getDefaultProperties ();
 
     /** Creates a default CountProcessor instance (ie. the default one used by DSK)
      * \param[in] params : used for configuring the processor
@@ -131,9 +131,9 @@ public:
      * \return a CountProcessor instance
      */
     static CountProcessor* getDefaultProcessor (
-        tools::misc::IProperties*       params,
-        tools::storage::impl::Storage*  dskStorage,
-        tools::storage::impl::Storage*  otherStorage = 0
+        tools::misc::IProperties::sptr       params,
+        tools::storage::impl::Storage::sptr  dskStorage,
+        tools::storage::impl::Storage::sptr  otherStorage = 0
     );
 
     /** Creates a vector holding the default CountProcessor configuration
@@ -144,9 +144,9 @@ public:
      */
     static std::vector<ICountProcessor<span>*> getDefaultProcessorVector (
         Configuration&                  config,
-        tools::misc::IProperties*       params,
-        tools::storage::impl::Storage*  dskStorage,
-        tools::storage::impl::Storage*  otherStorage = 0
+        tools::misc::IProperties::sptr       params,
+        tools::storage::impl::Storage::sptr  dskStorage,
+        tools::storage::impl::Storage::sptr  otherStorage = 0
     );
 
     /** Process the kmers counting. It is mainly composed of a loop over the passes, and for each pass :
@@ -184,7 +184,7 @@ public:
 
     /* Get the storage instance (if any).
      * \return the Storage instance. */
-    tools::storage::impl::Storage* getStorage () { return _storage; }
+    tools::storage::impl::Storage::sptr getStorage () { return _storage; }
 
     /** Get the repartitor instance, ie. the hash function built on minimizer information.
      * \return the Repartitor instance
@@ -219,8 +219,8 @@ private:
     kmer::impl::Configuration _config;
 
     /** Handle on the input bank. */
-    gatb::core::bank::IBank* _bank;
-    void setBank (gatb::core::bank::IBank* bank)  { SP_SETATTR(bank); }
+    gatb::core::bank::IBank::sptr _bank;
+    void setBank (gatb::core::bank::IBank::sptr bank)  { SP_SETATTR(bank); }
 
     /** Handle on the mininimizers hash function. */
     Repartitor* _repartitor;
@@ -231,12 +231,12 @@ private:
 
 	
     /** Handle on the progress information. */
-    gatb::core::tools::dp::IteratorListener* _progress;
-    void setProgress (gatb::core::tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
+    gatb::core::tools::dp::IteratorListener::sptr _progress;
+    void setProgress (gatb::core::tools::dp::IteratorListener::sptr progress)  { SP_SETATTR(progress); }
 
     /** Temporary partitions management. */
-    tools::storage::impl::Storage* _tmpPartitionsStorage;
-    void setPartitionsStorage (tools::storage::impl::Storage* tmpPartitionsStorage)  {  SP_SETATTR(tmpPartitionsStorage);  }
+    tools::storage::impl::Storage::sptr _tmpPartitionsStorage;
+    void setPartitionsStorage (tools::storage::impl::Storage::sptr tmpPartitionsStorage)  {  SP_SETATTR(tmpPartitionsStorage);  }
 
     /** Temporary partitions management. */
     tools::storage::impl::Partition<Type>* _tmpPartitions;
@@ -253,8 +253,8 @@ private:
     std::vector <std::vector<size_t> > _nbKmersPerPartitionPerBank;
 
     tools::storage::impl::StorageMode_e _storage_type;
-    tools::storage::impl::Storage* _storage;
-    void setStorage (tools::storage::impl::Storage* storage)  { SP_SETATTR(storage); }
+    tools::storage::impl::Storage::sptr _storage;
+    void setStorage (tools::storage::impl::Storage::sptr storage)  { SP_SETATTR(storage); }
 	
 	
 	//superkmer efficient storage

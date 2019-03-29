@@ -31,6 +31,7 @@
 #include <gatb/system/api/Exception.hpp>
 #include <string>
 #include <list>
+#include <mutex>
 
 /********************************************************************************/
 namespace gatb      {
@@ -47,7 +48,7 @@ class ISynchronizer;
  *
  * Definition of a thread in an OS independent fashion. See below how to create a thread through a factory.
  */
-class IThread : virtual public ISmartPointer
+class IThread : public SharedObject<IThread>
 {
 public:
 
@@ -74,14 +75,14 @@ public:
  * This class is not intended to be used by end users; instead, the
  * ThreadObject class can be used.
  */
-class IThreadGroup : virtual public ISmartPointer
+class IThreadGroup : public SharedObject<IThreadGroup>
 {
 public:
 
-    struct Info : public SmartPointer
+    struct Info : public SharedObject<Info>
     {
-        Info (IThreadGroup* group, void* data, size_t idx) : group(group), data(data), idx(idx) {}
-        IThreadGroup* group;
+        Info (IThreadGroup::sptr group, void* data, size_t idx) : group(group), data(data), idx(idx) {}
+        IThreadGroup::sptr group;
         void*         data;
         size_t        idx;
     };
@@ -102,7 +103,7 @@ public:
 
     /** Get the synchronizer associated to this threads group.
      * \return the ISynchronizer instance. */
-    virtual ISynchronizer* getSynchro() = 0;
+    virtual std::shared_ptr<ISynchronizer> getSynchro() = 0;
 
     /** Get the number of threads in the group.
      * \return the number of threads */
@@ -111,7 +112,7 @@ public:
     /** Get the ith thread of the group.
      * \param[in] idx : index of the thread in the group
      * \return the thread */
-    virtual IThread* operator[] (size_t idx) = 0;
+    virtual IThread::sptr operator[] (size_t idx) = 0;
 
     /** This method is used to gather exceptions occurring during the
      * execution of the threads of the group. By doing this, we can
@@ -137,16 +138,9 @@ public:
  *  This is an abstraction layer of what we need for handling synchronization.
  *  Actual implementations may use mutex for instance.
  */
-class ISynchronizer : virtual public ISmartPointer
+class ISynchronizer : public std::mutex, public SharedObject<ISynchronizer>
 {
 public:
-
-    /** Lock the synchronizer. */
-    virtual void   lock () = 0;
-
-    /** Unlock the synchronizer. */
-    virtual void unlock () = 0;
-
     /** Destructor. */
     virtual ~ISynchronizer () {}
 };
@@ -161,7 +155,7 @@ public:
  *  architecture is used. This is useful for automatically configure tools for
  *  using the maximum number of available cores for speeding up the algorithm.
  */
-class IThreadFactory
+class IThreadFactory : public SharedObject<IThreadFactory>
 {
 public:
 
@@ -170,12 +164,12 @@ public:
      * \param[in] data :  data provided to the mainloop when launched
      * \return the created thread.
      */
-    virtual IThread* newThread (void* (*mainloop) (void*), void* data) = 0;
+    virtual IThread::sptr newThread (void* (*mainloop) (void*), void* data) = 0;
 
     /** Creates a new synchronization object.
      * \return the created ISynchronizer instance
      */
-    virtual ISynchronizer* newSynchronizer (void) = 0;
+    virtual ISynchronizer::sptr newSynchronizer (void) = 0;
 
     /** Return the id of the calling thread. */
     virtual IThread::Id getThreadSelf() = 0;
@@ -200,7 +194,7 @@ public:
  *
  *  Code sample:
  *  \code
- *  void sample (ISynchronizer* synchronizer)
+ *  void sample (ISynchronizer::sptr synchronizer)
  *  {
  *      // we create a local synchronizer from the provided argument
  *      LocalSynchronizer localsynchro (synchronizer);
@@ -217,15 +211,16 @@ public:
     /** Constructor.
      * \param[in] ref : the ISynchronizer instance to be controlled.
      */
-    LocalSynchronizer (ISynchronizer* ref) : _ref(ref)  {  if (_ref)  { _ref->lock (); }  }
+    LocalSynchronizer (ISynchronizer::sptr ref) : _ref(std::move(ref))
+    {  if (_ref) _ref->lock ();  }
 
     /** Destructor. */
-    ~LocalSynchronizer ()  {  if (_ref)  {  _ref->unlock (); } }
+    ~LocalSynchronizer ()  { if (_ref)  _ref->unlock (); }
 
 private:
 
     /** The referred ISynchronizer instance. */
-    ISynchronizer* _ref;
+    ISynchronizer::sptr _ref;
 };
 
 /********************************************************************************/

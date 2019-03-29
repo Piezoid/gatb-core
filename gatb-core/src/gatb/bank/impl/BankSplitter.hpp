@@ -54,7 +54,7 @@ namespace impl      {
  *
  * This class allows to iterate the sequences of a given bank by splitting them.
  */
-class BankSplitter : public AbstractBank
+class BankSplitter : public virtual AbstractBank
 {
 public:
 
@@ -68,7 +68,7 @@ public:
      * \param[in] coverage : number of occurrences for the reads
      */
     BankSplitter (
-        IBank* reference,
+        std::shared_ptr<IBank> reference,
         size_t readMeanSize,
         size_t   overlap,
         u_int8_t coverage
@@ -81,7 +81,7 @@ public:
     std::string getId ()  { return "dummy"; }
 
     /** \copydoc IBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()  { return new Iterator (*this); }
+    tools::dp::Iterator<Sequence>::sptr iterator ()  { return std::make_shared<Iterator>(*this); }
 
     /** */
     int64_t getNbItems () { return -1; }
@@ -126,11 +126,8 @@ public:
         Sequence& item ()     { return *_item; }
 
     private:
-        tools::misc::Data* _dataRef;
-        void setDataRef (tools::misc::Data* dataRef)  { SP_SETATTR(dataRef); }
-
-        tools::dp::Iterator<Sequence>* _itRef;
-        void setItRef (tools::dp::Iterator<Sequence>* itRef)  { SP_SETATTR(itRef); }
+        std::shared_ptr<tools::misc::Data> _dataRef;
+        seq_iterator_ptr _itRef;
 
         size_t    _readMeanSize;
         int64_t   _rank;
@@ -145,8 +142,7 @@ public:
 
 protected:
 
-    IBank* _reference;
-    void setReference (IBank* reference) { SP_SETATTR(reference); }
+    IBank::sptr _reference;
 
     size_t      _readMeanSize;
     u_int8_t    _coverage;

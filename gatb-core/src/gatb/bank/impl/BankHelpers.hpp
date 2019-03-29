@@ -56,7 +56,7 @@ public:
      * \param[in] out : the converted bank
      * \param[in] progress : listener getting conversion progression information
      * */
-    tools::misc::IProperties* convert (IBank& in, IBank& out, tools::dp::IteratorListener* progress=0);
+    tools::misc::IProperties::sptr convert (IBank& in, IBank& out, tools::dp::IteratorListener::sptr progress=0);
 };
 
 /********************************************************************************/
@@ -68,17 +68,17 @@ public:
  * This class is not intended to be used by end users; it is rather used for
  * being subclassed.
  */
-class BankDelegate : public AbstractBank
+class BankDelegate : public virtual AbstractBank
 {
 public:
 
     /** Constructor.
      * \param[in] ref : referred bank.
      */
-    BankDelegate (IBank* ref) : _ref(0)  { setRef(ref); }
+    BankDelegate (IBank::sptr ref) : _ref(std::move(ref))  { }
 
     /** Destructor. */
-    ~BankDelegate () { setRef(0); }
+    ~BankDelegate () {}
 
     /** \copydoc AbstractBank::getId */
     std::string getId ()  { return _ref->getId(); }
@@ -87,7 +87,7 @@ public:
 
 	
     /** \copydoc AbstractBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()  { return _ref->iterator(); }
+    tools::dp::Iterator<Sequence>::sptr iterator ()  { return _ref->iterator(); }
 
     /** \copydoc AbstractBank::getNbItems */
     int64_t getNbItems () { return _ref->getNbItems(); }
@@ -121,8 +121,7 @@ public:
 
 protected:
 
-    IBank* _ref;
-    void setRef (IBank* ref)  { SP_SETATTR(ref); }
+    IBank::sptr _ref;
 };
 
 /********************************************************************************/
@@ -146,28 +145,26 @@ public:
      * \param[in] ref : referred bank.
      * \param[in] filter : functor that filters sequence.
      */
-    BankFiltered (IBank* ref, const Filter& filter) : BankDelegate (ref), _filter(filter)  {}
+    BankFiltered (IBank::sptr ref, const Filter& filter) : BankDelegate (ref), _filter(filter)  {}
 
+    using seq_iterator_ptr = tools::dp::Iterator<Sequence>::sptr;
     /** \copydoc tools::collections::Iterable::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()
+    seq_iterator_ptr iterator ()
     {
         // We create one iterator from the reference
-        tools::dp::Iterator<Sequence>* it = _ref->iterator ();
+        seq_iterator_ptr it = _ref->iterator ();
 
         // We get the composition for this iterator
-        std::vector<tools::dp::Iterator<Sequence>*> iterators = it->getComposition();
+        seq_iterator_vector iterators = it->getComposition();
 
-        if (iterators.size() == 1)  { return new tools::dp::impl::FilterIterator<Sequence,Filter> (it, _filter); }
+        if (iterators.size() == 1)  { return std::make_shared<tools::dp::impl::FilterIterator<Sequence,Filter>>(it, _filter); }
         else
         {
-            // We are going to create a new CompositeIterator, we won't need the one we just got from the reference
-            LOCAL(it);
-
             // We may have to encapsulate each sub iterator with the filter.
             for (size_t i=0; i<iterators.size(); i++)  {
             	iterators[i] = new tools::dp::impl::FilterIterator<Sequence,Filter> (iterators[i], _filter);
             }
-            return new tools::dp::impl::CompositeIterator<Sequence> (iterators);
+            return std::make_shared<tools::dp::impl::CompositeIterator<Sequence>>(iterators);
         }
     }
 
@@ -190,10 +187,10 @@ public:
     BankFilteredFactory (const std::string& delegateFormat, const Filter& filter) : _format(delegateFormat), _filter(filter)  {}
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri)
+    IBank::sptr createBank (const std::string& uri)
     {
         /** We create the reference bank. */
-        IBank* ref = Bank::getFactory(_format)->createBank (uri);
+        IBank::sptr ref = Bank::getFactory(_format)->createBank (uri);
 
         /** We encapsulate with a filtered bank. */
         return new BankFiltered<Filter> (ref, _filter);

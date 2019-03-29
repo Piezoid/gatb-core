@@ -56,9 +56,9 @@ public:
      * \param[in] autoRemove : auto delete the storage from file system during Storage destructor.
      * \return the created Storage instance
      */
-    static Storage* createStorage (const std::string& name, bool deleteIfExist, bool autoRemove, bool dont_add_extension = false, bool append = false)
+    static Storage::sptr createStorage (const std::string& name, bool deleteIfExist, bool autoRemove, bool dont_add_extension = false, bool append = false)
     {
-        return new StorageHDF5 (STORAGE_HDF5, name, deleteIfExist, autoRemove, dont_add_extension, append);
+        return std::make_shared<StorageHDF5>(STORAGE_HDF5, name, deleteIfExist, autoRemove, dont_add_extension, append);
     }
 
     /** Tells whether or not a Storage exists in file system given a name
@@ -86,12 +86,12 @@ public:
      * \param[in] name : name of the group to be created
      * \return the created Group instance.
      */
-    static Group* createGroup (ICell* parent, const std::string& name)
+    static Group::sptr createGroup (ICell::sptr parent, const std::string& name)
     {
-        StorageHDF5* storage = dynamic_cast<StorageHDF5*> (ICell::getRoot (parent));
+        auto storage = std::dynamic_pointer_cast<StorageHDF5> (ICell::getRoot (parent));
         assert (storage != 0);
 
-        return new GroupHDF5 (storage, parent, name);
+        return std::make_shared<GroupHDF5>(storage, parent, name);
     }
 
     /** Create a Partition instance and attach it to a cell in a storage.
@@ -101,9 +101,9 @@ public:
      * \return the created Partition instance.
      */
     template<typename Type>
-    static Partition<Type>* createPartition (ICell* parent, const std::string& name, size_t nb)
+    static Partition<Type>* createPartition (ICell::sptr parent, const std::string& name, size_t nb)
     {
-        StorageHDF5* storage = dynamic_cast<StorageHDF5*> (ICell::getRoot (parent));
+        std::shared_ptr<StorageHDF5> storage = dynamic_cast<std::shared_ptr<StorageHDF5>> (ICell::getRoot (parent));
         assert (storage != 0);
 
         std::string actualName = parent->getFullId('/') + "/" + name;
@@ -114,10 +114,10 @@ public:
         /** If the nb of partitions is null, we try to get it from a property. */
         if (nb==0)
         {
-            nb = StorageHDF5Factory::getPartitionsNb (&group);
+            nb = StorageHDF5Factory::getPartitionsNb (group);
 
             /** For backward compatibility only (ugly) : we look for the attribute in the parent object. */
-            if (nb==0)  {  nb = StorageHDF5Factory::getPartitionsNb (dynamic_cast<Group*> (parent));  }
+            if (nb==0)  {  nb = StorageHDF5Factory::getPartitionsNb (dynamic_cast<Group::sptr> (parent));  }
 
             /** Ok, we can't find any value. */
             if (nb==0)  {  throw system::Exception ("Partition '%s' has 0 items", name.c_str());      }
@@ -138,13 +138,13 @@ public:
      * \return the created Collection instance.
      */
     template<typename Type>
-    static CollectionNode<Type>* createCollection (ICell* parent, const std::string& name, system::ISynchronizer* synchro)
+    static CollectionNode<Type>* createCollection (ICell::sptr parent, const std::string& name, system::ISynchronizer::sptr synchro)
     {
 #if 1
         synchro = GlobalSynchro::singleton();
 #endif
 
-        StorageHDF5* storage = dynamic_cast<StorageHDF5*> (ICell::getRoot (parent));
+        std::shared_ptr<StorageHDF5> storage = dynamic_cast<std::shared_ptr<StorageHDF5>> (ICell::getRoot (parent));
         assert (storage != 0);
 
         std::string actualName = parent->getFullId('/') + "/" + name;
@@ -160,7 +160,7 @@ private:
     class GlobalSynchro
     {
     public:
-        static system::ISynchronizer* singleton()
+        static system::ISynchronizer::sptr singleton()
         {
             static GlobalSynchro instance;
             return instance.synchro;
@@ -169,7 +169,7 @@ private:
     private:
         GlobalSynchro ()  { synchro = system::impl::System::thread().newSynchronizer(); }
         ~GlobalSynchro () { if (synchro)  { delete synchro; } }
-        system::ISynchronizer* synchro;
+        system::ISynchronizer::sptr synchro;
     };
 
     /* */
@@ -178,14 +178,11 @@ private:
     /** Get the number of partitions (if any).
      * \param[in] group : check the attribute in this group
      * \return 0 if no attribute, otherwise the number of partitions */
-    static size_t getPartitionsNb (Group* group)
+    static size_t getPartitionsNb (const Group& group)
     {
         size_t result = 0;
-        if (group != 0)
-        {
-            std::string nbPartStr = group->getProperty (getNbPartitionsName());
-            if (nbPartStr.empty()==false)  { result = atoi (nbPartStr.c_str()); }
-        }
+        std::string nbPartStr = group.getProperty (getNbPartitionsName());
+        if (nbPartStr.empty()==false)  { result = atoi (nbPartStr.c_str()); }
         return result;
     }
 
@@ -259,7 +256,7 @@ private:
     class GroupHDF5 : public Group
     {
     public:
-        GroupHDF5 (StorageHDF5* storage, ICell* parent, const std::string& name)
+        GroupHDF5 (std::shared_ptr<StorageHDF5> storage, ICell::sptr parent, const std::string& name)
         : Group(storage->getFactory(),parent,name), _groupId(0)
         {
             /** We may need to create the HDF5 group. Empty name means root group, which is constructed by default. */

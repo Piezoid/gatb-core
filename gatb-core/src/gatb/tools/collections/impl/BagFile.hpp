@@ -47,7 +47,7 @@ namespace impl          {
 
 /** \brief Bag implementation for file
  */
-template <typename Item> class BagFile : public Bag<Item>, public system::SmartPointer
+template <typename Item> class BagFile : public Bag<Item>
 {
 public:
 
@@ -101,14 +101,14 @@ public:
 
 private:
     std::string _filename;
-    system::IFile* _file;
+    std::unique_ptr<system::IFile> _file;
 };
 
     
 
 /* \brief Bag implementation for file
  */
-template <typename Item> class BagGzFile : public Bag<Item>, public system::SmartPointer
+template <typename Item> class BagGzFile : public Bag<Item>
 {
 public:
     
@@ -154,7 +154,7 @@ public:
     
 private:
     std::string _filename;
-    system::IFile* _file;
+    std::unique_ptr<system::IFile> _file;
     gzFile  _gzfile;
 };
 
@@ -162,7 +162,7 @@ private:
 //stores items in a file, compressed by storing count, and only diff with previous item
 // todo writing is not yet cached
     //todo implem codage diff
-template <typename Item> class BagCountCompressedFile : public Bag<Item>, public system::SmartPointer
+template <typename Item> class BagCountCompressedFile : public Bag<Item>
 {
 public:
     
@@ -285,7 +285,7 @@ private:
 
     
     std::string _filename;
-    system::IFile* _file;
+    std::unique_ptr<system::IFile> _file;
     Item _previous;
     u_int64_t _sizeOutput;
     u_int64_t _sizeInput;

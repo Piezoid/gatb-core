@@ -59,11 +59,10 @@ static const char* progressFormat1 = "Bank: fasta to binary                  ";
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-BankConverterAlgorithm::BankConverterAlgorithm (IBank* bank,  size_t kmerSize, const std::string& outputUri)
-: Algorithm ("bankconverter"), _kind(BANK_CONVERT_TMP), _bankInput(0), _bankOutput(0), _outputUri(outputUri), _kmerSize(kmerSize)
-{
-    setBankInput  (bank);
-}
+BankConverterAlgorithm::BankConverterAlgorithm (IBank::sptr bank,  size_t kmerSize, const std::string& outputUri)
+    : Algorithm ("bankconverter"), _kind(BANK_CONVERT_TMP), _bankInput(std::move(bank)), _bankOutput(0),
+      _outputUri(outputUri), _kmerSize(kmerSize)
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -89,10 +88,7 @@ BankConverterAlgorithm::BankConverterAlgorithm (tools::storage::impl::Storage& s
 ** REMARKS :
 *********************************************************************/
 BankConverterAlgorithm::~BankConverterAlgorithm ()
-{
-    setBankInput  (0);
-    setBankOutput (0);
-}
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -107,7 +103,7 @@ void BankConverterAlgorithm::execute ()
     /** We may have no conversion at all to do. */
     if (_kind == BANK_CONVERT_NONE)
     {
-        setBankOutput (_bankInput);
+        _bankOutput = _bankInput;
         return;
     }
 
@@ -119,14 +115,13 @@ void BankConverterAlgorithm::execute ()
     _bankInput->estimate (number, totalSize, maxSize);
 
     /** We create the sequence iterator. */
-    Iterator<Sequence>* itSeq = _bankInput->iterator();
-    LOCAL (itSeq);
+    seq_iterator_ptr itSeq = _bankInput->iterator();
 
     u_int64_t   nbSeq = 0;
     u_int64_t sizeSeq = 0;
 
     /** We get the composition of the provided sequence iterator. */
-    std::vector<Iterator<Sequence>*> iters = itSeq->getComposition();
+    iterator_vector<Sequence> iters = itSeq->getComposition();
 
     /** We use a block for measuring the time elapsed in it. */
     {
@@ -139,12 +134,12 @@ void BankConverterAlgorithm::execute ()
         if (iters.size() == 1)
         {
             /** We set the output bank. */
-            setBankOutput (createBank (itSeq, number, _outputUri, nbSeq, sizeSeq));
+            _bankOutput = createBank (itSeq, number, _outputUri, nbSeq, sizeSeq);
         }
 
         else if (iters.size() > 1)
         {
-            vector<IBank*> ouputBanks;
+            IBank::vector ouputBanks;
 
             for (size_t i=0; i<iters.size(); i++)
             {
@@ -156,7 +151,7 @@ void BankConverterAlgorithm::execute ()
             }
 
             /** We set the result output bank. */
-            setBankOutput (new BankAlbum (_outputUri, ouputBanks));
+            _bankOutput = std::make_shared<BankAlbum>(_outputUri, ouputBanks);
         }
         else
         {
@@ -186,8 +181,8 @@ void BankConverterAlgorithm::execute ()
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IBank* BankConverterAlgorithm::createBank (
-    Iterator<Sequence>* inputSequences,
+IBank::sptr BankConverterAlgorithm::createBank (
+    seq_iterator_ptr inputSequences,
     size_t              nbInputSequences,
     const string& outputName,
     u_int64_t& nbSeq,
@@ -199,15 +194,14 @@ IBank* BankConverterAlgorithm::createBank (
     ));
 
     /** We create a new binary bank. */
-    IBank* result = new BankBinary (outputName, _kmerSize);
+    IBank::sptr result = std::make_shared<BankBinary>(outputName, _kmerSize);
 
     /** We need an iterator on the input bank. */
-    Iterator<Sequence>* itBank = createIterator<Sequence> (
+    seq_iterator_ptr itBank = createIterator<Sequence> (
         inputSequences,
         nbInputSequences,
         progressFormat1
     );
-    LOCAL (itBank);
 
     /** We iterate the sequences of the input bank. */
     for (itBank->first(); !itBank->isDone(); itBank->next())

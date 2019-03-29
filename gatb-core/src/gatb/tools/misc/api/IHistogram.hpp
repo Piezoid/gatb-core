@@ -57,7 +57,7 @@ namespace misc      {
  *  For the sum of the distribution, you can use:
  *  * h5dump -y -d dsk/histogram graph.h5 | grep [0-9] | grep -v [A-Z].* | paste - - | gawk 'BEGIN{s=0; i=0} { s=s+$2; i=i+1; print i,"  ", s}' | gnuplot -p -e 'plot [0:10][0:] "-" with lines'
 */
-class IHistogram : virtual public system::ISmartPointer
+class IHistogram : public system::SharedObject<IHistogram>
 {
 public:
 

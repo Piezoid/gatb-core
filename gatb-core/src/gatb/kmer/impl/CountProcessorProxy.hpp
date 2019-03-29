@@ -38,11 +38,12 @@ class CountProcessorProxy : public ICountProcessor<span>
 {
 public:
 
-    typedef ICountProcessor<span> CountProcessor;
-    typedef typename Kmer<span>::Type Type;
+    using CountProcessor = CountProcessor;
+    using CountProcessor_ptr = typename CountProcessor::sptr;
+    using Type = typename Kmer<span>::Type;
 
     /** Constructor. */
-    CountProcessorProxy (ICountProcessor<span>* ref) : _ref(0)  { setRef (ref); }
+    CountProcessorProxy (CountProcessor* ref) : _ref(ref->share()) { }
 
     /** Destructor. */
     virtual ~CountProcessorProxy()  {  setRef(0); }
@@ -51,35 +52,35 @@ public:
     /*   METHODS CALLED ON THE PROTOTYPE INSTANCE (in the main thread). */
     /********************************************************************/
 
-    /** \copydoc ICountProcessor<span>::begin */
+    /** \copydoc CountProcessor::begin */
     void begin (const impl::Configuration& config)  { _ref->begin (config); }
 
-    /** \copydoc ICountProcessor<span>::end */
+    /** \copydoc CountProcessor::end */
     void end   ()  { _ref->end (); }
 
-    /** \copydoc ICountProcessor<span>::beginPass */
+    /** \copydoc CountProcessor::beginPass */
     void beginPass (size_t passId)  { _ref->beginPass (passId); }
 
-    /** \copydoc ICountProcessor<span>::endPass */
+    /** \copydoc CountProcessor::endPass */
     void endPass   (size_t passId)  {  _ref->endPass (passId); }
 
-    /** \copydoc ICountProcessor<span>::clone */
-    ICountProcessor<span>* clone ()  { return _ref->clone(); }
+    /** \copydoc CountProcessor::clone */
+    CountProcessor* clone ()  { return _ref->clone(); }
 
-    /** \copydoc ICountProcessor<span>::finishClones */
-    void finishClones (std::vector<ICountProcessor<span>*>& clones)  { _ref->finishClones (clones); }
+    /** \copydoc CountProcessor::finishClones */
+    void finishClones (std::vector<CountProcessor_ptr>& clones)  { _ref->finishClones (clones); }
 
     /********************************************************************/
     /*   METHODS CALLED ON ONE CLONED INSTANCE (in a separate thread).  */
     /********************************************************************/
 
-    /** \copydoc ICountProcessor<span>::beginPart */
+    /** \copydoc CountProcessor::beginPart */
     void beginPart (size_t passId, size_t partId, size_t cacheSize, const char* name)  { _ref->beginPart (passId, partId, cacheSize, name); }
 
-    /** \copydoc ICountProcessor<span>::endPart */
+    /** \copydoc CountProcessor::endPart */
     void endPart   (size_t passId, size_t partId)  { _ref->endPart (passId, partId); }
 
-    /** \copydoc ICountProcessor<span>::process */
+    /** \copydoc CountProcessor::process */
     bool process (size_t partId, const Type& kmer, const CountVector& count, CountNumber sum=0)
     {  return _ref->process (partId, kmer, count, sum);  }
 
@@ -87,22 +88,21 @@ public:
     /*                          MISCELLANEOUS.                       */
     /*****************************************************************/
 
-    /** \copydoc ICountProcessor<span>::getName */
+    /** \copydoc CountProcessor::getName */
     std::string getName() const {  return _ref->getName(); }
 
-    /** \copydoc ICountProcessor<span>::setName */
+    /** \copydoc CountProcessor::setName */
     void setName (const std::string& name)  { _ref->setName (name); }
 
-    /** \copydoc ICountProcessor<span>::getProperties */
+    /** \copydoc CountProcessor::getProperties */
     tools::misc::impl::Properties getProperties() const  { return _ref->getProperties(); }
 
-    /** \copydoc ICountProcessor<span>::getInstances */
-    std::vector<ICountProcessor<span>*> getInstances () const  { return _ref->getInstances(); }
+    /** \copydoc CountProcessor::getInstances */
+    std::vector<CountProcessor_ptr> getInstances () const  { return _ref->getInstances(); }
 
 protected:
 
-    ICountProcessor<span>* _ref;
-    void setRef (ICountProcessor<span>* ref) { SP_SETATTR(ref); }
+    typename CountProcessor_ptr _ref;
 };
 
 /********************************************************************************/

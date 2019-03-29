@@ -39,16 +39,16 @@ namespace tools         {
 namespace collections   {
 /********************************************************************************/
 
-/** \brief Container interface
+/** \brief Set interface
  *
- * The Container interface provides an operation that ask for a given item
+ * The Set interface provides an operation that ask for a given item
  */
-template <class Item> class Container : public virtual system::ISmartPointer
+template <class Item> class ISet : public system::SharedObject<ISet<Item>>
 {
 public:
 
     /** Destructor. */
-    virtual ~Container() {}
+    virtual ~ISet() {}
 
     /** Tells whether an item exists or not
      * \return true if the item exists, false otherwise */

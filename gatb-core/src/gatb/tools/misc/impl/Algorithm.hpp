@@ -52,7 +52,7 @@ namespace impl      {
  *
  * \see Tool
  */
-class Algorithm : public system::SmartPointer
+class Algorithm : public system::SharedObject<Algorithm>
 {
 public:
 
@@ -60,10 +60,22 @@ public:
      * \param[in] name: name of the algorithm.
      * \param[in] nbCores : number of cores to be used for this algorithm.
      * \param[in] input : extra options for configuring the algorithm. */
-    Algorithm (const std::string& name, int nbCores=-1, gatb::core::tools::misc::IProperties* input=0);
+    Algorithm (const std::string& name, int nbCores=-1, gatb::core::tools::misc::IProperties* input=0)
+        : _name(name),
+          _input(input->share()),
+          _output(    std::make_shared<Properties>()),
+          _info(      std::make_shared<Properties>()),
+          _systemInfo(std::make_shared<Properties>()),
+          _dispatcher()
+    {
+        if (nbCores < 0)  {  nbCores = _input->get(STR_NB_CORES)  ? _input->getInt(STR_NB_CORES) : 0;  }
+        _dispatcher = std::make_shared<Dispatcher> (nbCores) ;
+
+        _info->add (0, _name);
+    }
 
     /** Destructor. */
-    virtual ~Algorithm ();
+    virtual ~Algorithm () {}
 
     /** Get tool name
      * \return the algorithm name. */
@@ -78,22 +90,22 @@ public:
     /** Get the parsed options as a properties instance
      * \return the parsed options.
      */
-    virtual IProperties*            getInput      ()  { return _input;      }
+    virtual IProperties&            getInput      ()  { return *_input;      }
 
     /** Get output results as a properties instance
      * \return the output results
      */
-    virtual IProperties*            getOutput     ()  { return _output;     }
+    virtual IProperties&            getOutput     ()  { return *_output;     }
 
     /** Get statistics information about the execution of the tool
      * \return the statistics
      */
-    virtual IProperties*            getInfo       ()  { return _info;       }
+    virtual IProperties&            getInfo       ()  { return *_info;       }
 
     /** Get an option parser configured with recognized options for the tool
      * \return the options parser instance
      */
-    virtual dp::IDispatcher*        getDispatcher ()  { return _dispatcher; }
+    virtual dp::IDispatcher&        getDispatcher ()  { return *_dispatcher; }
 
     /** Get a TimeInfo instance for the tool. This object can be used for gathering
      * execution times of some parts of the \ref execute method.
@@ -104,7 +116,7 @@ public:
     /** Get information about operating system resources used during the execution.
      * \return operating system information.
      */
-    virtual IProperties*            getSystemInfo ()  { return _systemInfo; }
+    virtual IProperties            getSystemInfo ()  { return *_systemInfo; }
 
     /** Create an iterator for the given iterator. If the verbosity is enough, progress bar information
      * can be displayed.
@@ -115,11 +127,11 @@ public:
      * \return the created iterator.
      */
     template<typename Item> 
-    dp::Iterator<Item>* createIterator (
-        dp::Iterator<Item>* iter,
+    typename dp::Iterator<Item>::sptr createIterator (
+        typename dp::Iterator<Item>::sptr iter,
         size_t nbIterations=0,
         const char* message=0,
-        dp::IteratorListener* listener = 0
+        dp::IteratorListener::sptr listener = {}
     )
     {
         if (nbIterations > 0 && message != 0)
@@ -127,15 +139,14 @@ public:
             //  We create some listener to be notified every 1000 iterations and attach it to the iterator.
             if (listener == 0)  { listener = createIteratorListener (nbIterations, message); }
 
-            dp::impl::SubjectIterator<Item>* iterSubject = new dp::impl::SubjectIterator<Item> (iter, nbIterations/100);
+            auto iterSubject = std::make_shared<dp::impl::SubjectIterator<Item>>(iter, nbIterations/100);
             iterSubject->addObserver (listener);
 
-            /** We assign the used iterator to be the subject iterator. */
-            iter = iterSubject;
+            /** We return the result. */
+            return iterSubject;
+        } else {
+            return iter;
         }
-
-        /** We return the result. */
-        return iter;
     }
 
     /** Creates an iterator listener according to the verbosity level.
@@ -143,7 +154,7 @@ public:
      * \param[in] message : progression message
      * \return an iterator listener.
      */
-    virtual dp::IteratorListener* createIteratorListener (size_t nbIterations, const char* message);
+    virtual dp::IteratorListener& createIteratorListener (size_t nbIterations, const char* message);
 
 
     /********************************************************************************/
@@ -152,14 +163,11 @@ public:
      * It ensures that the correct instance of the provided functor is launched,
      * according to the kmer size (known at runtime). */
     template <template<size_t> class Functor>
-    static int mainloop (tools::misc::IOptionsParser* parser, int argc, char* argv[])
+    static int mainloop (tools::misc::IOptionsParser& parser, int argc, char* argv[])
     {
-        // We get a handle on the provided parser.
-        LOCAL (parser);
-
         try {
             // We parse the user options.
-            tools::misc::IProperties* options = parser->parse (argc, argv);
+            tools::misc::IProperties::sptr options = parser.parse (argc, argv);
 
             // We apply the functor that calls the correct implementation of the functor
             // according to the kmer size value.
@@ -181,26 +189,26 @@ protected:
     std::string getUri (const std::string& str)  { return getInput()->getStr(STR_PREFIX) + str; }
 
     /** Setters. */
-    void setInput      (IProperties*            input)       { SP_SETATTR (input);      }
-    void setOutput     (IProperties*            output)      { SP_SETATTR (output);     }
-    void setInfo       (IProperties*            info)        { SP_SETATTR (info);       }
-    void setSystemInfo (IProperties*            systemInfo)  { SP_SETATTR (systemInfo); }
-    void setDispatcher (dp::IDispatcher*        dispatcher)  { SP_SETATTR (dispatcher); }
+    void setInput      (IProperties::sptr            input)       { _input = input; }
+    void setOutput     (IProperties::sptr            output)      { _output = _output; }
+    void setInfo       (IProperties::sptr            info)        { _info = info; }
+    void setSystemInfo (IProperties::sptr            systemInfo)  { _systemInfo = systemInfo; }
+    void setDispatcher (dp::IDispatcher::sptr        dispatcher)  { _dispatcher = dispatcher; }
 
 private:
 
     /** Name of the tool (set at construction). */
     std::string _name;
 
-    IProperties* _input;
+    IProperties::sptr _input;
 
-    IProperties* _output;
+    IProperties::sptr _output;
 
-    IProperties* _info;
+    IProperties::sptr _info;
 
-    IProperties* _systemInfo;
+    IProperties::sptr _systemInfo;
 
-    dp::IDispatcher* _dispatcher;
+    dp::IDispatcher::sptr _dispatcher;
 
     /** */
     TimeInfo _timeInfo;

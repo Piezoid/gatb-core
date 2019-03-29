@@ -48,7 +48,7 @@ namespace impl          {
  * This implementation uses a sorted vector for the 'contains' method. It implies
  * a binary_search (log(N) complexity)
  */
-template <typename Item> class ContainerSet : public Container<Item>, public system::SmartPointer
+template <typename Item> class ContainerSet : public ISet<Item>
 {
 public:
     

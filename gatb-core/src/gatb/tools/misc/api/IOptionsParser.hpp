@@ -48,7 +48,7 @@ namespace impl      {
 }
 
 /** Visitor design pattern for IOptionsParser. */
-class IOptionsParserVisitor
+class IOptionsParserVisitor : public system::SharedObject<IOptionsParserVisitor>
 {
 public:
     /** Destructor. */
@@ -77,7 +77,7 @@ public:
  * so we will have a 'leaf' implementation (see Option) and a 'composite'
  * implementation (see OptionsParser)
  */
-class IOptionsParser : public system::SmartPointer
+class IOptionsParser : public system::SharedObject<IOptionsParser>
 {
 public:
 
@@ -114,17 +114,17 @@ public:
      * \param[in] argv : table of arguments
      * \return object with information about the parsing.
      */
-    virtual misc::IProperties* parse (int argc, char** argv) = 0;
+    virtual misc::IProperties::sptr parse (int argc, char** argv) = 0;
 
     /** Perform the analyze of the arguments.
      * \param[in] s : string containing the options to be parsed
      * \return object with information about the parsing.
      */
-    virtual misc::IProperties* parseString (const std::string& s) = 0;
+    virtual misc::IProperties::sptr parseString (const std::string& s) = 0;
 
     /** Return the properties found during parsing.
      * \return the parsed properties. */
-    virtual misc::IProperties* getProperties ()  = 0;
+    virtual misc::IProperties::sptr getProperties ()  = 0;
 
     /** Tells whether an option has been seen during parsing.
      * \param[in] name : name of the option to be checked
@@ -140,23 +140,23 @@ public:
      * \param[in] expandDepth : while depth is less than expandDepth, put all the children and not the 'parser' itself.
      * \param[in] visibility : visibility status.
      */
-    virtual void push_back (IOptionsParser* parser, size_t expandDepth=0, bool visibility=true) = 0;
+    virtual void push_back (IOptionsParser::sptr parser, size_t expandDepth=0, bool visibility=true) = 0;
 
     /** Add a parser child at the front of known parsers.
      * \param[in] parser : the child parser
      * \param[in] expandDepth : while depth is less than expandDepth, put all the children and not the 'parser' itself.
      * \param[in] visibility : visibility status.
      */
-    virtual void push_front (IOptionsParser* parser, size_t expandDepth=0, bool visibility=true) = 0;
+    virtual void push_front (IOptionsParser::sptr parser, size_t expandDepth=0, bool visibility=true) = 0;
 
     /** Get a parser given its name.
      * \param[in] name : name of the parser to be retrieved
      * \return the parser instance if found, 0 otherwise. */
-    virtual IOptionsParser* getParser (const std::string& name) = 0;
+    virtual IOptionsParser::sptr getParser (const std::string& name) = 0;
 
     /** Get the children parsers.
      * \return a list of parsers.*/
-    virtual std::list<IOptionsParser*>& getParsers () = 0;
+    virtual std::list<IOptionsParser::sptr>& getParsers () = 0;
 
     /*************************************************************/
     /*********************   Miscellaneous   *********************/
@@ -164,7 +164,7 @@ public:
 
     /** Return the default properties
      * \return the default properties. */
-    virtual misc::IProperties* getDefaultProperties ()  = 0;
+    virtual misc::IProperties::sptr getDefaultProperties ()  = 0;
 
     /** Visitor design pattern. */
     virtual void accept (IOptionsParserVisitor& visitor, size_t depth=0) = 0;
@@ -179,6 +179,8 @@ public:
         std::list<std::string> errors;
     };
 };
+
+
 
 /********************************************************************************/
 } } } } /* end of namespaces. */

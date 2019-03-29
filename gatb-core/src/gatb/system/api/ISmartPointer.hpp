@@ -28,6 +28,8 @@
 #ifndef _GATB_CORE_SYSTEM_SMART_POINTER_HPP_
 #define _GATB_CORE_SYSTEM_SMART_POINTER_HPP_
 
+#include <memory>
+
 /********************************************************************************/
 namespace gatb      {
 namespace core      {
@@ -67,18 +69,28 @@ namespace system    {
  *  \see SP_SETATTR
  *  \see LOCAL
  */
-class ISmartPointer
+
+struct  SharedObjectVBase: public std::enable_shared_from_this<SharedObjectVBase>
 {
-public:
+    virtual ~SharedObjectVBase() {}
+};
 
-    /** Destructor. */
-    virtual ~ISmartPointer () {}
+template<typename Derived>
+struct SharedObject : public virtual SharedObjectVBase {
+    using sptr = std::shared_ptr<Derived>;
+    using csptr = std::shared_ptr<const Derived>;
+    using uptr = std::unique_ptr<Derived>;
+    using cuptr = std::unique_ptr<const Derived>;
 
-    /** Use an instance by taking a token on it */
-    virtual void use () = 0;
+    sptr share() {
+        return std::reinterpret_pointer_cast<Derived>(this->shared_from_this());
+    }
 
-    /** Forget an instance by releasing a token on it */
-    virtual void forget () = 0;
+    csptr share() const {
+        return std::reinterpret_pointer_cast<const Derived>(this->shared_from_this());
+    }
+
+    virtual ~SharedObject() {} //FIXME: not sure if it is needed as we don't have ressources to free locally
 };
 
 /********************************************************************************/
@@ -94,174 +106,22 @@ public:
  *  \see SP_SETATTR
  *  \see LOCAL
  */
-class SmartPointer : public virtual ISmartPointer
+
+/// Alows to easily get a shared_pointer of the derived type
+template<typename T>
+std::shared_ptr<T> as_shared_ptr(T* ptr)
 {
-public:
-    /** \copydoc ISmartPointer::use */
-    void use    ()
-    {
-        __sync_fetch_and_add (&_counterRef, 1 );
-        // DON'T DO _counterRef++  because possible real time issues...
-    }
-
-    /** \copydoc ISmartPointer::forget */
-    void forget ()
-    {
-        __sync_fetch_and_sub (&_counterRef, 1 );
-        // DON'T DO _counterRef--  because possible real time issues...
-
-        if (_counterRef<=0)  { delete this; }
-    }
-
-protected:
-
-    /** Constructor. */
-    SmartPointer () : _counterRef(0)  {}
-
-    /** Destruction of the instance will be automatically called when the reference counter becomes null.
-     *  The destructor is private in order to avoid to directly delete the instance without using the
-     *  'use/forget' mechanism.
-     */
-    virtual ~SmartPointer ()  {}
-
-private:
-    /** Counts the number of references of the instance.*/
-    int _counterRef;
-};
-
-/********************************************************************************/
-
-/** \brief Local usage of SmartPointer instance.
- *
- * Small utility for locally getting a reference on a smart pointer. It creates
- *  a local (ie created in the execution stack) object that takes a reference on
- *  a smart pointer and get rid of it when the execution is out of the statements
- *  block holding the local object.
- *
- *  Note that the LocalObject class is very close to the std::auto_ptr. The first
- *  one uses inheritance, the second uses templates.
- *
- *  Sample:
- *  \code
- *  void foo ()
- *  {
- *     {
- *        // we create an instance of a class that inherits from SmartPointer and link it to a LocalObject
- *        LocalObject object (new MyClass ());
- *
- *        // we can access the referenced instance
- *        object.getPtr ();
- *     }
- *
- *     // Here, the MyClass instance should have been automatically deleted.
- *  }
- *  \endcode
- *
- *  \see LOCAL
- */
-class LocalObject
-{
-public:
-    /** Constructor.
-     * \param[in] ptr : the instance we want locally manage.
-     */
-    LocalObject (ISmartPointer* ptr) : _ptr(ptr)  { if (_ptr)  {  _ptr->use();  } }
-
-    /** Destructor. */
-    ~LocalObject () { if (_ptr)  {  _ptr->forget ();  } }
-
-    /** Getter on the referenced instance.
-     * \return the referenced SmartPointer instance. */
-    ISmartPointer* getPtr ()  { return _ptr; }
-
-private:
-    /** The SmartPointer instance we want local life cycle management. */
-    ISmartPointer* _ptr;
-};
-
-/********************************************************************************/
-
-/** Macro that creates an instance of type LocalObject whose name is the prefix '__' followed by the provided argument.
- *
- *  Sample:
- *  \code
- *  void foo ()
- *  {
- *     {
- *        // we create an instance of a class that inherits from SmartPointer
- *        MyClass* object = new MyClass ();
- *
- *        // we want that this object lives only inside the including statements block.
- *        // note that we use the LOCAL macro
- *        LOCAL (object);
- *     }
- *
- *     // Here, the object should have been automatically deleted.
- *  }
- *  \endcode
- *
- *  \see LocalObject
- */
-#define LOCAL(object)  gatb::core::system::LocalObject __##object (object)
-
-/** Macro that generates an instructions block that manages life cycle of a class attributes.
- *  It is dedicated to simply write clever setter methods.
- *
- * As a convention, the attribute name must begin by an underscore. Then the provided argument here
- * is the attribute name without this leading underscore.
- *
- * A typical use of this macro is the following:
- * \li in the constructor, use the default initialization of the attribute as 0
- * \li in the constructor body, use the smart setter with a provided argument
- * \li in the destructor body, use the smart setter with null argument.
- * \li in the private (or protected) part, defines a smart setter for the attribute by using the SP_SETATTR macro
- *
- * Sample of code:
- *  \code
- *  class MyClass
- *  {
- *  public:
- *       MyClass (SomeSmartPointerClass* ptr) : _ptr(0)  { setPtr (ptr); }
- *      ~MyClass ()  { setPtr (0); }
- *  private:
- *      SomeSmartPointerClass* _ptr;
- *      void setPtr (SomeSmartPointerClass* ptr)  { SP_SETATTR(ptr); }
- *  };
- *  \endcode
- *
- *  \see SmartPointer
- */
-#define SP_SETATTR(a)  \
-{  \
-    if (_##a == a)  { return;  }   /* just to be sure that we don't reuse the same object */  \
-    if (_##a != 0)  {  _##a->forget (); } \
-    _##a = a; \
-    if (_##a != 0)  {  _##a->use    (); } \
+#ifdef NDEBUG
+    return std::reinterpret_pointer_cast<T>(ptr->shared_from_this());
+#else
+    return std::dynamic_pointer_cast<T>(ptr->shared_from_this());
+#endif
 }
 
-/********************************************************************************/
+template<typename T>
+std::shared_ptr<T> as_shared_ptr(std::shared_ptr<T> ptr)
+{ return ptr; }
 
-class SmartObject
-{
-public:
-
-    SmartObject (ISmartPointer* ref=0) : _ref(0)  { setRef(ref); }
-
-    virtual ~SmartObject ()  { setRef(0); }
-
-    SmartObject (const SmartObject& o) : _ref(0)  { setRef(o._ref); }
-
-    SmartObject& operator= (const SmartObject& o)  {  if (this != &o)  {  setRef (o._ref);  }  return *this; }
-
-    void setRef (ISmartPointer* ref)  {  SP_SETATTR(ref); }
-    ISmartPointer* getRef ()  {  return _ref; }
-
-    bool hasRef () const { return _ref != 0; }
-
-private:
-
-    ISmartPointer* _ref;
-};
 
 /********************************************************************************/
 } } } /* end of namespaces. */

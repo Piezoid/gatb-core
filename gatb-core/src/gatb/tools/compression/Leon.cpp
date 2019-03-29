@@ -112,13 +112,13 @@ _progress_decode(0),_generalModel(256),_inputBank(0),_anchorDictModel(5)
 	getParser()->push_back (new OptionNoParam  ("-lossless", "switch to lossless compression for qualities (default is lossy. lossy has much higher compression rate, and the loss is in fact a gain. lossy is better!)",   false));
 
 	
-    IOptionsParser* compressionParser = new OptionsParser ("compression");
+    IOptionsParser::sptr compressionParser = new OptionsParser ("compression");
 
     /** We add the sorting count options and hide all of them by default and display one some of them. */
     compressionParser->push_back (SortingCountAlgorithm<>::getOptionsParser(), 1, false);
 
-    if (IOptionsParser* input = compressionParser->getParser (STR_URI_INPUT))  {  input->setName (STR_URI_FILE);  }
-    if (IOptionsParser* input = compressionParser->getParser (STR_KMER_SIZE))  {  input->setVisible (true);  }
+    if (IOptionsParser::sptr input = compressionParser->getParser (STR_URI_INPUT))  {  input->setName (STR_URI_FILE);  }
+    if (IOptionsParser::sptr input = compressionParser->getParser (STR_KMER_SIZE))  {  input->setVisible (true);  }
 
     compressionParser->push_back (new OptionOneParam(STR_KMER_ABUNDANCE, "abundance threshold for solid kmers (default inferred)", false));
 	compressionParser->push_back (new OptionNoParam  (STR_INIT_ITER, "init iterator for ibank mode", false));
@@ -128,7 +128,7 @@ _progress_decode(0),_generalModel(256),_inputBank(0),_anchorDictModel(5)
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOQUAL, "discard quality scores", false));
 
-    IOptionsParser* decompressionParser = new OptionsParser ("decompression");
+    IOptionsParser::sptr decompressionParser = new OptionsParser ("decompression");
     decompressionParser->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
 	
 
@@ -148,8 +148,6 @@ _progress_decode(0),_generalModel(256),_inputBank(0),_anchorDictModel(5)
 
 Leon::~Leon ()
 {
-	setInputBank (0);
-	
 	if(_storageH5file !=0)
 		delete _storageH5file;
 	
@@ -233,7 +231,7 @@ void Leon::createBloom (){
 	u_int64_t nb_kmers_infile;
 	
 	//cout << _dskOutputFilename << endl;
-	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
+	Storage::sptr storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	LOCAL (storage);
 	
 	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
@@ -248,7 +246,7 @@ void Leon::createBloom (){
 		
 		//retrieve cutoff
 		
-		Collection<NativeInt64>& cutoff  = storage->getGroup("histogram").getCollection<NativeInt64> ("cutoff");
+		ICollection<NativeInt64>& cutoff  = storage->getGroup("histogram").getCollection<NativeInt64> ("cutoff");
 		Iterator<NativeInt64>* iter = cutoff.iterator();
 		LOCAL (iter);
 		for (iter->first(); !iter->isDone(); iter->next())  {
@@ -258,7 +256,7 @@ void Leon::createBloom (){
 		
 		//retrieve nb solids
 		
-		Collection<NativeInt64>& storagesolid  = storage->getGroup("histogram").getCollection<NativeInt64> ("nbsolidsforcutoff");
+		ICollection<NativeInt64>& storagesolid  = storage->getGroup("histogram").getCollection<NativeInt64> ("nbsolidsforcutoff");
 		Iterator<NativeInt64>* iter2 = storagesolid.iterator();
 		LOCAL (iter2);
 		for (iter2->first(); !iter2->isDone(); iter2->next())  {
@@ -394,7 +392,7 @@ void Leon::executeCompression(){
 
 
     //_inputBank = Bank::singleton().createBank(_inputFilename);
-	setInputBank (Bank::open(_inputFilename));
+	_inputBank  = Bank::open(_inputFilename);
 	
 	//cout << Bank::getType(_inputFilename) << endl;
 	
@@ -794,7 +792,7 @@ void Leon::endCompression(){
 
 
 void Leon::startHeaderCompression(){
-    Iterator<Sequence>* itSeq = createIterator<Sequence> (
+    seq_iterator_ptr itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
                                                           _inputBank->estimateNbItems(),
                                                           "Compressing headers"
@@ -920,7 +918,7 @@ void Leon::startDnaCompression(){
 	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated ); //creator with nb entries given
 //	printf("asked %lli entries, got %llu \n",nbestimated/10 ,nbcreated);
 	
-    Iterator<Sequence>* itSeq = createIterator<Sequence> (
+    seq_iterator_ptr itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
                                                           nbestimated,
                                                           "Compressing dna"
@@ -1488,7 +1486,7 @@ void Leon::executeDecompression(){
 void Leon::testing_iter(){
 	//printf("testing iterator \n");
 	
-	tools::dp::Iterator<Sequence>* iterl = new LeonIterator(*this);
+	tools::dp::seq_iterator_ptr iterl = new LeonIterator(*this);
 	
 	/*
 	iterl->first();
@@ -2046,10 +2044,10 @@ void Leon::endDecompression(){
 		//string prefix = System::file().getBaseName(_inputFilename);
 		
 		string originalFilename;
-		IBank* originalBank;
-		IBank* newBank;
-		Iterator<Sequence>* originalBankIt;
-		Iterator<Sequence>* newBankIt;
+		IBank::sptr originalBank;
+		IBank::sptr newBank;
+		seq_iterator_ptr originalBankIt;
+		seq_iterator_ptr newBankIt;
 		
 		if(_isFasta)
 			originalFilename = dir + "/" + prefix + ".fasta";
@@ -2403,7 +2401,7 @@ void BankLeon::estimate (u_int64_t& number, u_int64_t& totalSize, u_int64_t& max
 
 /// BankLeonFactory : test hdf5  storage opening, if leon version can be found, this is a leon file
 
-IBank* BankLeonFactory::createBank (const std::string& uri)
+IBank::sptr BankLeonFactory::createBank (const std::string& uri)
 {
 	//printf("create bank factory  Leon  %s \n",uri.c_str());
 	bool isLEON = false;

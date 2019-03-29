@@ -49,7 +49,7 @@ namespace collections   {
  *
  * Note that one Iterable instance can create several iterators.
  */
-template <class Item> class Iterable : public virtual system::ISmartPointer
+template <class Item> class Iterable : public system::SharedObject<Iterable<Item>>
 {
 public:
 
@@ -57,7 +57,7 @@ public:
 
     /** Create an iterator for the given Iterable instance.
      * \return the new iterator. */
-    virtual dp::Iterator<Item>* iterator () = 0;
+    virtual typename dp::Iterator<Item>::sptr iterator () = 0;
 
     /** Direct iteration through a functor.
      * \param[in] f : the functor to be applied on each sequence of the bank. */

@@ -62,12 +62,12 @@ namespace impl      {
  *
  * -- R: nice find, Erwan!
  */
-template <class Item> struct  CollectionDataHDF5Patch : public system::SmartPointer
+template <class Item> struct  CollectionDataHDF5Patch : public system::SharedObject< CollectionDataHDF5Patch<Item> >
 {
 //public:
 
     /** */
-    CollectionDataHDF5Patch (hid_t fileId, const std::string& filename, system::ISynchronizer* synchro, int compress)
+    CollectionDataHDF5Patch (hid_t fileId, const std::string& filename, system::ISynchronizer::sptr synchro, int compress)
      : _fileId(fileId), _datasetId(0), _typeId(0), _nbItems(0), _name(filename), _synchro(synchro), _nbCalls(0), _compress(compress)
     {
         /** We get the HDF5 type of the item. */
@@ -224,7 +224,7 @@ template <class Item> struct  CollectionDataHDF5Patch : public system::SmartPoin
     hid_t                   _typeId;
     hsize_t                 _nbItems;
     std::string             _name;
-    system::ISynchronizer*  _synchro;
+    system::ISynchronizer::sptr  _synchro;
     u_int64_t               _nbCalls;
     int                     _compress;
 
@@ -241,7 +241,7 @@ template <class Item> struct  CollectionDataHDF5Patch : public system::SmartPoin
 
 /********************************************************************************/
 
-template <class Item> class BagHDF5Patch : public collections::Bag<Item>, public system::SmartPointer
+template <class Item> class BagHDF5Patch : public collections::Bag<Item>
 {
 public:
 
@@ -321,7 +321,7 @@ private:
 
 template<typename Item> class HDF5IteratorPatch;
 
-template <class Item> class IterableHDF5Patch : public collections::Iterable<Item>,  public system::SmartPointer
+template <class Item> class IterableHDF5Patch : public collections::Iterable<Item>
 {
 public:
 
@@ -526,12 +526,12 @@ private:
 
 /********************************************************************************/
 
-template <class Item> class CollectionHDF5Patch : public collections::impl::CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionHDF5Patch : public collections::impl::CollectionAbstract<Item>
 {
 public:
 
     /** Constructor. */
-    CollectionHDF5Patch (hid_t fileId, const std::string& name, system::ISynchronizer* synchro, int compressLevel)
+    CollectionHDF5Patch (hid_t fileId, const std::string& name, system::ISynchronizer::sptr synchro, int compressLevel)
         : collections::impl::CollectionAbstract<Item> (0,0), _common(0)
     {
         system::LocalSynchronizer localsynchro (synchro);

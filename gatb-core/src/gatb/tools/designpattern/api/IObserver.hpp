@@ -59,7 +59,7 @@ typedef u_int32_t InterfaceId;
  *
  *  Defined as a SmartPointer for easing the EventInfo instances life cycle management.
  */
-class EventInfo : public system::SmartPointer
+class EventInfo : public system::SharedObject<EventInfo>
 {
 public:
 

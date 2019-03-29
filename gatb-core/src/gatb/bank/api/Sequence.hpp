@@ -118,7 +118,7 @@ struct Sequence
      * \param[in] ref : the referred Data instance holding the genomic data
      * \param[in] offset : starting index in the referred data
      * \param[in] length : length of the genomic data of the current sequence. */
-    void setDataRef (tools::misc::Data* ref, int offset, int length)  {  _data.setRef (ref, offset, length);  }
+    void setDataRef (tools::misc::data_ptr ref, int offset, int length)  {  _data.setRef (ref, offset, length);  }
 
     /** Set the index of the sequence. Typically, it should be called by a IBank iterator that knows what is
      * the index of the currently iterated sequence.
@@ -177,6 +177,9 @@ private:
     size_t _index;
 };
 
+using seq_iterator_ptr = tools::dp::Iterator<Sequence>::sptr;
+using seq_iterator_vector = tools::dp::iterator_vector<Sequence>;
+
 /********************************************************************************/
 } } } /* end of namespaces. */
 
@@ -188,7 +191,10 @@ namespace gatb  {
 		namespace tools {
 			namespace dp    {
 				namespace impl  {
-					
+
+using bank::seq_iterator_ptr;
+using bank::seq_iterator_vector;
+
 template <>
 class CompositeIterator <bank::Sequence> : public Iterator <bank::Sequence>
 {
@@ -197,19 +203,15 @@ public:
 	/** Constructor.
 	 * \param[in] iterators : the iterators vector
 	 */
-	CompositeIterator (std::vector <Iterator<bank::Sequence>*>&  iterators)
-	: _iterators(iterators), _currentIdx(0), _currentIt(0), _isDone(true)
+	CompositeIterator (seq_iterator_vector&& iterators)
+        : _iterators(std::move(iterators)), _currentIdx(0), _currentIt(0), _isDone(true)
 	{
-		for (size_t i=0; i<_iterators.size(); i++)  { _iterators[i]->use(); }
-		
-		_currentIt = _iterators[_currentIdx];
+		_currentIt = std::move(_iterators[_currentIdx]);
 	}
 	
 	/** Destructor. */
 	virtual ~CompositeIterator ()
-	{
-		for (size_t i=0; i<_iterators.size(); i++)  { _iterators[i]->forget(); }
-	}
+	{}
 	
 	/** \copydoc Iterator::first */
 	void first()
@@ -251,15 +253,15 @@ public:
 	void setItem (bank::Sequence& i)  {  _currentIt->setItem (i);  }
 	
 	/** Get a vector holding the composite structure of the iterator. */
-	virtual std::vector<Iterator<bank::Sequence>*> getComposition() { return _iterators; }
+	virtual seq_iterator_vector getComposition() { return _iterators; }
 	
 private:
 	size_t _seqIndex;
 
-	std::vector <Iterator<bank::Sequence>*>  _iterators;
+	seq_iterator_vector _iterators;
 	
 	size_t          _currentIdx;
-	Iterator<bank::Sequence>* _currentIt;
+	seq_iterator_ptr _currentIt;
 	
 	bool _isDone;
 	
@@ -271,10 +273,10 @@ private:
 		
 		while ((int)_currentIdx<(int)_iterators.size() && _isDone == true)
 		{
-			Iterator<bank::Sequence>* previous = _currentIt;
-			
+			seq_iterator_ptr previous = std::move(_currentIt);
+
 			/** We get the next iterator. */
-			_currentIt = _iterators[_currentIdx];
+			_currentIt = std::move(_iterators[_currentIdx]);
 			assert (_currentIt != 0);
 			
 			/** We have to take the reference of the previous iterator. */
@@ -287,9 +289,6 @@ private:
 			_isDone = _currentIt->isDone();
 			
 			if (_isDone==true) { _currentIdx++; }
-			
-			/** We can finish the previous item (only if not first call). */
-			if (!isFirst) { previous->finalize(); }
 		}
 	}
 };

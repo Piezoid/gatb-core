@@ -70,7 +70,7 @@ public:
 private:
 
     /** */
-    system::ISynchronizer* newSynchro ();
+    system::ISynchronizer::sptr newSynchro ();
 };
 
 /********************************************************************************/
@@ -117,10 +117,10 @@ public:
 private:
 
     /** */
-    system::ISynchronizer* newSynchro ();
+    system::ISynchronizer::sptr newSynchro ();
 
     /** */
-    system::IThread* newThread (ICommand* command);
+    system::IThread::sptr newThread (ICommand* command);
 
     /** */
     static void* mainloop (void* data);

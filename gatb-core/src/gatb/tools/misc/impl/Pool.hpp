@@ -408,18 +408,15 @@ public:
         used_space = 0;
     }
 
-    MemAllocator(size_t nbCores=0) : mainbuffer(NULL),capacity(0),used_space(0), _nbCores(nbCores), _synchro(0)
-    {
-        setSynchro (system::impl::System::thread().newSynchronizer());
-    }
+    MemAllocator(size_t nbCores=0) : mainbuffer(NULL), capacity(0), used_space(0), _nbCores(nbCores), _synchro()
+    {}
 
     ~MemAllocator()
     {
         if (mainbuffer != NULL)  {  FREE (mainbuffer);  }
-        setSynchro (0);
     }
 
-    system::ISynchronizer* getSynchro()  { return _synchro; }
+    std::mutex& getSynchro()  { return _synchro; }
 
 private :
     char*     mainbuffer;
@@ -428,8 +425,7 @@ private :
 
     size_t _nbCores;
 
-    system::ISynchronizer* _synchro;
-    void setSynchro (system::ISynchronizer* synchro) { SP_SETATTR(synchro); }
+    std::mutex _synchro;
 };
 
 /********************************************************************************/

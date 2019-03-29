@@ -52,12 +52,12 @@ namespace impl          {
  * accesses by several threads. This allows to encapsulate a single Collection into several
  * CollectionCache instances, each one used in a thread.
  */
-template <class Item> class CollectionCache : public CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionCache : public CollectionAbstract<Item>
 {
 public:
 
     /** Constructor. */
-    CollectionCache (Collection<Item>& ref,  size_t cacheSize, system::ISynchronizer* synchro)
+    CollectionCache (ICollection<Item>& ref,  size_t cacheSize, system::ISynchronizer::sptr synchro)
         : CollectionAbstract<Item> (
             new BagCache<Item> (ref.bag(), cacheSize, synchro),
             ref.iterable()
@@ -71,10 +71,10 @@ public:
 
     /** Accessor to the delegate Collection.
      * \return the delegate Collection instance. */
-    Collection<Item>& getRef ()  { return _ref; }
+    ICollection<Item>& getRef ()  { return _ref; }
 
 private:
-    Collection<Item>& _ref;
+    ICollection<Item>& _ref;
 };
 
 /********************************************************************************/
@@ -87,12 +87,12 @@ private:
  *
  * Remark : maybe could be inherited from CollectionCache ?
  */
-template <class Item> class CollectionCacheSorted : public CollectionAbstract<Item>, public system::SmartPointer
+template <class Item> class CollectionCacheSorted : public CollectionAbstract<Item>
 {
 public:
     
     /** Constructor. */
-    CollectionCacheSorted (Collection<Item>& ref,  size_t cacheSize, size_t sharedCacheSize,  system::ISynchronizer* synchro, system::ISynchronizer* outsynchro, Item* sharedBuffer, size_t * idxShared) //
+    CollectionCacheSorted (ICollection<Item>& ref,  size_t cacheSize, size_t sharedCacheSize,  system::ISynchronizer::sptr synchro, system::ISynchronizer::sptr outsynchro, Item* sharedBuffer, size_t * idxShared) //
     : CollectionAbstract<Item> (
             new BagCacheSortedBuffered<Item> (
                 ref.bag(),
@@ -114,10 +114,10 @@ public:
     
     /** Accessor to the delegate Collection.
      * \return the delegate Collection instance. */
-    Collection<Item>& getRef ()  { return _ref; }
+    ICollection<Item>& getRef ()  { return _ref; }
     
 private:
-    Collection<Item>& _ref;
+    ICollection<Item>& _ref;
 };
 
 /********************************************************************************/

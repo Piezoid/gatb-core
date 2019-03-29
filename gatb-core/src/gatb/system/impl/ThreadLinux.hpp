@@ -43,10 +43,10 @@ class ThreadFactoryLinux : public IThreadFactory
 {
 public:
     /** \copydoc IThreadFactory::newThread */
-    IThread* newThread (void* (*mainloop) (void*), void* data);
+    IThread::sptr newThread (void* (*mainloop) (void*), void* data);
 
     /** \copydoc IThreadFactory::newSynchronizer */
-    ISynchronizer* newSynchronizer (void);
+    ISynchronizer::sptr newSynchronizer (void);
 
     /** \copydoc IThreadFactory::getThreadSelf */
     IThread::Id getThreadSelf();

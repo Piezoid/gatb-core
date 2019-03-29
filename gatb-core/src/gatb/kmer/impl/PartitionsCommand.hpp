@@ -106,7 +106,7 @@ private:
 	
 /********************************************************************************/
 template<size_t span>
-class PartitionsCommand : public gatb::core::tools::dp::ICommand, public system::SmartPointer
+class PartitionsCommand : public gatb::core::tools::dp::ICommand
 {
 public:
 
@@ -120,7 +120,7 @@ public:
       //  gatb::core::tools::collections::Iterable<Type>& partition,
         CountProcessor*                                 processor,
         size_t                                          cacheSize,
-        gatb::core::tools::dp::IteratorListener*        progress,
+        gatb::core::tools::dp::IteratorListener::sptr        progress,
         tools::misc::impl::TimeInfo&                    timeInfo,
         PartiInfo<5>&                                   pInfo,
         int                                             passi,
@@ -139,7 +139,7 @@ public:
 
 protected:
  //   gatb::core::tools::collections::Iterable<Type>&         _partition;
-    gatb::core::tools::dp::IteratorListener*                _progress;
+    gatb::core::tools::dp::IteratorListener::sptr                _progress;
 	PartiInfo<5>&                                           _pInfo;
     int                                                     _pass_num;
 	int                                                     _parti_num;
@@ -177,7 +177,7 @@ public:
     //    gatb::core::tools::collections::Iterable<Type>& partition,
         CountProcessor*                                 processor,
         size_t                                          cacheSize,
-        gatb::core::tools::dp::IteratorListener*        progress,
+        gatb::core::tools::dp::IteratorListener::sptr        progress,
         tools::misc::impl::TimeInfo&                    timeInfo,
         PartiInfo<5>&                                   pInfo,
         int                                             passi,
@@ -230,7 +230,7 @@ public:
 							//   gatb::core::tools::collections::Iterable<Type>& partition,
 							   CountProcessor*                                 processor,
 							   size_t                                          cacheSize,
-							   gatb::core::tools::dp::IteratorListener*        progress,
+							   gatb::core::tools::dp::IteratorListener::sptr        progress,
 							   tools::misc::impl::TimeInfo&                    timeInfo,
 							   PartiInfo<5>&                                   pInfo,
 							   int                                             passi,
@@ -259,7 +259,7 @@ private:
 	uint64_t*          _radix_sizes;
 	uint64_t*          _r_idx;
 	
-	tools::dp::IDispatcher* _dispatcher;
+	tools::dp::IDispatcher::sptr _dispatcher;
 	
 	void executeRead   ();
 	void executeSort   ();
@@ -278,7 +278,7 @@ private:
 
 
 template<size_t span>
-class PartitionsCommand_multibank : public gatb::core::tools::dp::ICommand, public system::SmartPointer
+class PartitionsCommand_multibank : public gatb::core::tools::dp::ICommand
 {
 public:
 	
@@ -292,7 +292,7 @@ public:
 								 gatb::core::tools::collections::Iterable<Type>& partition,
 								 CountProcessor*                                 processor,
 								 size_t                                          cacheSize,
-								 gatb::core::tools::dp::IteratorListener*        progress,
+								 gatb::core::tools::dp::IteratorListener::sptr        progress,
 								 tools::misc::impl::TimeInfo&                    timeInfo,
 								 PartiInfo<5>&                                   pInfo,
 								 int                                             passi,
@@ -310,7 +310,7 @@ public:
 	
 protected:
 	gatb::core::tools::collections::Iterable<Type>&         _partition;
-	gatb::core::tools::dp::IteratorListener*                _progress;
+	gatb::core::tools::dp::IteratorListener::sptr                _progress;
 	PartiInfo<5>&                                           _pInfo;
 	int                                                     _pass_num;
 	int                                                     _parti_num;
@@ -352,7 +352,7 @@ public:
 										 gatb::core::tools::collections::Iterable<Type>& partition,
 										 CountProcessor*                                 processor,
 										 size_t                                          cacheSize,
-										 gatb::core::tools::dp::IteratorListener*        progress,
+										 gatb::core::tools::dp::IteratorListener::sptr        progress,
 										 tools::misc::impl::TimeInfo&                    timeInfo,
 										 PartiInfo<5>&                                   pInfo,
 										 int                                             passi,
@@ -379,7 +379,7 @@ private:
 	uint64_t*          _radix_sizes;
 	uint64_t*          _r_idx;
 	
-	tools::dp::IDispatcher* _dispatcher;
+	tools::dp::IDispatcher::sptr _dispatcher;
 	
 	void executeRead   ();
 	void executeSort   ();

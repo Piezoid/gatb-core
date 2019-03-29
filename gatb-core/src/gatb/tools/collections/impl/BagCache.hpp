@@ -49,29 +49,25 @@ namespace impl          {
  * items are inserted into the delegate; this operation may be protected by a
  * synchronizer in case several threads use different BagCache on the same delegate.
  */
-template <typename Item> class BagCache : public Bag<Item>, public system::SmartPointer
+template <typename Item> class BagCache : public Bag<Item>
 {
 public:
 
     /** Constructor */
-    BagCache () : _ref(0), _synchro(0), _items(0), _nbMax(0), _idx(0)  {}
+    BagCache () : _ref(0), _synchro(), _items(0), _nbMax(0), _idx(0)  {}
 
     /** Constructor. Cache size is in terms of number of items (I think) */
-    BagCache (Bag<Item>* ref, size_t cacheSize, system::ISynchronizer* synchro=0)
-        : _ref(0), _synchro(0), _items(0), _nbMax(cacheSize), _idx(0)
+    BagCache (Bag<Item>& ref, size_t cacheSize)
+        : _ref(ref.share()), _synchro(), _items(0), _nbMax(cacheSize), _idx(0)
     {
-        setRef     (ref);
-        setSynchro (synchro);
         _items = (Item*) CALLOC (_nbMax, sizeof(Item));
         system::impl::System::memory().memset (_items, 0, _nbMax*sizeof(Item));
     }
 
     BagCache (const BagCache<Item>& b)
-        : _ref(0), _synchro(0), _items (0), _nbMax(b._nbMax), _idx(0)
+        : _ref(b._ref), _synchro(), _items (0), _nbMax(b._nbMax), _idx(0)
     {
-        setRef     (b._ref);
-        setSynchro (b._synchro);
-
+        auto guard = std::lock_guard(b._synchro);
         _items = (Item*) CALLOC (_nbMax, sizeof(Item));
         system::impl::System::memory().memset (_items, 0, _nbMax*sizeof(Item));
     }
@@ -82,10 +78,6 @@ public:
         /** We flush the potential remaining stuf. */
         flush ();
 
-        /** We clean resources. */
-        setRef     (0);
-        setSynchro (0);
-
         FREE (_items);
     }
 
@@ -94,9 +86,8 @@ public:
     {
         if (_idx+1 > _nbMax)
         {
-            if (_synchro)  {  _synchro->lock();    }
+            auto guard = std::lock_guard(_synchro);
             flushCache ();
-            if (_synchro)  {  _synchro->unlock();  }
         }
 
         _items[_idx++] = item;
@@ -105,19 +96,16 @@ public:
     /**  \copydoc Bag::flush */
     void flush ()
     {
-        if (_synchro)  {  _synchro->lock();    }
+        auto guard = std::lock_guard(_synchro);
         flushCache ();
         _ref->flush();
-        if (_synchro)  {  _synchro->unlock();  }
     }
 
 protected:
 
-    Bag<Item>*             _ref;
-    void setRef (Bag<Item>* ref)  { SP_SETATTR(ref); }
+    typename Bag<Item>::sptr _ref;
 
-    system::ISynchronizer* _synchro;
-    void setSynchro (system::ISynchronizer* synchro)  { SP_SETATTR(synchro); }
+    std::mutex _synchro;
 
     Item*                  _items;
     size_t                 _nbMax;
@@ -141,11 +129,12 @@ template <typename Item> class BagCacheSortedBuffered : public BagCache<Item>
 public:
     
     /** Constructor. */
-    BagCacheSortedBuffered (Bag<Item>* ref, size_t cacheSize, Item* sharedBuffer, size_t sharedCacheSize,  size_t * idxShared,  system::ISynchronizer* outsynchro=0, system::ISynchronizer* synchro=0
-)
-    : BagCache<Item>(ref, cacheSize, synchro), _outsynchro(0),_idxShared(idxShared)  {
+    BagCacheSortedBuffered (Bag<Item>& ref, size_t cacheSize,
+                            Item* sharedBuffer, size_t sharedCacheSize,  size_t* idxShared,
+                            system::ISynchronizer* outsynchro=nullptr)
+    : BagCache<Item>(ref, cacheSize), _outsynchro(0),_idxShared(idxShared) {
         _sharedBuffer = sharedBuffer;
-        setOutSynchro (outsynchro);
+        if(outsynchro != nullptr) _outsynchro = outsynchro->share();
         _sharedCacheSize = sharedCacheSize;
       //  printf("BagCacheSortedBuffered created with _idxShared %p : %zu \n",_idxShared,*_idxShared);
     }
@@ -156,9 +145,6 @@ public:
     {
         /** We flush the potential remaining stuf. */
         //flush ();
-        
-        /** We clean resources. */
-        setOutSynchro (0);
     }
     
     /**  \copydoc Bag::insert */
@@ -191,8 +177,7 @@ public:
     
 private:
     Item * _sharedBuffer; // shared buffer for sorting, allocated from outside
-    system::ISynchronizer* _outsynchro;
-    void setOutSynchro (system::ISynchronizer* outsynchro)  { SP_SETATTR(outsynchro); }
+    system::ISynchronizer::sptr _outsynchro;
     size_t _sharedCacheSize;
     size_t * _idxShared;
 
@@ -253,10 +238,7 @@ private:
 template <typename Item> class BagCacheSorted : public BagCache<Item>
 {
 public:
-
-    /** Constructor. */
-    BagCacheSorted (Bag<Item>* ref, size_t cacheSize, system::ISynchronizer* synchro=0)
-        : BagCache<Item>(ref, cacheSize, synchro)  { }
+    using BagCache<Item>::BagCache;
 
     /**  \copydoc Bag::insert */
     void insert (const Item& item)

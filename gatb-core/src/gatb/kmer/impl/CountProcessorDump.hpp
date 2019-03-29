@@ -60,7 +60,7 @@ public:
     CountProcessorDump (
         tools::storage::impl::Group&            group,
         size_t                                  kmerSize,
-        system::ISynchronizer*                  synchronizer = 0,
+        system::ISynchronizer::sptr                  synchronizer = 0,
         tools::storage::impl::Partition<Count>* solidCounts  = 0,
         size_t                                  nbPartsPerPass = 0
     )
@@ -205,8 +205,8 @@ private:
 
     size_t _nbPartsPerPass;
 
-    system::ISynchronizer* _synchronizer;
-    void setSynchronizer (system::ISynchronizer* synchronizer)  { SP_SETATTR(synchronizer); }
+    system::ISynchronizer::sptr _synchronizer;
+    void setSynchronizer (system::ISynchronizer::sptr synchronizer)  { SP_SETATTR(synchronizer); }
 
     tools::storage::impl::Partition<Count>* _solidCounts;
     void setSolidCounts (tools::storage::impl::Partition<Count>* solidCounts) { SP_SETATTR(solidCounts); }

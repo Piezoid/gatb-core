@@ -62,11 +62,12 @@ BranchingAlgorithm<span, Node, Edge, Graph>::BranchingAlgorithm (
     tools::storage::impl::Storage& storage,
     tools::misc::BranchingKind  kind,
     size_t                      nb_cores,
-    tools::misc::IProperties*   options
+    tools::misc::IProperties::sptr   options
 )
-    : Algorithm("branching", nb_cores, options), _graph (&graph),  _storage(storage), _kind(kind), _branchingCollection(0)
+    : Algorithm("branching", nb_cores, options), _graph (&graph),  _storage(storage), _kind(kind),
+      _branchingCollection(_storage(storage("branching").getCollection<Count> ("nodes").share()))
 {
-    setBranchingCollection (& storage("branching").getCollection<Count> ("nodes"));
+
 }
 
 /*********************************************************************
@@ -79,10 +80,9 @@ BranchingAlgorithm<span, Node, Edge, Graph>::BranchingAlgorithm (
 *********************************************************************/
 template<size_t span, typename Node, typename Edge, typename Graph>
 BranchingAlgorithm<span, Node, Edge, Graph>::BranchingAlgorithm (tools::storage::impl::Storage& storage)
-    : Algorithm("branching", 0, 0), _graph(0), _storage(storage), _branchingCollection(0)
+    : Algorithm("branching", 0, 0), _graph(0), _storage(storage),
+      _branchingCollection(_storage(storage("branching").getCollection<Count> ("nodes").share()))
 {
-    setBranchingCollection (& storage("branching").getCollection<Count> ("nodes"));
-
     string xmlString = storage(this->getName()).getProperty ("xml");
     stringstream ss; ss << xmlString;   getInfo()->readXML (ss);
 }
@@ -97,9 +97,7 @@ BranchingAlgorithm<span, Node, Edge, Graph>::BranchingAlgorithm (tools::storage:
 *********************************************************************/
 template<size_t span, typename Node, typename Edge, typename Graph>
 BranchingAlgorithm<span, Node, Edge, Graph>::~BranchingAlgorithm ()
-{
-    setBranchingCollection(0);
-}
+{}
 
 /*********************************************************************
 ** METHOD  :
@@ -110,9 +108,9 @@ BranchingAlgorithm<span, Node, Edge, Graph>::~BranchingAlgorithm ()
 ** REMARKS :
 *********************************************************************/
 template<size_t span, typename Node, typename Edge, typename Graph>
-IOptionsParser* BranchingAlgorithm<span, Node, Edge, Graph>::getOptionsParser ()
+IOptionsParser::sptr BranchingAlgorithm<span, Node, Edge, Graph>::getOptionsParser ()
 {
-    IOptionsParser* parser = new OptionsParser ("branching");
+    IOptionsParser::sptr parser = new OptionsParser ("branching");
 
     parser->push_back (new OptionOneParam (STR_BRANCHING_TYPE,    "branching type ('none' or 'stored')",      false, "stored"));
     parser->push_back (new OptionOneParam (STR_TOPOLOGY_STATS,    "topological information level (0 for none)", false, "0"));
@@ -170,7 +168,7 @@ struct FunctorNodes
 /*********************************************************************/
 
 template<typename Count>
-class SortCmd : public tools::dp::ICommand, public system::SmartPointer
+class SortCmd : public tools::dp::ICommand
 {
 public:
     vector<Count>& vec;
@@ -192,10 +190,10 @@ struct Compare
 template<typename Count>
 class CustomListener : public ProgressProxy
 {
-    Collection<Count>* _branchingCollection;
+    ICollection<Count>* _branchingCollection;
 
 public:
-    CustomListener (IteratorListener* ref, Collection<Count>* branchingCollection)
+    CustomListener (IteratorListener::sptr ref, ICollection<Count>* branchingCollection)
         : ProgressProxy(ref), _branchingCollection(branchingCollection) {}
 
     void finish ()  {}

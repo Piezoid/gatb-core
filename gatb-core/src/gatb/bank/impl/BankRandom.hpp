@@ -44,7 +44,7 @@ namespace impl      {
  *
  * This class generates random genomic data and can be used for test purpose.
  */
-class BankRandom : public AbstractBank
+class BankRandom : public virtual AbstractBank
 {
 public:
 
@@ -63,7 +63,7 @@ public:
     std::string getId ()  { return "dummy"; }
 
     /** \copydoc IBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()  { return new Iterator (*this); }
+    seq_iterator_ptr iterator ()  { return std::make_shared<Iterator>(*this); }
 
     /** */
     int64_t getNbItems () { return -1; }
@@ -112,8 +112,7 @@ public:
         int64_t   _rank;
         bool      _isDone;
 
-        tools::misc::Data* _dataRef;
-        void setDataRef (tools::misc::Data* dataRef)  { SP_SETATTR(dataRef); }
+        tools::misc::data_ptr _dataRef;
     };
 
 protected:

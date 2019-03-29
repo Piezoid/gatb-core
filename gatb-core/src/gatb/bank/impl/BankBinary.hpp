@@ -63,7 +63,7 @@ namespace impl      {
  * \snippet bank8.cpp  snippet8_binary
  *
  */
-class BankBinary : public AbstractBank
+class BankBinary : public virtual AbstractBank
 {
 public:
 
@@ -86,7 +86,7 @@ public:
     std::string getId ()  { return _filename; }
 
     /** \copydoc IBank::iterator */
-    tools::dp::Iterator<Sequence>* iterator ()  { return new Iterator (*this); }
+    seq_iterator_ptr iterator ()  { return std::make_shared<Iterator>(*this); }
 
     /** \copydoc IBank::getNbItems */
     int64_t getNbItems () { return -1; }
@@ -157,8 +157,7 @@ public:
         bool _isDone;
 
         /** Block buffer read from file. */
-        tools::misc::Data* _bufferData;
-        void setBufferData (tools::misc::Data* bufferData)  { SP_SETATTR(bufferData); }
+        tools::misc::data_ptr _bufferData;
 
         int   cpt_buffer;
         int   blocksize_toread;
@@ -193,9 +192,9 @@ class BankBinaryFactory : public IBankFactory
 public:
 
     /** \copydoc IBankFactory::createBank */
-    IBank* createBank (const std::string& uri)
+    IBank::sptr createBank (const std::string& uri)
     {
-        return BankBinary::check(uri) ? new BankBinary (uri) : 0;
+        return BankBinary::check(uri) ? std::make_shared<BankBinary>(uri) : 0;
     }
 };
 

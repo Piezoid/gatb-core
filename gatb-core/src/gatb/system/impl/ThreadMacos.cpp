@@ -41,7 +41,7 @@ namespace gatb { namespace core { namespace system { namespace impl {
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-class ThreadMacos : public IThread, public system::SmartPointer
+class ThreadMacos : public IThread
 {
 public:
 	ThreadMacos (void* (mainloop) (void*), void* data)  {
@@ -75,7 +75,7 @@ private:
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-class SynchronizerMacos : public ISynchronizer, public system::SmartPointer
+class SynchronizerMacos : public ISynchronizer
 {
 public:
 	SynchronizerMacos ()            {  pthread_mutex_init (&_mutex, NULL);  }
@@ -96,7 +96,7 @@ private:
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IThread* ThreadFactoryMacos::newThread (void* (*mainloop) (void*), void* data)
+IThread::sptr ThreadFactoryMacos::newThread (void* (*mainloop) (void*), void* data)
 {
     return new ThreadMacos (mainloop, data);
 }
@@ -109,7 +109,7 @@ IThread* ThreadFactoryMacos::newThread (void* (*mainloop) (void*), void* data)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-ISynchronizer* ThreadFactoryMacos::newSynchronizer (void)
+ISynchronizer::sptr ThreadFactoryMacos::newSynchronizer (void)
 {
     return new SynchronizerMacos ();
 }

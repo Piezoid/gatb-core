@@ -110,7 +110,7 @@ public:
 
     /** \brief Interface providing a way to get CPU usage information
      */
-    class CpuInfo : public SmartPointer
+    class CpuInfo : public SharedObject<CpuInfo>
     {
     public:
 
@@ -126,7 +126,7 @@ public:
 
     /** Create a CpuInfo object
      * \return the created object. */
-    virtual CpuInfo* createCpuInfo () = 0;
+    virtual std::shared_ptr<CpuInfo> createCpuInfo () = 0;
 };
 
 /********************************************************************************/

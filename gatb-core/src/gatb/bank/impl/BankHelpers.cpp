@@ -45,13 +45,12 @@ namespace gatb {  namespace core {  namespace bank {  namespace impl {
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IProperties* BankHelper::convert (IBank& in, IBank& out, tools::dp::IteratorListener* progress)
+IProperties::sptr BankHelper::convert (IBank& in, IBank& out, tools::dp::IteratorListener::sptr progress)
 {
     // We need an iterator on the input bank.
-    Iterator<Sequence>* itBank = in.iterator();
-    LOCAL (itBank);
+    seq_iterator_ptr itBank = in.iterator();
 
-    SubjectIterator<Sequence> itSeq (itBank, 100*1000);
+    SubjectIterator<Sequence> itSeq (*itBank, 100*1000);
 
     if (progress != 0)  {  itSeq.addObserver (progress);  }
 
@@ -77,7 +76,7 @@ IProperties* BankHelper::convert (IBank& in, IBank& out, tools::dp::IteratorList
     ITime::Value t1 = ts.getTimeStamp();
 
     /** We create the properties result. */
-    Properties* props = new Properties ();
+    auto props = std::make_shared<Properties>();
 
     props->add (0, "conversion", "");
 

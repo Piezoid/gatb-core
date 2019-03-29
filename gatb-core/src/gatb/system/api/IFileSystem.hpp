@@ -248,7 +248,7 @@ public:
       * \param[in] mode : mode of the file (like fopen)
       * \return instance of IFile, 0 otherwise.
       */
-     virtual IFile* newFile (const Path& path, const char* mode) = 0;
+     virtual std::unique_ptr<IFile> newFile (const Path& path, const char* mode) = 0;
 
      /** Creates a new IFile instance (equivalent to 'fopen' function)
       * \param[in] dirpath  : uri of the directory where the file is meant to be.
@@ -256,7 +256,7 @@ public:
       * \param[in] mode : mode of the file (like fopen)
       * \return instance of IFile, 0 otherwise.
       */
-     virtual IFile* newFile (const Path& dirpath, const Path& filename, const char* mode) = 0;
+     virtual std::unique_ptr<IFile> newFile (const Path& dirpath, const Path& filename, const char* mode) = 0;
 
      /** Get metadata associated with the file for a given key.
       * \param[in] filename : name of the file.

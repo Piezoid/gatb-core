@@ -48,7 +48,7 @@ namespace collections   {
  * Several ways for inserting items exist. There is also a flush method that makes
  * sure that all the inserted items are actually in the bag.
  */
-template <class Item> class Bag : public virtual  system::ISmartPointer
+template <class Item> class Bag : public system::SharedObject<Bag<Item>>
 {
 public:
 

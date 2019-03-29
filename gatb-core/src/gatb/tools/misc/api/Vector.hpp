@@ -44,16 +44,16 @@ namespace misc      {
  *      - dynamic allocation: the data buffer is allocated
  *      - reference : the data buffer is a reference to some existing buffer in memory
  */
-template<typename T> class Vector : public system::SmartPointer
+template<typename T> class Vector : public system::SharedObject<Vector<T>>
 {
 public:
 
     /** Default constructor. */
-    Vector () : _buffer(0), _size(0), _isAllocated(false), _ref(0)  {}
+    Vector () : _buffer(0), _size(0), _isAllocated(false), _ref()  {}
 
     /** Constructor with initial size.
      * \param aSize : initial size of the vector. */
-    Vector (size_t aSize) :  _buffer(0), _size(0), _isAllocated(false), _ref(0)   {  resize (aSize);  }
+    Vector (size_t aSize) :  _buffer(0), _size(0), _isAllocated(false), _ref()   {  resize (aSize);  }
 
     /** assign operator */
     Vector& operator=(const Vector& vect)
@@ -69,9 +69,6 @@ public:
     ~Vector ()
     {
         if (_isAllocated && _buffer) {  FREE (_buffer); }
-
-        /** We get rid of the referred data if any. */
-        setRef (0);
     }
 
     /** \return buffer holding the actual data. */
@@ -102,9 +99,9 @@ public:
      * \param[in] ref : data referred by the current instance.
      * \param[in] offset : the current data will begin 'offset' bytes from the beginning of the referred data.
      * \param[in] length : size of the data */
-    void setRef (Vector* ref, size_t offset, size_t length)
+    void setRef (std::shared_ptr<Vector> ref, size_t offset, size_t length)
     {
-        setRef (ref);
+        _ref = std::move(ref);
         _buffer      = _ref->_buffer + offset;
         _size        = length;
         _isAllocated = false;
@@ -139,8 +136,7 @@ private:
     int    _size;
     bool   _isAllocated;
 
-    Vector* _ref;
-    void setRef (Vector* ref)  {  SP_SETATTR(ref);  }
+    std::shared_ptr<Vector> _ref;
 };
 
 /********************************************************************************/

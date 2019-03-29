@@ -59,7 +59,7 @@ PartitionsCommand<span>:: PartitionsCommand (
    // Iterable<Type>&     partition,
     CountProcessor*     processor,
     size_t              cacheSize,
-    IteratorListener*   progress,
+    IteratorListener::sptr   progress,
     TimeInfo&           timeInfo,
     PartiInfo<5>&       pInfo,
     int                 passi,
@@ -126,7 +126,7 @@ PartitionsCommand_multibank<span>:: PartitionsCommand_multibank (
 											 Iterable<Type>&     partition,
 											 CountProcessor*     processor,
 											 size_t              cacheSize,
-											 IteratorListener*   progress,
+											 IteratorListener::sptr   progress,
 											 TimeInfo&           timeInfo,
 											 PartiInfo<5>&       pInfo,
 											 int                 passi,
@@ -193,7 +193,7 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
    // Iterable<Type>&         partition,
     CountProcessor*         processor,
     size_t                  cacheSize,
-    IteratorListener*       progress,
+    IteratorListener::sptr       progress,
     TimeInfo&               timeInfo,
     PartiInfo<5>&           pInfo,
     int                     passi,
@@ -249,7 +249,7 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				
 				filenames.push_back(newfname);
 				
-				std::vector<Iterator<abundance_t>*> _tmpCountIterators;
+				iterator_vector<abundance_t> _tmpCountIterators;
 				
 				for(std::string& file: currentFiles)
 				{
@@ -543,7 +543,7 @@ void PartitionsByHashCommand<span>:: execute ()
 		_tmpCountFileNames = tempCountFileMerger.mergeFiles(_tmpCountFileNames);
 		//then will use code below to merge remaining files with the contents of the hash table
 
-		std::vector<Iterator<abundance_t>*> _tmpCountIterators;
+		iterator_vector<abundance_t> _tmpCountIterators;
 
 		//how to make sure there are not too many subpart files ?  and that we'll not reach the max open files limit ?
 		//we *could* merge  only some of them at a time ..  todo ?  --> done with TempCountFileMerger above
@@ -899,7 +899,7 @@ private :
 //car le jeu separe necessite de passer un cpt de separation des banques, a verifier, et il faut que les buffer conservent l'ordre d'entree, a verifier aussi
 //readcommand pour lecture parallele des parti superkmers
 template<size_t span>
-class ReadSuperKCommand : public gatb::core::tools::dp::ICommand, public system::SmartPointer
+class ReadSuperKCommand : public gatb::core::tools::dp::ICommand
 {
 	typedef typename Kmer<span>::Type  Type;
 	
@@ -1141,7 +1141,7 @@ PartitionsByVectorCommand<span>:: PartitionsByVectorCommand (
   //  Iterable<Type>&     partition,
     CountProcessor*     processor,
     size_t              cacheSize,
-    IteratorListener*   progress,
+    IteratorListener::sptr   progress,
     TimeInfo&           timeInfo,
     PartiInfo<5>&       pInfo,
     int                 passi,
@@ -1365,7 +1365,7 @@ void PartitionsByVectorCommand<span>::executeRead ()
 ** REMARKS :
 *********************************************************************/
 template<size_t span>
-class SortCommand : public gatb::core::tools::dp::ICommand, public system::SmartPointer
+class SortCommand : public gatb::core::tools::dp::ICommand
 {
 public:
     typedef typename Kmer<span>::Type  Type;
@@ -1791,7 +1791,7 @@ PartitionsByVectorCommand_multibank<span>:: PartitionsByVectorCommand_multibank 
 																				 Iterable<Type>&     partition,
 																				 CountProcessor*     processor,
 																				 size_t              cacheSize,
-																				 IteratorListener*   progress,
+																				 IteratorListener::sptr   progress,
 																				 TimeInfo&           timeInfo,
 																				 PartiInfo<5>&       pInfo,
 																				 int                 passi,

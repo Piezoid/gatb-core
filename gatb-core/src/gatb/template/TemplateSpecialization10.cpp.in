@@ -11,7 +11,7 @@ namespace gatb { namespace core { namespace debruijn { namespace impl  {
 /********************************************************************************/
 
 
-template void bcalm2<${KSIZE}>(Storage* storage, 
+template void bcalm2<${KSIZE}>(Storage::sptr storage, 
         std::string prefix,
         int kmerSize, 
         int abundance, 
@@ -20,7 +20,7 @@ template void bcalm2<${KSIZE}>(Storage* storage,
         int minimizer_type, 
         bool verbose
         );
-template void bglue<${KSIZE}>(Storage* storage, 
+template void bglue<${KSIZE}>(Storage::sptr storage, 
         std::string prefix,
         int kmerSize, 
         int nb_glue_partitions, 

@@ -83,7 +83,7 @@ public:
     u_int64_t getMemorySelfMaxUsed() const  { return 0; }
 
     /** \copydoc ISystemInfo::createCpuInfo */
-    virtual CpuInfo* createCpuInfo (); //  { return new CpuInfoCommon(); }
+    virtual std::shared_ptr<CpuInfo> createCpuInfo (); //  { return new CpuInfoCommon(); }
 };
 
 /********************************************************************************/

@@ -97,7 +97,7 @@ struct TraversalStats
  *
  */
 template <typename Node, typename Edge, typename Graph>
-class TraversalTemplate: public system::SmartPointer
+class TraversalTemplate: public system::SharedObject< TraversalTemplate<Node, Edge, Graph> >
 {
 public:
 

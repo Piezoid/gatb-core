@@ -41,23 +41,23 @@ namespace gatb { namespace core { namespace system { namespace impl {
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-class ThreadLinux : public IThread, public system::SmartPointer
+class ThreadLinux : public IThread
 {
 public:
 	ThreadLinux (void* (mainloop) (void*), void* data)  {
-		
+
 		//set stack size to 8 MB
 		pthread_attr_t tattr;
 		int ret = pthread_attr_init ( &tattr ) ;
 		size_t size = 4096*2000 ; // must be multiple of page size
 		ret = pthread_attr_setstacksize(&tattr, size);
-		
+
 		pthread_create (&_thread, NULL,  mainloop, data);
-		
+
 		pthread_attr_destroy(&tattr);
-		
+
 	}
-	
+
     ~ThreadLinux ()  { /* pthread_detach (_thread); */  }
     void join ()     { pthread_join   (_thread, NULL);  }
     Id getId () const { return (Id) _thread; }
@@ -74,7 +74,7 @@ private:
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-class SynchronizerLinux : public ISynchronizer, public system::SmartPointer
+class SynchronizerLinux
 {
 public:
     SynchronizerLinux ()             {  pthread_mutex_init (&_mutex, NULL);  }
@@ -95,7 +95,7 @@ private:
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-IThread* ThreadFactoryLinux::newThread (void* (*mainloop) (void*), void* data)
+IThread::sptr ThreadFactoryLinux::newThread (void* (*mainloop) (void*), void* data)
 {
     return new ThreadLinux (mainloop, data);
 }
@@ -108,7 +108,7 @@ IThread* ThreadFactoryLinux::newThread (void* (*mainloop) (void*), void* data)
 ** RETURN  :
 ** REMARKS :
 *********************************************************************/
-ISynchronizer* ThreadFactoryLinux::newSynchronizer (void)
+ISynchronizer::sptr ThreadFactoryLinux::newSynchronizer (void)
 {
     return new SynchronizerLinux ();
 }

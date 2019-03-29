@@ -52,7 +52,7 @@ public:
         tools::storage::impl::Storage& storage,
         std::string                 unitigs_filename,
         size_t                      nb_cores = 0,
-        tools::misc::IProperties*   options  = 0,
+        tools::misc::IProperties::sptr   options  = 0,
         bool do_bcalm = true,
         bool do_bglue = true,
         bool do_links = true
@@ -64,7 +64,7 @@ public:
     /** Get an option parser for branching parameters. Dynamic allocation, so must be released when no more used.
      * \return an instance of IOptionsParser.
      */
-    static tools::misc::IOptionsParser* getOptionsParser ();
+    static tools::misc::IOptionsParser::sptr getOptionsParser ();
 
     /** \copydoc tools::misc::impl::Algorithm::execute */
     void execute ();

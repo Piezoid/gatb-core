@@ -46,18 +46,27 @@ namespace collections   {
  *
  * It is also to get/set properties (as [key,value]) to collections.
  */
-template <class Item> class Collection : public Bag<Item>, public Iterable<Item>
+template <class Item> class ICollection :
+        public Bag<Item>,
+        public Iterable<Item>,
+        public system::SharedObject<ICollection<Item>>
 {
+    using SO = system::SharedObject<ICollection<Item>>;
 public:
+    using SO::sptr;
+    using SO::csptr;
+    using SO::uptr;
+    using SO::cuptr;
+    using SO::share;
 
     /** Destructor. */
-    virtual ~Collection () {}
+    virtual ~ICollection () {}
 
     /** \return the bag instance. */
-    virtual Bag<Item>* bag() = 0;
+    virtual Bag<Item>& bag() = 0;
 
     /** \return the iterable instance. */
-    virtual Iterable<Item>* iterable() = 0;
+    virtual Iterable<Item>& iterable() = 0;
 
     /** Remove physically the collection. */
     virtual void remove () = 0;
