@@ -333,7 +333,7 @@ void MPHFTerminatorTemplate<Graph>::reset()
 template class MPHFTerminatorTemplate<GraphPoly>;
 template class BranchingTerminatorTemplate<GraphPoly>;
 template class TerminatorTemplate<GraphPoly>;
-#endif GATB_USE_VARIANTS
+#endif /* GATB_USE_VARIANTS */
 
 /********************************************************************************/
 } } } } /* end of namespaces. */
