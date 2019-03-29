@@ -64,8 +64,8 @@ public:
     NativeInt16 operator&  (const NativeInt16& other)   const   {  return value[0] & other.value[0];  }
     NativeInt16 operator&  (const char& other)          const   {  return value[0] & other;        }
     NativeInt16 operator~  ()                           const   {  return ~value[0];               }
-    NativeInt16 operator<< (const int& coeff)           const   {  return value[0] << coeff;       }
-    NativeInt16 operator>> (const int& coeff)           const   {  return value[0] >> coeff;       }
+    NativeInt16 operator<< (const unsigned& coeff)      const   {  return value[0] << coeff;       }
+    NativeInt16 operator>> (const unsigned& coeff)      const   {  return value[0] >> coeff;       }
     bool        operator!= (const NativeInt16& c)       const   {  return value[0] != c.value[0];     }
     bool        operator== (const NativeInt16& c)       const   {  return value[0] == c.value[0];     }
     bool        operator<  (const NativeInt16& c)       const   {  return value[0] < c.value[0];      }

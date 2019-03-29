@@ -1410,7 +1410,7 @@ struct Kmer
 			
 			Type basekmer = (*this)[0].forward();
 			
-			int rem_size = kmerSize;
+			unsigned rem_size = kmerSize;
 			u_int8_t newbyte=0;
 			u_int64_t mask4nt  = 255;
 			u_int64_t mask1nt  = 3;
@@ -1430,11 +1430,11 @@ struct Kmer
 			
 			//reste du kmer
 			newbyte = basekmer.getVal() & mask4nt;
-			int uid = rem_size; //uid = nb nt used in this newbyte
+			unsigned uid = rem_size; //uid = nb nt used in this newbyte
 
 			//reste du newbyte avec le superk
 
-			uint skid =1;
+			unsigned skid =1;
 			
 			while(true)
 			{

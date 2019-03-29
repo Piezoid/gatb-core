@@ -10,6 +10,8 @@ message ("--  ---------- GATB TOOLS ----------")
 add_definitions (${gatb-core-flags})
 
 include_directories (${gatb-core-includes})
+# Avoids warning from thirdparty headers
+include_directories (SYSTEM ${PROJECT_SOURCE_DIR}/thirdparty)
 
 # We add the path for extra libraries
 link_directories (${gatb-core-extra-libraries-path})

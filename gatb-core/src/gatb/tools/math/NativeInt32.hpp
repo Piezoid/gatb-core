@@ -64,8 +64,8 @@ public:
     NativeInt32 operator&  (const NativeInt32& other)   const   {  return value[0] & other.value[0];  }
     NativeInt32 operator&  (const char& other)          const   {  return value[0] & other;        }
     NativeInt32 operator~  ()                           const   {  return ~value[0];               }
-    NativeInt32 operator<< (const int& coeff)           const   {  return value[0] << coeff;       }
-    NativeInt32 operator>> (const int& coeff)           const   {  return value[0] >> coeff;       }
+    NativeInt32 operator<< (const unsigned& coeff)      const   {  return value[0] << coeff;       }
+    NativeInt32 operator>> (const unsigned& coeff)      const   {  return value[0] >> coeff;       }
     bool        operator!= (const NativeInt32& c)       const   {  return value[0] != c.value[0];     }
     bool        operator== (const NativeInt32& c)       const   {  return value[0] == c.value[0];     }
     bool        operator<  (const NativeInt32& c)       const   {  return value[0] < c.value[0];      }

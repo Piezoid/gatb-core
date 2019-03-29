@@ -66,15 +66,15 @@ public:
     NativeInt64 operator+  (const NativeInt64& other)   const   {  return value + other.value;  }
     NativeInt64 operator-  (const NativeInt64& other)   const   {  return value - other.value;  }
     NativeInt64 operator|  (const NativeInt64& other)   const   {  return value | other.value;  }
-    NativeInt64 operator*  (const int& coeff)           const   {  return value * coeff;        }
-    NativeInt64 operator/  (const u_int32_t& divisor)   const   {  return value / divisor;      }
-    u_int32_t   operator%  (const u_int32_t& divisor)   const   {  return value % divisor;      }
+    NativeInt64 operator*  (const u_int64_t& coeff)     const   {  return value * coeff;        }
+    NativeInt64 operator/  (const u_int64_t& divisor)   const   {  return value / divisor;      }
+    u_int32_t   operator%  (const u_int64_t& divisor)   const   {  return value % divisor;      }
     NativeInt64 operator^  (const NativeInt64& other)   const   {  return value ^ other.value;  }
     NativeInt64 operator&  (const NativeInt64& other)   const   {  return value & other.value;  }
     NativeInt64 operator&  (const char& other)          const   {  return value & other;        }
     NativeInt64 operator~  ()                           const   {  return ~value;               }
-    NativeInt64 operator<< (const int& coeff)           const   {  return value << coeff;       }
-    NativeInt64 operator>> (const int& coeff)           const   {  return value >> coeff;       }
+    NativeInt64 operator<< (const u_int32_t& coeff)     const   {  return value << coeff;       }
+    NativeInt64 operator>> (const u_int32_t& coeff)     const   {  return value >> coeff;       }
     bool        operator!= (const NativeInt64& c)       const   {  return value != c.value;     }
     bool        operator== (const NativeInt64& c)       const   {  return value == c.value;     }
     bool        operator<  (const NativeInt64& c)       const   {  return value < c.value;      }
@@ -84,8 +84,8 @@ public:
     NativeInt64& operator^=  (const NativeInt64& other)    {  value ^= other.value; return *this; }
     NativeInt64& operator&=  (const NativeInt64& other)    {  value &= other.value; return *this; }
     NativeInt64& operator|=  (const NativeInt64& other)    {  value |= other.value; return *this; }
-    NativeInt64& operator<<= (const int& coeff)            {  value <<= coeff;         return *this; }
-    NativeInt64& operator>>= (const int& coeff)            {  value >>= coeff;         return *this; }
+    NativeInt64& operator<<= (const unsigned& coeff)       {  value <<= coeff;         return *this; }
+    NativeInt64& operator>>= (const unsigned& coeff)       {  value >>= coeff;         return *this; }
 
     NativeInt64& sync_fetch_and_or  (const NativeInt64& other)  { __sync_fetch_and_or  (&(value), other.value); return *this; }
     NativeInt64& sync_fetch_and_and (const NativeInt64& other)  { __sync_fetch_and_and (&(value), other.value); return *this; }

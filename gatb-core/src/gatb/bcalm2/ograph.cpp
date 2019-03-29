@@ -233,7 +233,7 @@ void graph3<span>::debruijn(){
     minusone.setVal(-1);
 	left.push_back({0,minusone, SEQ_LEFT}); // dummy kmer so that we dont need to check bounds.. clever..
 	right.push_back({0,minusone, SEQ_LEFT});
-    //uint debug_index = 0;
+    // uint debug_index = 0;
 
     for (uint32_t i = 0; i< indiceUnitigs; i++)
     {
@@ -405,9 +405,7 @@ void graph3<span>::addtuple(tuple<string,uint,uint,uint>& tuple){
         // TODO probably to handle kmers that are their own reerse compelment, do:
         //  if (kmer2 < kmer1) instead of the "else"
         //  but i didnt test it yet, was chasing another bug, so let's implement that later
-	}
-    else
-    {
+    } else {
         indexed_left.push_back(false);
     }
 
@@ -425,9 +423,7 @@ void graph3<span>::addtuple(tuple<string,uint,uint,uint>& tuple){
 			left.push_back(kmerIndiceT<span>{indiceUnitigs,kmer2, SEQ_RIGHT});
 
 		}
-	}
-    else
-    {
+    } else {
         indexed_right.push_back(false);
     }
 	++indiceUnitigs;

@@ -82,6 +82,8 @@ file (GLOB_RECURSE  ComponentFiles  *  ${PROJECT_BINARY_DIR}/src/gatb/*.cpp)
 add_definitions (${gatb-core-flags})
 
 include_directories (${gatb-core-includes})
+# Avoids warning from thirdparty headers
+include_directories (SYSTEM ${PROJECT_SOURCE_DIR}/thirdparty)
 
 add_library    (gatbcore-static  STATIC  ${ComponentFiles} )
 #add_library   (gatbcore-dynamic SHARED  ${ComponentFiles} )

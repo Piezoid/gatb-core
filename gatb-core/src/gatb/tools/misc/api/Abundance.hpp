@@ -49,7 +49,7 @@ namespace misc      {
  *
  * \see math::LargeInt
  */
-template<typename Type, int precision>
+template<typename Type, size_t precision>
 struct ArrayData
 {
     Type value[precision];

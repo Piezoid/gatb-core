@@ -271,8 +271,8 @@ inline void justSweepForAA(const LargeInt<2>& x, const unsigned int _nbMinimizer
 {
         __uint128_t val = x.value;
 
-        const int it = std::min((unsigned int)sizeof(__uint128_t)*4, _nbMinimizers); 
-        int j = 0;
+        const unsigned it = std::min((unsigned int)sizeof(__uint128_t)*4, _nbMinimizers); 
+        unsigned j = 0;
         while (j < it)
         {
             if ((val & 15) == 0) // val starts with AA

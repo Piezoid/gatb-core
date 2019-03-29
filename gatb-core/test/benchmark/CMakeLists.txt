@@ -3,6 +3,8 @@
 ################################################################################
 
 include_directories (${gatb-core-includes})
+# Avoids warning from thirdparty headers
+include_directories (SYSTEM ${PROJECT_SOURCE_DIR}/thirdparty)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11") # needed for bench_mphf
 

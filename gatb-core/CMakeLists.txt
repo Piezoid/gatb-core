@@ -3,6 +3,17 @@ project(gatb-core)
 # We set the required version
 cmake_minimum_required (VERSION 3.10.0)
 
+# Compiler cache support with ccache
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set(ENABLE_CCACHE ON CACHE BOOL "Enable ccache")
+    if(ENABLE_CCACHE)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif()
+endif(CCACHE_FOUND)
+
+
 ################################################################################
 # The version number.
 ################################################################################
@@ -99,7 +110,7 @@ endif()
 # GENERAL DEFINITIONS
 ################################################################################
 set (LIBRARY_COMPILE_DEFINITIONS "-std=c++11")
-set (LIB_COMPILE_WARNINGS "-Wall -Wno-unused-function -Wno-format -Wno-unknown-pragmas") # last one is exclusively for BooPHF
+set (LIB_COMPILE_WARNINGS "-Wall -Wclobbered -Wuninitialized -Wno-unused-function -Wno-format -Wno-unknown-pragmas") # last one is exclusively for BooPHF
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set (debug 1)
@@ -107,7 +118,7 @@ endif()
 
 if (debug)
     #set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g -p -pg")
-    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g -p ${LIB_COMPILE_WARNINGS}")
+    set (LIBRARY_COMPILE_DEFINITIONS  "${LIBRARY_COMPILE_DEFINITIONS} -g ${LIB_COMPILE_WARNINGS}")
     set (CMAKE_BUILD_TYPE Debug) # else CMake adds DNDEBUG
     message("-- COMPILATION IN DEBUG MODE")
 endif()
@@ -128,7 +139,7 @@ endif()
 # from https://github.com/rurban/smhasher/blob/master/CMakeLists.txt
 # i do not see much performance gain for now, but let's keep that code here, might be useful later.
 # list of performance gain observed:
-# popcount in Graph::countNeighbors
+# popcount in Graph::degree
 IF(CMAKE_SYSTEM_NAME MATCHES "Linux")
     EXEC_PROGRAM(cat ARGS "/proc/cpuinfo" OUTPUT_VARIABLE CPUINFO)
     STRING(REGEX REPLACE "^.*(sse2).*$" "\\1" SSE_THERE ${CPUINFO})
@@ -188,17 +199,20 @@ set (EXECUTABLE_OUTPUT_PATH    ${PROJECT_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
 # For instance, you can do the following:
 #       cmake -DEXTRALIBS="somelib"  -DEXTRALIBS_PATH="/somewhere/libs"  -DEXTRALIBS_INC="/somewhere/inc" ..
 
-IF (DEFINED EXTRALIBS)
-    set (gatb-core-extra-libraries ${EXTRALIBS})
-    set (gatb-core-extra-libraries ${gatb-core-extra-libraries} PARENT_SCOPE)
-ENDIF()
-IF (DEFINED EXTRALIBS_PATH)
-    set (gatb-core-extra-libraries-path ${EXTRALIBS_PATH})
-    set (gatb-core-extra-libraries-path ${gatb-core-extra-libraries-path} PARENT_SCOPE)
-ENDIF()
-IF (DEFINED EXTRALIBS_INC)
-    set (gatb-core-extra-libraries-inc ${EXTRALIBS_INC})
-    set (gatb-core-extra-libraries-inc ${gatb-core-extra-libraries-inc} PARENT_SCOPE)
+get_directory_property(hasParent PARENT_DIRECTORY)
+IF (hasParent)
+    IF (DEFINED EXTRALIBS)
+        set (gatb-core-extra-libraries ${EXTRALIBS})
+        set (gatb-core-extra-libraries ${gatb-core-extra-libraries} PARENT_SCOPE)
+    ENDIF()
+    IF (DEFINED EXTRALIBS_PATH)
+        set (gatb-core-extra-libraries-path ${EXTRALIBS_PATH})
+        set (gatb-core-extra-libraries-path ${gatb-core-extra-libraries-path} PARENT_SCOPE)
+    ENDIF()
+    IF (DEFINED EXTRALIBS_INC)
+        set (gatb-core-extra-libraries-inc ${EXTRALIBS_INC})
+        set (gatb-core-extra-libraries-inc ${gatb-core-extra-libraries-inc} PARENT_SCOPE)
+    ENDIF()
 ENDIF()
 
 # We define the compilation flags used for compiling binary based on gatb core
@@ -214,19 +228,19 @@ set (gatb-core-libraries   gatbcore-static  dl  pthread  z hdf5-static ${gatb-co
 # We define the directory where to find cmake helpers
 set (gatb-core-cmake  ${CMAKE_MODULE_PATH})
 
-# NOTE... we have to duplicate the variables for the other scopes (in particular for sub directories)
-set (gatb-core-flags          ${gatb-core-flags}          PARENT_SCOPE)
-set (gatb-core-includes       ${gatb-core-includes}       PARENT_SCOPE)
-set (gatb-core-libraries      ${gatb-core-libraries}      PARENT_SCOPE)
-set (gatb-core-cmake          ${gatb-core-cmake}          PARENT_SCOPE)
-
 ################################################################################
 #  LIBRARY GENERATION 
 ################################################################################
 ADD_SUBDIRECTORY(src)
 
 # NOTE... we have to duplicate the variables for the other scopes (in particular for sub directories)
-set (gatb-core-klist   ${gatb-core-klist}  PARENT_SCOPE)
+IF (hasParent)
+    set (gatb-core-flags          ${gatb-core-flags}          PARENT_SCOPE)
+    set (gatb-core-includes       ${gatb-core-includes}       PARENT_SCOPE)
+    set (gatb-core-libraries      ${gatb-core-libraries}      PARENT_SCOPE)
+    set (gatb-core-cmake          ${gatb-core-cmake}          PARENT_SCOPE)
+    set (gatb-core-klist          ${gatb-core-klist}  PARENT_SCOPE)
+ENDIF ()
 
 ################################################################################
 #  UNIT TESTS GENERATION 

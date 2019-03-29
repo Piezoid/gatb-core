@@ -7,7 +7,9 @@ add_definitions (${gatb-core-flags})
 
 file (GLOB_RECURSE  GatbCoreTestFiles  src/*)
 
-include_directories (${gatb-core-includes}  ${gatb-core_SOURCE_DIR}/test/unit/src  ${CPPUNIT_INCLUDE_DIR})
+include_directories (${gatb-core-includes}  ${gatb-core_SOURCE_DIR}/test/unit/src)
+# Avoids warning from thirdparty headers
+include_directories (SYSTEM ${PROJECT_SOURCE_DIR}/thirdparty ${CPPUNIT_INCLUDE_DIR})
 
 # We add the path for extra libraries
 link_directories (${gatb-core-extra-libraries-path})

@@ -1195,7 +1195,7 @@ public:
     void debruijn_deletenode_fct (Graph& graph)
     {
         Node n1 = graph.buildNode ((char*)"AGGCG");
-        Node n2 = graph.buildNode ((char*)"GGCGC");
+        //Node n2 = graph.buildNode ((char*)"GGCGC");
         Node n3 = graph.buildNode ((char*)"GCGCC");
 
         graph.deleteNode(n3);

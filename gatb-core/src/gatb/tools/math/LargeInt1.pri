@@ -288,7 +288,7 @@ inline void fastLexiMinimizer (const LargeInt<1>& x, const unsigned int _nbMinim
 {
     if (m > sizeof(u_int32_t)*4) {std::cout << "wrong minimizer size for fastLeximinimizer :" << m; exit(1);}
 
-    const u_int32_t default_minimizer = ~0 & ((1 << (2*m)) - 1); 
+    const u_int32_t default_minimizer = ~u_int32_t(0) & ((1 << (2*m)) - 1); 
     minimizer = default_minimizer; 
 
     validResult = false;
@@ -308,8 +308,8 @@ inline void justSweepForAA(const LargeInt<1>& x, const unsigned int _nbMinimizer
 {
     u_int64_t val = x.value;
 
-    const int it = std::min((unsigned int)sizeof(u_int64_t)*4,(unsigned int) _nbMinimizers); 
-    int j = 0;
+    const unsigned it = std::min((unsigned int)sizeof(u_int64_t)*4,(unsigned int) _nbMinimizers); 
+    unsigned j = 0;
     while (j < it)
     {
         if ((val & 15) == 0) // val starts with AA

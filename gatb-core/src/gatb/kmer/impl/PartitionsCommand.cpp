@@ -219,20 +219,20 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 	{
 		typedef typename Kmer<span>::Type  Type;
 		typedef tools::misc::Abundance<Type> abundance_t;
-		typedef std::pair< int , Type> ptcf; //  id pointer , kmer value
+		typedef std::pair< unsigned , Type> ptcf; //  id pointer , kmer value
 		struct ptcfcomp { bool operator() (ptcf l,ptcf r) { return ((r.second) < (l.second)); } } ;
 		
 	public:
-		TempCountFileMerger(int reduceTarget, int chunksize) :_reduceTarget(reduceTarget), _chunksize(chunksize),_idx(0)
+		TempCountFileMerger(unsigned reduceTarget, unsigned chunksize) :_reduceTarget(reduceTarget), _chunksize(chunksize),_idx(0)
 		{
 		}
 		
 		std::vector<string>  mergeFiles(std::vector<string> filenames)
 		{
 			ptcf best_elem;
-			int best_p;
-			int current_ab = 0;
-			int previous_ab = 0;
+			unsigned best_p;
+			unsigned current_ab = 0;
+			unsigned previous_ab = 0;
 			Type current_kmer,previous_kmer;
 			
 			
@@ -240,7 +240,7 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 			{
 				
 				std::vector<string> currentFiles;
-				for(int ii=0; ii<_chunksize; ii++)
+				for(unsigned ii=0; ii<_chunksize; ii++)
 				{
 					currentFiles.push_back(filenames.back()); filenames.pop_back();
 				}
@@ -254,7 +254,7 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				
 				std::vector<Iterator<abundance_t>*> _tmpCountIterators;
 				
-				for(int ii=0; ii< currentFiles.size(); ii++)
+				for(size_t ii=0; ii < currentFiles.size(); ii++)
 				{
 					_tmpCountIterators.push_back( new IteratorFile<abundance_t> (currentFiles[ii])  );
 				}
@@ -262,13 +262,13 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				
 				
 				//// init all iterators  ////
-				for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+				for(size_t ii=0; ii < _tmpCountIterators.size(); ii++)
 				{
 					_tmpCountIterators[ii]->first();
 				}
 				
 				//////   init pq ////
-				for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+				for(size_t ii=0; ii < _tmpCountIterators.size(); ii++)
 				{
 					if( ! _tmpCountIterators[ii]->isDone())  {
 						pq.push(ptcf(ii,_tmpCountIterators[ii]->item().value) );
@@ -332,14 +332,14 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 				
 				//cleanup
 				
-				for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+				for(size_t ii=0; ii < _tmpCountIterators.size(); ii++)
 				{
 					delete _tmpCountIterators[ii];
 				}
 				
 				
 				//erase used files
-				for(int ii=0; ii< currentFiles.size(); ii++)
+				for(size_t ii=0; ii < currentFiles.size(); ii++)
 				{
 					std::string fname = currentFiles[ii];
 					system::impl::System::file().remove(fname);
@@ -353,9 +353,9 @@ PartitionsByHashCommand<span>:: PartitionsByHashCommand (
 		
 		private :
 		
-		int _reduceTarget;
-		int _chunksize;
-		int _idx;
+		unsigned _reduceTarget;
+		unsigned _chunksize;
+		unsigned _idx;
 		
 	};
 	
@@ -560,7 +560,7 @@ void PartitionsByHashCommand<span>:: execute ()
 
 		//how to make sure there are not too many subpart files ?  and that we'll not reach the max open files limit ?
 		//we *could* merge  only some of them at a time ..  todo ?  --> done with TempCountFileMerger above
-		for(int ii=0; ii< _tmpCountFileNames.size(); ii++)
+		for(size_t ii=0; ii < _tmpCountFileNames.size(); ii++)
 		{
 			std::string fname = _tmpCountFileNames[ii];
 			_tmpCountIterators.push_back( new IteratorFile<abundance_t> (fname)  );
@@ -584,7 +584,7 @@ void PartitionsByHashCommand<span>:: execute ()
 
 		//// init all iterators  ////
 		itKmerAbundance->first();
-		for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+		for(size_t ii=0; ii < _tmpCountIterators.size(); ii++)
 		{
 			_tmpCountIterators[ii]->first();
 		}
@@ -596,7 +596,7 @@ void PartitionsByHashCommand<span>:: execute ()
 			pq.push(ptcf(-1,itKmerAbundance->item().graine) ); // -1  will mean in the  itKmerAbundance
 		}
 		
-		for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+		for(size_t ii=0; ii < _tmpCountIterators.size(); ii++)
 		{
 			if( ! _tmpCountIterators[ii]->isDone())  {
 				abundance_t &ab = _tmpCountIterators[ii]->item();
@@ -606,8 +606,8 @@ void PartitionsByHashCommand<span>:: execute ()
 		
 		ptcf best_elem;
 		int best_p;
-		int current_ab = 0;
-		int previous_ab = 0;
+		unsigned current_ab = 0;
+		unsigned previous_ab = 0;
 		Type current_kmer,previous_kmer;
 		
 	
@@ -705,14 +705,14 @@ void PartitionsByHashCommand<span>:: execute ()
 		
 
 		//cleanup
-		for(int ii=0; ii< _tmpCountIterators.size(); ii++)
+		for(size_t ii=0; ii < _tmpCountIterators.size(); ii++)
 		{
 			delete _tmpCountIterators[ii];
 		}
 		
 		
 		//erase sub files
-		for(int ii=0; ii< _tmpCountFileNames.size(); ii++)
+		for(size_t ii=0; ii < _tmpCountFileNames.size(); ii++)
 		{
 			std::string fname = _tmpCountFileNames[ii];
 			system::impl::System::file().remove(fname);
